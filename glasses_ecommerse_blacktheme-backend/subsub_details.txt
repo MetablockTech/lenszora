@@ -1,0 +1,39 @@
+Container: "Men" (Sub) inside "Eyeglasses"
+  Children (4):
+    - "Prescription Glasses" (Level: subsub, _id: 69844ea367dae66098b9a631)
+    - "Zero Power (Fashion)" (Level: subsub, _id: 69844ea367dae66098b9a633)
+    - "Computer / Blue-Light" (Level: subsub, _id: 69844ea367dae66098b9a635)
+    - "Reading Glasses" (Level: subsub, _id: 69844ea367dae66098b9a637)
+---
+Container: "Women" (Sub) inside "Eyeglasses"
+  Children (4):
+    - "Prescription Glasses" (Level: subsub, _id: 69844ea367dae66098b9a639)
+    - "Zero Power (Fashion)" (Level: subsub, _id: 69844ea367dae66098b9a63b)
+    - "Computer / Blue-Light" (Level: subsub, _id: 69844ea367dae66098b9a63d)
+    - "Reading Glasses" (Level: subsub, _id: 69844ea367dae66098b9a63f)
+---
+Container: "Kids" (Sub) inside "Eyeglasses"
+  Children (0):
+---
+Container: "Men" (Sub) inside "Sunglasses"
+  Children (5):
+    - "Normal Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a641)
+    - "Polarized Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a643)
+    - "UV Protection" (Level: subsub, _id: 69844ea367dae66098b9a645)
+    - "Sports Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a647)
+    - "Driving Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a649)
+---
+Container: "Women" (Sub) inside "Sunglasses"
+  Children (5):
+    - "Normal Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a64b)
+    - "Polarized Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a64d)
+    - "UV Protection" (Level: subsub, _id: 69844ea367dae66098b9a64f)
+    - "Sports Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a651)
+    - "Fashion Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a653)
+---
+Container: "Kids" (Sub) inside "Sunglasses"
+  Children (3):
+    - "Normal Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a655)
+    - "UV Protection" (Level: subsub, _id: 69844ea367dae66098b9a657)
+    - "Sports Sunglasses" (Level: subsub, _id: 69844ea367dae66098b9a659)
+---

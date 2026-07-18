@@ -1,0 +1,44 @@
+Connected to MongoDB
+Found 6 categories matching gender names.
+- Cat: "Men"
+  _id: 69844ea367dae66098b9a623
+  Level: sub
+  Parent: Eyeglasses (69844ea367dae66098b9a61b)
+  Children count: 4
+  Products count: 0
+---
+- Cat: "Women"
+  _id: 69844ea367dae66098b9a625
+  Level: sub
+  Parent: Eyeglasses (69844ea367dae66098b9a61b)
+  Children count: 4
+  Products count: 0
+---
+- Cat: "Kids"
+  _id: 69844ea367dae66098b9a627
+  Level: sub
+  Parent: Eyeglasses (69844ea367dae66098b9a61b)
+  Children count: 0
+  Products count: 0
+---
+- Cat: "Men"
+  _id: 69844ea367dae66098b9a629
+  Level: sub
+  Parent: Sunglasses (69844ea367dae66098b9a61d)
+  Children count: 5
+  Products count: 0
+---
+- Cat: "Women"
+  _id: 69844ea367dae66098b9a62b
+  Level: sub
+  Parent: Sunglasses (69844ea367dae66098b9a61d)
+  Children count: 5
+  Products count: 0
+---
+- Cat: "Kids"
+  _id: 69844ea367dae66098b9a62d
+  Level: sub
+  Parent: Sunglasses (69844ea367dae66098b9a61d)
+  Children count: 3
+  Products count: 0
+---

@@ -1,0 +1,106 @@
+Found 35 sub-subcategories.
+- "Prescription Glasses" (Count: 1)
+  Path: Eyeglasses > Men > Prescription Glasses
+  _id: 69844ea367dae66098b9a631
+- "Zero Power (Fashion)" (Count: 0)
+  Path: Eyeglasses > Men > Zero Power (Fashion)
+  _id: 69844ea367dae66098b9a633
+- "Computer / Blue-Light" (Count: 0)
+  Path: Eyeglasses > Men > Computer / Blue-Light
+  _id: 69844ea367dae66098b9a635
+- "Reading Glasses" (Count: 0)
+  Path: Eyeglasses > Men > Reading Glasses
+  _id: 69844ea367dae66098b9a637
+- "Prescription Glasses" (Count: 1)
+  Path: Eyeglasses > Women > Prescription Glasses
+  _id: 69844ea367dae66098b9a639
+- "Zero Power (Fashion)" (Count: 0)
+  Path: Eyeglasses > Women > Zero Power (Fashion)
+  _id: 69844ea367dae66098b9a63b
+- "Computer / Blue-Light" (Count: 0)
+  Path: Eyeglasses > Women > Computer / Blue-Light
+  _id: 69844ea367dae66098b9a63d
+- "Reading Glasses" (Count: 0)
+  Path: Eyeglasses > Women > Reading Glasses
+  _id: 69844ea367dae66098b9a63f
+- "Normal Sunglasses" (Count: 1)
+  Path: Sunglasses > Men > Normal Sunglasses
+  _id: 69844ea367dae66098b9a641
+- "Polarized Sunglasses" (Count: 1)
+  Path: Sunglasses > Men > Polarized Sunglasses
+  _id: 69844ea367dae66098b9a643
+- "UV Protection" (Count: 1)
+  Path: Sunglasses > Men > UV Protection
+  _id: 69844ea367dae66098b9a645
+- "Sports Sunglasses" (Count: 0)
+  Path: Sunglasses > Men > Sports Sunglasses
+  _id: 69844ea367dae66098b9a647
+- "Driving Sunglasses" (Count: 0)
+  Path: Sunglasses > Men > Driving Sunglasses
+  _id: 69844ea367dae66098b9a649
+- "Normal Sunglasses" (Count: 0)
+  Path: Sunglasses > Women > Normal Sunglasses
+  _id: 69844ea367dae66098b9a64b
+- "Polarized Sunglasses" (Count: 1)
+  Path: Sunglasses > Women > Polarized Sunglasses
+  _id: 69844ea367dae66098b9a64d
+- "UV Protection" (Count: 0)
+  Path: Sunglasses > Women > UV Protection
+  _id: 69844ea367dae66098b9a64f
+- "Sports Sunglasses" (Count: 0)
+  Path: Sunglasses > Women > Sports Sunglasses
+  _id: 69844ea367dae66098b9a651
+- "Fashion Sunglasses" (Count: 1)
+  Path: Sunglasses > Women > Fashion Sunglasses
+  _id: 69844ea367dae66098b9a653
+- "Normal Sunglasses" (Count: 0)
+  Path: Sunglasses > Kids > Normal Sunglasses
+  _id: 69844ea367dae66098b9a655
+- "UV Protection" (Count: 0)
+  Path: Sunglasses > Kids > UV Protection
+  _id: 69844ea367dae66098b9a657
+- "Sports Sunglasses" (Count: 0)
+  Path: Sunglasses > Kids > Sports Sunglasses
+  _id: 69844ea367dae66098b9a659
+- "Clear Lenses" (Count: 0)
+  Path: Contact Lenses > Daily Disposable > Clear Lenses
+  _id: 69844ea367dae66098b9a661
+- "Colored Lenses" (Count: 0)
+  Path: Contact Lenses > Daily Disposable > Colored Lenses
+  _id: 69844ea367dae66098b9a663
+- "Clear Lenses" (Count: 0)
+  Path: Contact Lenses > Monthly Disposable > Clear Lenses
+  _id: 69844ea367dae66098b9a665
+- "Colored Lenses" (Count: 0)
+  Path: Contact Lenses > Monthly Disposable > Colored Lenses
+  _id: 69844ea367dae66098b9a667
+- "Toric (Astigmatism)" (Count: 0)
+  Path: Contact Lenses > Monthly Disposable > Toric (Astigmatism)
+  _id: 69844ea367dae66098b9a669
+- "Lens Solutions" (Count: 0)
+  Path: Contact Lenses > Solutions & Care > Lens Solutions
+  _id: 69844ea367dae66098b9a66b
+- "Eye Drops" (Count: 0)
+  Path: Contact Lenses > Solutions & Care > Eye Drops
+  _id: 69844ea367dae66098b9a66d
+- "Lens Cases" (Count: 0)
+  Path: Contact Lenses > Solutions & Care > Lens Cases
+  _id: 69844ea367dae66098b9a66f
+- "Hard Cases" (Count: 0)
+  Path: Accessories > Eyewear Cases > Hard Cases
+  _id: 69844ea367dae66098b9a677
+- "Soft Pouches" (Count: 0)
+  Path: Accessories > Eyewear Cases > Soft Pouches
+  _id: 69844ea367dae66098b9a679
+- "Spray & Cloth Kits" (Count: 0)
+  Path: Accessories > Cleaning Kits > Spray & Cloth Kits
+  _id: 69844ea367dae66098b9a67b
+- "Microfiber Cloths" (Count: 0)
+  Path: Accessories > Cleaning Kits > Microfiber Cloths
+  _id: 69844ea367dae66098b9a67d
+- "Metal Chains" (Count: 0)
+  Path: Accessories > Chains & Straps > Metal Chains
+  _id: 69844ea367dae66098b9a67f
+- "Beaded Chains" (Count: 0)
+  Path: Accessories > Chains & Straps > Beaded Chains
+  _id: 69844ea367dae66098b9a681

@@ -1,0 +1,99 @@
+Starting migration at 2026-02-08T15:35:07.154Z
+Found 6 gender containers to process.
+Processing "Men" under "Eyeglasses"...
+  Migrating sub-sub "Prescription Glasses"...
+    Created new target subcategory: "Prescription Glasses" (6988ad2ba0926c704002ee97)
+    Moved 1 products.
+    Deleted sub-subcategory "Prescription Glasses".
+  Migrating sub-sub "Zero Power (Fashion)"...
+    Created new target subcategory: "Zero Power (Fashion)" (6988ad2ba0926c704002ee98)
+    Moved 0 products.
+    Deleted sub-subcategory "Zero Power (Fashion)".
+  Migrating sub-sub "Computer / Blue-Light"...
+    Created new target subcategory: "Computer / Blue-Light" (6988ad2ba0926c704002ee99)
+    Moved 0 products.
+    Deleted sub-subcategory "Computer / Blue-Light".
+  Migrating sub-sub "Reading Glasses"...
+    Created new target subcategory: "Reading Glasses" (6988ad2ba0926c704002ee9a)
+    Moved 0 products.
+    Deleted sub-subcategory "Reading Glasses".
+  Deleted gender container category "Men".
+Processing "Women" under "Eyeglasses"...
+  Migrating sub-sub "Prescription Glasses"...
+    Found existing target subcategory: "Prescription Glasses" (6988ad2ba0926c704002ee97)
+    Moved 1 products.
+    Deleted sub-subcategory "Prescription Glasses".
+  Migrating sub-sub "Zero Power (Fashion)"...
+    Found existing target subcategory: "Zero Power (Fashion)" (6988ad2ba0926c704002ee98)
+    Moved 0 products.
+    Deleted sub-subcategory "Zero Power (Fashion)".
+  Migrating sub-sub "Computer / Blue-Light"...
+    Found existing target subcategory: "Computer / Blue-Light" (6988ad2ba0926c704002ee99)
+    Moved 0 products.
+    Deleted sub-subcategory "Computer / Blue-Light".
+  Migrating sub-sub "Reading Glasses"...
+    Found existing target subcategory: "Reading Glasses" (6988ad2ba0926c704002ee9a)
+    Moved 0 products.
+    Deleted sub-subcategory "Reading Glasses".
+  Deleted gender container category "Women".
+Processing "Kids" under "Eyeglasses"...
+  Deleted gender container category "Kids".
+Processing "Men" under "Sunglasses"...
+  Migrating sub-sub "Normal Sunglasses"...
+    Created new target subcategory: "Normal Sunglasses" (6988ad2ba0926c704002ee9b)
+    Moved 1 products.
+    Deleted sub-subcategory "Normal Sunglasses".
+  Migrating sub-sub "Polarized Sunglasses"...
+    Created new target subcategory: "Polarized Sunglasses" (6988ad2ba0926c704002ee9c)
+    Moved 1 products.
+    Deleted sub-subcategory "Polarized Sunglasses".
+  Migrating sub-sub "UV Protection"...
+    Created new target subcategory: "UV Protection" (6988ad2ba0926c704002ee9d)
+    Moved 1 products.
+    Deleted sub-subcategory "UV Protection".
+  Migrating sub-sub "Sports Sunglasses"...
+    Created new target subcategory: "Sports Sunglasses" (6988ad2ba0926c704002ee9e)
+    Moved 0 products.
+    Deleted sub-subcategory "Sports Sunglasses".
+  Migrating sub-sub "Driving Sunglasses"...
+    Created new target subcategory: "Driving Sunglasses" (6988ad2ba0926c704002ee9f)
+    Moved 0 products.
+    Deleted sub-subcategory "Driving Sunglasses".
+  Deleted gender container category "Men".
+Processing "Women" under "Sunglasses"...
+  Migrating sub-sub "Normal Sunglasses"...
+    Found existing target subcategory: "Normal Sunglasses" (6988ad2ba0926c704002ee9b)
+    Moved 0 products.
+    Deleted sub-subcategory "Normal Sunglasses".
+  Migrating sub-sub "Polarized Sunglasses"...
+    Found existing target subcategory: "Polarized Sunglasses" (6988ad2ba0926c704002ee9c)
+    Moved 1 products.
+    Deleted sub-subcategory "Polarized Sunglasses".
+  Migrating sub-sub "UV Protection"...
+    Found existing target subcategory: "UV Protection" (6988ad2ba0926c704002ee9d)
+    Moved 0 products.
+    Deleted sub-subcategory "UV Protection".
+  Migrating sub-sub "Sports Sunglasses"...
+    Found existing target subcategory: "Sports Sunglasses" (6988ad2ba0926c704002ee9e)
+    Moved 0 products.
+    Deleted sub-subcategory "Sports Sunglasses".
+  Migrating sub-sub "Fashion Sunglasses"...
+    Created new target subcategory: "Fashion Sunglasses" (6988ad2ba0926c704002eea0)
+    Moved 1 products.
+    Deleted sub-subcategory "Fashion Sunglasses".
+  Deleted gender container category "Women".
+Processing "Kids" under "Sunglasses"...
+  Migrating sub-sub "Normal Sunglasses"...
+    Found existing target subcategory: "Normal Sunglasses" (6988ad2ba0926c704002ee9b)
+    Moved 0 products.
+    Deleted sub-subcategory "Normal Sunglasses".
+  Migrating sub-sub "UV Protection"...
+    Found existing target subcategory: "UV Protection" (6988ad2ba0926c704002ee9d)
+    Moved 0 products.
+    Deleted sub-subcategory "UV Protection".
+  Migrating sub-sub "Sports Sunglasses"...
+    Found existing target subcategory: "Sports Sunglasses" (6988ad2ba0926c704002ee9e)
+    Moved 0 products.
+    Deleted sub-subcategory "Sports Sunglasses".
+  Deleted gender container category "Kids".
+Migration completed successfully.

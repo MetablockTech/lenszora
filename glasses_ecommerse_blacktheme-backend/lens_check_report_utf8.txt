@@ -1,0 +1,20 @@
+﻿Connected to MongoDB
+--- DATABASE LENS VERIFICATION ---
+Found 3 vendors.
+
+Vendor: Platform Store (ID: 69844ea367dae66098b9a60c)
+ - Lens Types: 0
+ - Lens Packages: 0
+---------------------------
+Vendor: Ray-Ban Official Store (ID: 69844ea367dae66098b9a611)
+ - Lens Types: 0
+ - Lens Packages: 0
+---------------------------
+Vendor: Oakley Sports Eyewear (ID: 69844ea367dae66098b9a616)
+ - Lens Types: 0
+ - Lens Packages: 0
+---------------------------
+Platform Global (vendorId: null)
+ - Lens Types: 1
+ - Lens Packages: 1
+---------------------------

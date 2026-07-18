@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lenskart – Product</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0f1e3c;
+  --teal:#00b9a8;
+  --teal-light:#e6f7f6;
+  --star:#f5a623;
+  --green:#22c55e;
+  --border:#e5e7eb;
+  --bg:#f5f5f5;
+  --white:#fff;
+  --muted:#6b7280;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--navy);min-height:100vh}
+
+/* TOPBAR */
+.topbar{background:#fff;border-bottom:1px solid var(--border);font-size:.73rem;color:var(--muted);padding:7px 32px;display:flex;align-items:center;flex-wrap:wrap}
+.topbar a{color:var(--muted);text-decoration:none;padding:0 10px;cursor:pointer;transition:color .15s}
+.topbar a:hover{color:var(--navy)}
+.topbar a+a{border-left:1px solid var(--border)}
+
+/* NAVBAR */
+.navbar{background:#fff;border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;height:58px;gap:36px}
+.logo{font-size:1.4rem;font-weight:700;letter-spacing:-1px;color:var(--navy);display:flex;align-items:center;gap:6px;margin-right:8px}
+.logo-svg{width:38px;height:22px}
+.nav-link{font-size:.8rem;font-weight:600;letter-spacing:.5px;color:var(--navy);text-decoration:none;text-transform:uppercase;cursor:pointer;padding:4px 0;border-bottom:2px solid transparent;transition:border-color .15s;white-space:nowrap}
+.nav-link:hover{border-bottom-color:var(--teal)}
+
+/* PAGE GRID */
+.page{display:grid;grid-template-columns:90px 1fr 400px;min-height:calc(100vh - 90px);background:var(--white)}
+
+/* THUMBNAILS */
+.thumbs{padding:16px 0 16px 14px;display:flex;flex-direction:column;gap:10px;border-right:1px solid var(--border)}
+.thumb{width:72px;height:72px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;background:#f8f8f8;display:flex;align-items:center;justify-content:center;transition:border-color .15s}
+.thumb:first-child,.thumb:hover{border-color:var(--navy)}
+.thumb-face{background:#e8e2da}
+
+/* MAIN IMAGE */
+.main-img{display:flex;align-items:center;justify-content:center;padding:48px 36px;background:#f7f7f7}
+
+/* DETAIL */
+.detail{padding:32px 24px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.rating-row{display:flex;align-items:center;gap:8px}
+.star-icon{color:var(--star)}
+.product-name{font-size:1.18rem;font-weight:700;line-height:1.35}
+.product-sub{font-size:.82rem;color:var(--muted)}
+.price-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.price{font-size:1.45rem;font-weight:700}
+.price-old{font-size:.9rem;color:var(--muted);text-decoration:line-through}
+.price-off{font-size:.78rem;font-weight:700;color:var(--green);background:#dcfce7;padding:2px 8px;border-radius:20px}
+.divider{border:none;border-top:1px solid var(--border)}
+.section-label{font-size:.73rem;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px}
+.color-options{display:flex;gap:10px}
+.color-dot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .15s}
+.color-dot.active,.color-dot:hover{border-color:var(--navy);transform:scale(1.15)}
+.size-options{display:flex;gap:8px;flex-wrap:wrap}
+.size-btn{padding:6px 13px;border:1.5px solid var(--border);border-radius:6px;font-size:.8rem;font-weight:500;cursor:pointer;background:#fff;color:var(--navy);transition:all .15s;font-family:'DM Sans',sans-serif}
+.size-btn.active,.size-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.delivery-box{background:#f8faff;border:1px solid var(--border);border-radius:10px;padding:14px}
+.delivery-box .d-title{font-size:.85rem;font-weight:600;margin-bottom:8px}
+.delivery-input{display:flex;gap:8px}
+.delivery-input input{flex:1;border:1.5px solid var(--border);border-radius:7px;padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;transition:border-color .15s}
+.delivery-input input:focus{border-color:var(--navy)}
+.delivery-input button{background:var(--navy);color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-cart{background:var(--navy);color:#fff;border:none;border-radius:10px;padding:13px 0;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s}
+.btn-cart:hover{opacity:.86}
+.btn-wishlist{background:#fff;color:var(--navy);border:1.5px solid var(--border);border-radius:10px;padding:12px 0;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:border-color .15s}
+.btn-wishlist:hover{border-color:var(--navy)}
+.perks{font-size:.75rem;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+
+/* OVERLAY */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.48);z-index:100;opacity:0;pointer-events:none;transition:opacity .32s}
+.overlay.active{opacity:1;pointer-events:all}
+
+/* SIDEBAR */
+.sidebar{position:fixed;top:0;right:0;width:490px;max-width:100vw;height:100vh;background:#fff;z-index:200;transform:translateX(100%);transition:transform .36s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-8px 0 36px rgba(0,0,0,0.14)}
+.sidebar.open{transform:translateX(0)}
+.sb-header{padding:18px 22px 0;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sb-back{background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:.88rem;color:var(--navy);font-family:'DM Sans',sans-serif;font-weight:500;padding:4px 6px 4px 0;visibility:hidden}
+.sb-back:hover{opacity:.7}
+.sb-title{font-size:1.1rem;font-weight:700;flex:1;text-align:center;color:var(--navy)}
+.sb-close{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;border-radius:6px;display:flex;transition:background .15s}
+.sb-close:hover{background:var(--border)}
+
+/* STEPS */
+.steps{display:flex;padding:18px 24px 0;gap:0;flex-shrink:0}
+.step{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;position:relative}
+.step:not(:last-child)::after{content:'';position:absolute;top:14px;left:58%;width:84%;height:2px;background:var(--border);z-index:0}
+.step.done:not(:last-child)::after{background:var(--teal)}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;border:2px solid var(--border);background:#fff;color:var(--muted);z-index:1;transition:all .22s}
+.step.active .step-circle{background:var(--navy);border-color:var(--navy);color:#fff}
+.step.done .step-circle{background:var(--teal);border-color:var(--teal);color:#fff}
+.step-label{font-size:.7rem;font-weight:600;color:var(--muted);text-align:center;white-space:nowrap}
+.step.active .step-label{color:var(--navy);font-weight:700}
+.step-bar{height:2px;width:100%;background:transparent;margin-top:8px}
+.step.active .step-bar{background:var(--teal)}
+
+/* SIDEBAR CONTENT */
+.sb-content{flex:1;overflow-y:auto;padding:22px 22px 8px}
+.sb-content::-webkit-scrollbar{width:4px}
+.sb-content::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:10px}
+.pw-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.pw-heading h2{font-size:.98rem;font-weight:700}
+.learn-more{font-size:.8rem;color:var(--teal);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:2px}
+.learn-more:hover{text-decoration:underline}
+
+/* LENS CARDS */
+.lens-card{display:flex;align-items:center;gap:14px;padding:15px 16px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;margin-bottom:11px;transition:border-color .18s,box-shadow .18s;background:#fff}
+.lens-card:hover{border-color:#aaa;box-shadow:0 2px 10px rgba(0,0,0,0.06)}
+.lens-card.selected{border-color:var(--teal);box-shadow:0 2px 14px rgba(0,185,168,0.14)}
+.lens-thumb{width:62px;height:46px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.lens-info{flex:1;min-width:0}
+.ln-row{display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap}
+.ln-name{font-size:.9rem;font-weight:700}
+.ln-tag{font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.tag-common{background:#fff3cd;color:#92400a}
+.tag-blu{background:#dbeafe;color:#1e40af}
+.ln-desc{font-size:.8rem;color:var(--muted);line-height:1.4}
+.ln-arrow{color:#bbb;flex-shrink:0}
+
+/* STEP 2 – Lens Package Cards */
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.filter-btn{display:flex;align-items:center;gap:5px;padding:7px 14px;border:1.5px solid var(--border);border-radius:22px;font-size:.8rem;font-weight:600;cursor:pointer;background:#fff;color:var(--navy);font-family:'DM Sans',sans-serif;transition:all .18s;white-space:nowrap}
+.filter-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.filter-btn:not(.active):hover{border-color:#aaa}
+
+/* Lens package card */
+.lp-card{border:1.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;cursor:pointer;transition:border-color .18s,box-shadow .18s;background:#fff;position:relative}
+.lp-card:hover{border-color:#bbb;box-shadow:0 3px 14px rgba(0,0,0,0.07)}
+.lp-card.selected{border-color:var(--teal);box-shadow:0 3px 16px rgba(0,185,168,0.15)}
+.lp-top-banner{font-size:.68rem;font-weight:700;padding:5px 14px;letter-spacing:.3px;text-transform:uppercase}
+.banner-screen{background:#00b9a8;color:#fff}
+.banner-popular{background:#f59e0b;color:#fff}
+.lp-body{display:flex;gap:0;padding:0}
+.lp-img-col{width:110px;flex-shrink:0;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;border-right:1px solid var(--border)}
+.lp-lens-visual{width:82px;height:68px;position:relative;cursor:pointer}
+.lp-lens-visual svg{width:100%;height:100%}
+.play-btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.play-circle{width:28px;height:28px;background:rgba(0,0,0,0.55);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.warranty-tag{font-size:.65rem;color:var(--muted);display:flex;align-items:center;gap:3px;text-align:center;line-height:1.3}
+.lp-info{flex:1;padding:14px 14px 12px 14px}
+.lp-title-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.lp-title{font-size:.95rem;font-weight:700;color:var(--navy);line-height:1.3}
+.lp-arrow-btn{width:28px;height:28px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:8px}
+.lp-features{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.lp-feat{font-size:.78rem;color:#374151;display:flex;align-items:center;gap:6px}
+.lp-view{font-size:.78rem;color:var(--teal);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:3px;margin-bottom:10px}
+.lp-view:hover{text-decoration:underline}
+.lp-pricing{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px dashed var(--border);flex-wrap:wrap;gap:4px}
+.lp-coupon{font-size:.75rem;color:var(--muted)}
+.lp-coupon strong{color:var(--navy);font-weight:700}
+.lp-price-col{text-align:right}
+.lp-price-label{font-size:.67rem;color:var(--muted);display:block;margin-bottom:1px}
+.lp-price-row{display:flex;align-items:baseline;gap:6px}
+.lp-price-new{font-size:.95rem;font-weight:700;color:var(--navy)}
+.lp-price-old{font-size:.8rem;color:var(--muted);text-decoration:line-through}
+
+/* STEP 3 – Eye Power cards */
+.ep-card{display:flex;align-items:center;gap:0;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;background:#fff;transition:border-color .18s,box-shadow .18s}
+.ep-card:hover{border-color:#bbb;box-shadow:0 3px 12px rgba(0,0,0,0.07)}
+.ep-card.selected{border-color:var(--teal);box-shadow:0 3px 14px rgba(0,185,168,0.14)}
+.ep-card-img{width:80px;height:80px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.ep-card-info{flex:1;padding:14px 12px}
+.ep-card-title{font-size:.9rem;font-weight:700;color:var(--navy);margin-bottom:3px}
+.ep-card-sub{font-size:.78rem;color:var(--muted)}
+.ep-card-arrow{padding:0 14px;flex-shrink:0}
+
+/* FOOTER */
+.sb-footer{padding:14px 22px 22px;border-top:1px solid var(--border);flex-shrink:0}
+.btn-next{width:100%;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:13px 0;font-family:'DM Sans',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .15s}
+.btn-next:hover:not(:disabled){opacity:.87}
+.btn-next:disabled{opacity:.4;cursor:not-allowed}
+
+/* WhatsApp */
+.wa{position:fixed;bottom:22px;right:22px;width:48px;height:48px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(37,211,102,.38);cursor:pointer;z-index:50;transition:transform .15s}
+.wa:hover{transform:scale(1.08)}
+
+@media(max-width:860px){
+  .page{grid-template-columns:1fr;grid-template-rows:auto auto}
+  .thumbs{display:none}
+  .sidebar{width:100vw}
+  .navbar{gap:18px;padding:0 16px}
+  .nav-link{font-size:.72rem}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a>Corporate</a><a>StoreLocator</a><a>Singapore</a><a>UAE</a>
+  <a>John Jacobs</a><a>Aqualens</a><a>Cobrowsing</a>
+  <a>Engineering Blog</a><a>Partner With Us</a>
+</div>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <div class="logo">
+    <svg class="logo-svg" viewBox="0 0 44 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="11" cy="13" r="9" stroke="#0f1e3c" stroke-width="3"/>
+      <circle cx="33" cy="13" r="9" stroke="#0f1e3c" stroke-width="3"/>
+      <line x1="20" y1="13" x2="24" y2="13" stroke="#0f1e3c" stroke-width="2.5"/>
+      <line x1="2" y1="13" x2="0" y2="20" stroke="#0f1e3c" stroke-width="2"/>
+      <line x1="42" y1="13" x2="44" y2="20" stroke="#0f1e3c" stroke-width="2"/>
+    </svg>
+    lenskart
+  </div>
+  <a class="nav-link">Eyeglasses</a>
+  <a class="nav-link">Sunglasses</a>
+  <a class="nav-link">Contacts</a>
+  <a class="nav-link">Special Power</a>
+  <a class="nav-link">Stores</a>
+  <a class="nav-link">Try @ Home</a>
+</div>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- THUMBS -->
+  <div class="thumbs">
+    <div class="thumb" style="background:#f0f0f0">
+      <svg viewBox="0 0 76 38" fill="none" width="66" height="34"><rect x="2" y="8" width="30" height="22" rx="11" stroke="#111" stroke-width="3"/><rect x="44" y="8" width="30" height="22" rx="11" stroke="#111" stroke-width="3"/><line x1="32" y1="19" x2="44" y2="19" stroke="#111" stroke-width="2.5"/><line x1="2" y1="19" x2="0" y2="28" stroke="#111" stroke-width="2"/><line x1="74" y1="19" x2="76" y2="28" stroke="#111" stroke-width="2"/></svg>
+    </div>
+    <div class="thumb" style="background:#f0f0f0">
+      <svg viewBox="0 0 76 38" fill="none" width="66" height="34"><rect x="4" y="11" width="28" height="16" rx="8" stroke="#555" stroke-width="2.5"/><rect x="44" y="11" width="28" height="16" rx="8" stroke="#555" stroke-width="2.5"/><line x1="32" y1="19" x2="44" y2="19" stroke="#555" stroke-width="2"/><line x1="4" y1="19" x2="0" y2="27" stroke="#555" stroke-width="2"/><line x1="72" y1="19" x2="76" y2="27" stroke="#555" stroke-width="2"/></svg>
+    </div>
+    <div class="thumb thumb-face">
+      <svg viewBox="0 0 56 68" fill="none" width="56" height="68"><ellipse cx="28" cy="20" rx="13" ry="15" fill="#c9a882"/><rect x="9" y="36" width="38" height="30" rx="8" fill="#7899c8"/><ellipse cx="28" cy="36" rx="11" ry="6" fill="#c9a882"/></svg>
+    </div>
+    <div class="thumb thumb-face">
+      <svg viewBox="0 0 56 68" fill="none" width="56" height="68"><ellipse cx="28" cy="20" rx="13" ry="15" fill="#8d6e4e"/><rect x="9" y="36" width="38" height="30" rx="8" fill="#5a7a44"/><ellipse cx="28" cy="36" rx="11" ry="6" fill="#8d6e4e"/></svg>
+    </div>
+    <div class="thumb thumb-face">
+      <svg viewBox="0 0 56 68" fill="none" width="56" height="68"><ellipse cx="28" cy="20" rx="13" ry="15" fill="#d4a574"/><rect x="9" y="36" width="38" height="30" rx="8" fill="#c46c6c"/><ellipse cx="28" cy="36" rx="11" ry="6" fill="#d4a574"/></svg>
+    </div>
+  </div>
+
+  <!-- MAIN IMAGE -->
+  <div class="main-img">
+    <svg viewBox="0 0 560 240" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;filter:drop-shadow(0 14px 32px rgba(0,0,0,0.17))">
+      <path d="M215 118 Q280 98 345 118" stroke="#111" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <rect x="28" y="60" width="183" height="120" rx="36" stroke="#111" stroke-width="9" fill="rgba(185,210,230,0.15)"/>
+      <rect x="349" y="60" width="183" height="120" rx="36" stroke="#111" stroke-width="9" fill="rgba(185,210,230,0.15)"/>
+      <path d="M28 118 Q10 128 4 172" stroke="#111" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+      <path d="M532 118 Q550 128 556 172" stroke="#111" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+      <path d="M48 78 L198 70" stroke="#111" stroke-width="5.5" stroke-linecap="round"/>
+      <path d="M538 158 Q542 166 540 174" stroke="#c0392b" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="219" cy="128" rx="5" ry="8" fill="#999"/>
+      <ellipse cx="341" cy="128" rx="5" ry="8" fill="#999"/>
+    </svg>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="detail">
+    <div class="rating-row">
+      <span class="star-icon">★★★★</span><span class="star-icon" style="color:#ddd">★</span>
+      <span style="font-weight:700;font-size:.88rem">4.8</span>
+      <span style="color:var(--muted);font-size:.8rem">12538 reviews</span>
+    </div>
+    <div>
+      <div class="product-name">Vincent Chase VC E13654 C1 Eyeglasses</div>
+      <div class="product-sub">Full Rim · Rectangle · Black · Medium</div>
+    </div>
+    <div class="price-row">
+      <span class="price">₹1,500</span>
+      <span class="price-old">₹3,000</span>
+      <span class="price-off">50% OFF</span>
+    </div>
+    <hr class="divider"/>
+    <div>
+      <div class="section-label">Frame Colour</div>
+      <div class="color-options">
+        <div class="color-dot active" style="background:#111" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#6b7280" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#92400e" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#1e40af" onclick="pickColor(this)"></div>
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Frame Size</div>
+      <div class="size-options">
+        <button class="size-btn active" onclick="pickSize(this)">Medium</button>
+        <button class="size-btn" onclick="pickSize(this)">Large</button>
+        <button class="size-btn" onclick="pickSize(this)">Extra Large</button>
+      </div>
+    </div>
+    <hr class="divider"/>
+    <div class="delivery-box">
+      <div class="d-title">🚚 Check Delivery</div>
+      <div class="delivery-input">
+        <input type="text" placeholder="Enter pincode"/>
+        <button>Check</button>
+      </div>
+    </div>
+    <hr class="divider"/>
+    <div class="btn-row">
+      <button class="btn-cart" onclick="openSidebar()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Add to Cart
+      </button>
+      <button class="btn-wishlist">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        Wishlist
+      </button>
+    </div>
+    <div class="perks">
+      <span>🔄 14-day returns</span>
+      <span>✅ Authentic</span>
+      <span>🎁 Free lens kit</span>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+
+  <div class="sb-header">
+    <button class="sb-back" id="backBtn" onclick="goBack()">
+      <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <div class="sb-title">Select Lens Type</div>
+    <button class="sb-close" onclick="closeSidebar()">
+      <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="stp1">
+      <div class="step-circle">1</div>
+      <div class="step-label">Power Type</div>
+      <div class="step-bar"></div>
+    </div>
+    <div class="step" id="stp2">
+      <div class="step-circle">2</div>
+      <div class="step-label">Lenses</div>
+      <div class="step-bar"></div>
+    </div>
+    <div class="step" id="stp3">
+      <div class="step-circle">3</div>
+      <div class="step-label">Add Power</div>
+      <div class="step-bar"></div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="sb-content">
+
+    <!-- STEP 1 -->
+    <div id="s1">
+      <div class="pw-heading">
+        <h2>Select your Power Type:</h2>
+        <a class="learn-more">Learn more ▶</a>
+      </div>
+
+      <div class="lens-card" onclick="pickPower(this,'with')">
+        <div class="lens-thumb" style="background:radial-gradient(circle at 40% 40%,#fffde7,#f0f0f0)">
+          <svg viewBox="0 0 60 44" fill="none" width="52"><circle cx="17" cy="22" r="13" stroke="#888" stroke-width="2.2" fill="rgba(210,230,255,0.3)"/><circle cx="43" cy="22" r="13" stroke="#888" stroke-width="2.2" fill="rgba(210,230,255,0.3)"/><line x1="30" y1="22" x2="30" y2="22"/><path d="M30 22 Q30 14 30 22" stroke="#888" stroke-width="2"/><text x="10" y="26" font-size="9" fill="#888" font-family="sans-serif">-/+</text></svg>
+        </div>
+        <div class="lens-info">
+          <div class="ln-row"><span class="ln-name">With Power</span><span class="ln-tag tag-common">Most common</span></div>
+          <div class="ln-desc">Positive, Negative or Cylindrical</div>
+        </div>
+        <div class="ln-arrow"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="lens-card" onclick="pickPower(this,'zero')">
+        <div class="lens-thumb" style="background:radial-gradient(circle at 40% 40%,#e0f2fe,#f0f8ff)">
+          <svg viewBox="0 0 60 44" fill="none" width="52"><circle cx="17" cy="22" r="13" stroke="#4a9eff" stroke-width="2.2" fill="rgba(147,197,253,0.22)"/><circle cx="43" cy="22" r="13" stroke="#4a9eff" stroke-width="2.2" fill="rgba(147,197,253,0.22)"/><circle cx="17" cy="22" r="5" fill="rgba(96,165,250,0.28)"/><circle cx="43" cy="22" r="5" fill="rgba(96,165,250,0.28)"/><line x1="30" y1="22" x2="30" y2="22" stroke="#4a9eff" stroke-width="2"/></svg>
+        </div>
+        <div class="lens-info">
+          <div class="ln-row"><span class="ln-name">Zero Power</span><span class="ln-tag tag-blu">BLU Screen lenses</span></div>
+          <div class="ln-desc">Blue light block for screen protection</div>
+        </div>
+        <div class="ln-arrow"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="lens-card" onclick="pickPower(this,'progressive')">
+        <div class="lens-thumb" style="background:radial-gradient(circle at 40% 40%,#f0f0f8,#f5f5f5)">
+          <svg viewBox="0 0 60 44" fill="none" width="52"><circle cx="17" cy="22" r="13" stroke="#aaa" stroke-width="2.2" fill="rgba(220,220,240,0.3)"/><circle cx="43" cy="22" r="13" stroke="#aaa" stroke-width="2.2" fill="rgba(220,220,240,0.3)"/><line x1="6" y1="22" x2="27" y2="22" stroke="#bbb" stroke-width="1" stroke-dasharray="3 2"/><line x1="33" y1="22" x2="54" y2="22" stroke="#bbb" stroke-width="1" stroke-dasharray="3 2"/></svg>
+        </div>
+        <div class="lens-info">
+          <div class="ln-row"><span class="ln-name">Progressive/Bifocals</span></div>
+          <div class="ln-desc">Two powers in one eye</div>
+        </div>
+        <div class="ln-arrow"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="lens-card" onclick="pickPower(this,'frame')">
+        <div class="lens-thumb" style="background:#f5f5f5">
+          <svg viewBox="0 0 60 44" fill="none" width="52"><circle cx="17" cy="22" r="13" stroke="#ccc" stroke-width="2.2" fill="rgba(240,240,240,0.2)"/><circle cx="43" cy="22" r="13" stroke="#ccc" stroke-width="2.2" fill="rgba(240,240,240,0.2)"/><line x1="30" y1="22" x2="30" y2="22" stroke="#ccc" stroke-width="2"/></svg>
+        </div>
+        <div class="lens-info">
+          <div class="ln-row"><span class="ln-name">Frame Only</span></div>
+          <div class="ln-desc">With no lenses</div>
+        </div>
+        <div class="ln-arrow"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div id="s2" style="display:none">
+      <!-- Filter tabs -->
+      <div class="filter-row">
+        <button class="filter-btn active" onclick="filterBtns(this)">⭐ Bestsellers</button>
+        <button class="filter-btn" onclick="filterBtns(this)">🖥️ Work Friendly</button>
+        <button class="filter-btn" onclick="filterBtns(this)">👓 High Power</button>
+        <button class="filter-btn" onclick="filterBtns(this)">🕶️ Colored</button>
+      </div>
+
+      <!-- Card 1: Anti-Glare Premium -->
+      <div class="lp-card" onclick="pickLens(this)">
+        <div class="lp-body">
+          <div class="lp-img-col">
+            <div class="lp-lens-visual">
+              <svg viewBox="0 0 82 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="41" cy="34" rx="36" ry="28" fill="rgba(220,230,245,0.5)" stroke="#ccc" stroke-width="1.5"/>
+                <ellipse cx="41" cy="34" rx="28" ry="20" fill="rgba(200,215,235,0.4)"/>
+                <line x1="18" y1="20" x2="55" y2="48" stroke="#b0c4de" stroke-width="1.2" opacity="0.7"/>
+                <line x1="24" y1="16" x2="62" y2="44" stroke="#b0c4de" stroke-width="1" opacity="0.5"/>
+                <line x1="12" y1="26" x2="48" y2="54" stroke="#b0c4de" stroke-width="1" opacity="0.4"/>
+              </svg>
+              <div class="play-btn"><div class="play-circle"><svg width="10" height="12" viewBox="0 0 10 12" fill="white"><polygon points="0,0 10,6 0,12"/></svg></div></div>
+            </div>
+            <div class="warranty-tag">🛡️ 6 Months Warranty</div>
+          </div>
+          <div class="lp-info">
+            <div class="lp-title-row">
+              <div class="lp-title">Anti-Glare Premium</div>
+              <div class="lp-arrow-btn"><svg width="12" height="12" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </div>
+            <div class="lp-features">
+              <div class="lp-feat">⚡ Double Side Anti-Glare Lens</div>
+              <div class="lp-feat">🛡️ Scratch Resistant</div>
+            </div>
+            <div class="lp-view">View Details <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+            <div class="lp-pricing">
+              <div class="lp-coupon">Coupon : <strong>SINGLE</strong></div>
+              <div class="lp-price-col">
+                <span class="lp-price-label">Frame + Lens</span>
+                <div class="lp-price-row">
+                  <span class="lp-price-new">₹1400</span>
+                  <span class="lp-price-old">₹1900</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Lenskart BLU Screen -->
+      <div class="lp-card" onclick="pickLens(this)">
+        <div class="lp-top-banner banner-screen">✦ Screen Friendly</div>
+        <div class="lp-body">
+          <div class="lp-img-col">
+            <div class="lp-lens-visual">
+              <svg viewBox="0 0 82 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="41" cy="34" rx="36" ry="28" fill="rgba(200,230,255,0.5)" stroke="#99c5e8" stroke-width="1.5"/>
+                <ellipse cx="41" cy="34" rx="28" ry="20" fill="rgba(180,215,245,0.45)"/>
+                <line x1="18" y1="20" x2="55" y2="48" stroke="#7bb8e8" stroke-width="1.2" opacity="0.7"/>
+                <line x1="24" y1="16" x2="62" y2="44" stroke="#7bb8e8" stroke-width="1" opacity="0.55"/>
+                <line x1="12" y1="26" x2="48" y2="54" stroke="#7bb8e8" stroke-width="1" opacity="0.4"/>
+              </svg>
+              <div class="play-btn"><div class="play-circle"><svg width="10" height="12" viewBox="0 0 10 12" fill="white"><polygon points="0,0 10,6 0,12"/></svg></div></div>
+            </div>
+            <div class="warranty-tag">🛡️ 1 Year Warranty</div>
+          </div>
+          <div class="lp-info">
+            <div class="lp-title-row">
+              <div class="lp-title">Lenskart BLU Screen</div>
+              <div class="lp-arrow-btn"><svg width="12" height="12" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </div>
+            <div class="lp-features">
+              <div class="lp-feat">🧑‍💻 Screen Protection</div>
+              <div class="lp-feat">😌 Minimizes Eyestrain</div>
+              <div class="lp-feat">🛡️ Scratch &amp; Smudge Resistant</div>
+            </div>
+            <div class="lp-view">View Details <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+            <div class="lp-pricing">
+              <div class="lp-coupon">Coupon : <strong>SINGLE</strong></div>
+              <div class="lp-price-col">
+                <span class="lp-price-label">Frame + Lens</span>
+                <div class="lp-price-row">
+                  <span class="lp-price-new">₹1500</span>
+                  <span class="lp-price-old">₹2500</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: HD Progressive -->
+      <div class="lp-card" onclick="pickLens(this)">
+        <div class="lp-top-banner banner-popular">🏆 Most Popular</div>
+        <div class="lp-body">
+          <div class="lp-img-col">
+            <div class="lp-lens-visual">
+              <svg viewBox="0 0 82 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="41" cy="34" rx="36" ry="28" fill="rgba(235,235,250,0.6)" stroke="#c5c5d8" stroke-width="1.5"/>
+                <ellipse cx="41" cy="34" rx="28" ry="20" fill="rgba(220,220,245,0.4)"/>
+                <line x1="15" y1="34" x2="67" y2="34" stroke="#aaa" stroke-width="1.5" stroke-dasharray="4 3"/>
+              </svg>
+              <div class="play-btn"><div class="play-circle"><svg width="10" height="12" viewBox="0 0 10 12" fill="white"><polygon points="0,0 10,6 0,12"/></svg></div></div>
+            </div>
+            <div class="warranty-tag">🛡️ 1 Year Warranty</div>
+          </div>
+          <div class="lp-info">
+            <div class="lp-title-row">
+              <div class="lp-title">HD Clear Lens</div>
+              <div class="lp-arrow-btn"><svg width="12" height="12" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </div>
+            <div class="lp-features">
+              <div class="lp-feat">✨ Crystal Clear Vision</div>
+              <div class="lp-feat">🛡️ UV400 Protection</div>
+              <div class="lp-feat">💧 Hydrophobic Coating</div>
+            </div>
+            <div class="lp-view">View Details <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+            <div class="lp-pricing">
+              <div class="lp-coupon">Coupon : <strong>SINGLE</strong></div>
+              <div class="lp-price-col">
+                <span class="lp-price-label">Frame + Lens</span>
+                <div class="lp-price-row">
+                  <span class="lp-price-new">₹1800</span>
+                  <span class="lp-price-old">₹2800</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div id="s3" style="display:none">
+      <!-- Help row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <span style="font-size:.85rem;color:var(--muted)">Need help with power option?</span>
+        <a style="font-size:.82rem;color:var(--teal);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:2px">Learn more <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></a>
+      </div>
+
+      <!-- Section: I don't know my power -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h2 style="font-size:1rem;font-weight:700;color:var(--navy)">I don't know my power</h2>
+        <div style="width:34px;height:34px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.82.487 3.53 1.338 5L2 22l5.13-1.322A9.956 9.956 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+        </div>
+      </div>
+      <div class="ep-card" onclick="selectPowerOption(this,'later')">
+        <div class="ep-card-img" style="background:linear-gradient(135deg,#f5e6d3,#e8d5c0)">
+          <svg viewBox="0 0 72 72" fill="none" width="72" height="72">
+            <ellipse cx="36" cy="28" rx="14" ry="16" fill="#c9a882"/>
+            <rect x="14" y="46" width="44" height="26" rx="10" fill="#7899c8"/>
+            <ellipse cx="36" cy="46" rx="13" ry="7" fill="#c9a882"/>
+            <ellipse cx="29" cy="26" rx="3" ry="3.5" fill="#6b4c2a"/>
+            <ellipse cx="43" cy="26" rx="3" ry="3.5" fill="#6b4c2a"/>
+            <!-- glasses -->
+            <rect x="22" y="22" width="11" height="8" rx="4" stroke="white" stroke-width="1.5" fill="none"/>
+            <rect x="38" y="22" width="11" height="8" rx="4" stroke="white" stroke-width="1.5" fill="none"/>
+            <line x1="33" y1="26" x2="38" y2="26" stroke="white" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="ep-card-info">
+          <div class="ep-card-title">Submit Power Later in 15 days</div>
+          <div class="ep-card-sub">After placing the order</div>
+        </div>
+        <div class="ep-card-arrow"><svg width="15" height="15" fill="none" stroke="#aaa" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <!-- Spacer -->
+      <div style="height:20px"></div>
+
+      <!-- Section: I know my power -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h2 style="font-size:1rem;font-weight:700;color:var(--navy)">I know my power</h2>
+        <div style="width:34px;height:34px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.82.487 3.53 1.338 5L2 22l5.13-1.322A9.956 9.956 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+        </div>
+      </div>
+      <div class="ep-card" onclick="selectPowerOption(this,'manual')">
+        <div class="ep-card-img" style="background:linear-gradient(135deg,#e8f0f8,#d0e0f0)">
+          <svg viewBox="0 0 72 72" fill="none" width="72" height="72">
+            <!-- hand holding phone -->
+            <rect x="24" y="12" width="28" height="42" rx="5" fill="#fff" stroke="#ccc" stroke-width="1.5"/>
+            <rect x="27" y="16" width="22" height="30" rx="2" fill="#e8f4ff"/>
+            <!-- screen lines -->
+            <line x1="30" y1="21" x2="46" y2="21" stroke="#a0c0e0" stroke-width="1.5"/>
+            <line x1="30" y1="26" x2="46" y2="26" stroke="#a0c0e0" stroke-width="1.5"/>
+            <line x1="30" y1="31" x2="40" y2="31" stroke="#a0c0e0" stroke-width="1.5"/>
+            <!-- hand -->
+            <path d="M20 52 Q18 48 22 44 L50 44 Q54 44 54 48 L54 56 Q54 60 50 60 L26 60 Q22 60 20 56 Z" fill="#d4a574"/>
+          </svg>
+        </div>
+        <div class="ep-card-info">
+          <div class="ep-card-title">Enter Power Manually</div>
+          <div class="ep-card-sub">Input your latest eye prescription</div>
+        </div>
+        <div class="ep-card-arrow"><svg width="15" height="15" fill="none" stroke="#aaa" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="sb-footer">
+    <button class="btn-next" id="nextBtn" disabled onclick="nextStep()">Continue</button>
+  </div>
+</div>
+
+<!-- WhatsApp -->
+<div class="wa">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.82.487 3.53 1.338 5L2 22l5.13-1.322A9.956 9.956 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+</div>
+
+<script>
+let curStep = 1, selPower = null, selLens = null, selPowerOpt = null;
+
+function openSidebar(){
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('active');
+  document.body.style.overflow='hidden';
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('active');
+  document.body.style.overflow='';
+  setTimeout(reset,360);
+}
+function reset(){
+  curStep=1;selPower=null;selLens=null;selPowerOpt=null;
+  showStep(1);
+  document.querySelectorAll('.lens-card').forEach(c=>c.classList.remove('selected'));
+  document.querySelectorAll('.lp-card').forEach(c=>c.classList.remove('selected'));
+  document.querySelectorAll('.ep-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('nextBtn').disabled=true;
+  document.getElementById('nextBtn').textContent='Continue';
+  document.getElementById('nextBtn').style.background='';
+}
+function showStep(n){
+  curStep=n;
+  ['stp1','stp2','stp3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.className='step';
+    if(i+1<n) el.classList.add('done');
+    if(i+1===n) el.classList.add('active');
+  });
+  document.getElementById('s1').style.display=n===1?'block':'none';
+  document.getElementById('s2').style.display=n===2?'block':'none';
+  document.getElementById('s3').style.display=n===3?'block':'none';
+  document.getElementById('backBtn').style.visibility=n>1?'visible':'hidden';
+  document.querySelector('.sb-title').textContent=n===2?'Choose Lens Package':n===3?'Eye Power':'Select Lens Type';
+  const nb=document.getElementById('nextBtn');
+  nb.textContent=n===3?'Add to Cart ✓':'Continue';
+  nb.disabled=(n===1&&!selPower)||(n===2&&!selLens)||(n===3&&!selPowerOpt);
+}
+function goBack(){ if(curStep>1) showStep(curStep-1); }
+function nextStep(){
+  if(curStep<3){ showStep(curStep+1); }
+  else{
+    const nb=document.getElementById('nextBtn');
+    nb.textContent='Added to Cart!';
+    nb.style.background='#16a34a';
+    nb.disabled=true;
+    setTimeout(closeSidebar,1100);
+  }
+}
+function pickPower(el,type){
+  document.querySelectorAll('.lens-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  selPower=type;
+  if(type==='frame'){
+    // skip to confirm
+    document.getElementById('nextBtn').disabled=false;
+    document.getElementById('nextBtn').textContent='Confirm – Frame Only';
+    curStep=3;
+    document.getElementById('nextBtn').onclick=function(){
+      this.textContent='Added to Cart!';
+      this.style.background='#16a34a';
+      this.disabled=true;
+      setTimeout(closeSidebar,1100);
+    };
+  } else {
+    document.getElementById('nextBtn').disabled=false;
+    document.getElementById('nextBtn').textContent='Continue';
+    document.getElementById('nextBtn').onclick=nextStep;
+  }
+}
+function pickLens(el){
+  document.querySelectorAll('.lp-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  selLens=el.querySelector('.lp-title').textContent;
+  document.getElementById('nextBtn').disabled=false;
+}
+function selectPowerOption(el, type){
+  document.querySelectorAll('.ep-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  selPowerOpt = type;
+  document.getElementById('nextBtn').disabled = false;
+  if(type === 'later'){
+    document.getElementById('nextBtn').textContent = 'Place Order →';
+  } else {
+    document.getElementById('nextBtn').textContent = 'Enter Power →';
+  }
+}
+function filterBtns(btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function pickColor(el){
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active'));
+  el.classList.add('active');
+}
+function pickSize(btn){
+  document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* LensZora Premium Dark Theme */
+    --background: 0 0% 5%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Gold Primary */
+    --primary: 43 69% 53%;
+    --primary-foreground: 0 0% 5%;
+
+    /* Dark Secondary */
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 43 69% 53%;
+    --accent-foreground: 0 0% 5%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 15%;
+    --ring: 43 69% 53%;
+
+    --radius: 0.25rem;
+
+    /* Custom LensZora Colors */
+    --gold: 43 69% 53%;
+    --gold-light: 43 69% 65%;
+    --gold-dark: 43 69% 40%;
+    --jet-black: 0 0% 5%;
+    --matte-black: 0 0% 8%;
+    --charcoal: 0 0% 12%;
+
+    /* Premium Gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(43, 69%, 53%), hsl(43, 69%, 40%));
+    --gradient-gold-shine: linear-gradient(135deg, hsl(43, 69%, 65%), hsl(43, 69%, 53%), hsl(43, 69%, 40%));
+    --gradient-dark: linear-gradient(180deg, hsl(0, 0%, 8%), hsl(0, 0%, 5%));
+    --gradient-spotlight: radial-gradient(ellipse at center, hsl(0, 0%, 15%) 0%, hsl(0, 0%, 5%) 70%);
+
+    /* Premium Shadows */
+    --shadow-gold: 0 4px 30px -5px hsl(43, 69%, 53%, 0.3);
+    --shadow-gold-glow: 0 0 40px hsl(43, 69%, 53%, 0.25);
+    --shadow-elegant: 0 20px 50px -15px hsl(0, 0%, 0%, 0.8);
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 6%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 43 69% 53%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 43 69% 53%;
+  }
+
+  .dark {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-poppins antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-playfair;
+  }
+}
+
+@layer components {
+  .gold-text {
+    @apply text-primary;
+  }
+
+  .gold-gradient-text {
+    background: linear-gradient(135deg, hsl(43, 69%, 65%), hsl(43, 69%, 53%), hsl(43, 69%, 40%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gold-border {
+    @apply border border-primary/30;
+  }
+
+  .gold-border-hover {
+    @apply border border-transparent hover:border-primary/50 transition-all duration-300;
+  }
+
+  .gold-glow {
+    box-shadow: 0 0 30px hsl(43, 69%, 53%, 0.2);
+  }
+
+  .gold-glow-hover:hover {
+    box-shadow: 0 0 40px hsl(43, 69%, 53%, 0.3);
+  }
+
+  .spotlight-bg {
+    background: radial-gradient(ellipse at 50% 30%, hsl(0, 0%, 15%) 0%, hsl(0, 0%, 5%) 60%);
+  }
+
+  .premium-card {
+    @apply bg-card border border-border/50 hover:border-primary/30 transition-all duration-500;
+  }
+
+  .nav-link {
+    @apply relative text-foreground/80 hover:text-primary transition-colors duration-300;
+  }
+
+  .nav-link::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-[1px] bg-primary transition-all duration-300;
+  }
+
+  .nav-link:hover::after {
+    @apply w-full;
+  }
+
+  .btn-gold {
+    @apply bg-primary text-primary-foreground font-medium px-6 py-3 hover:bg-primary/90 transition-all duration-300;
+    box-shadow: 0 4px 20px -5px hsl(43, 69%, 53%, 0.4);
+  }
+
+  .btn-gold:hover {
+    box-shadow: 0 6px 30px -5px hsl(43, 69%, 53%, 0.5);
+  }
+
+  .btn-outline-gold {
+    @apply border border-primary text-primary bg-transparent hover:bg-primary hover:text-primary-foreground transition-all duration-300;
+  }
+
+  .section-heading {
+    @apply font-playfair text-3xl md:text-4xl lg:text-5xl font-semibold text-foreground;
+  }
+
+  .gold-underline {
+    @apply relative inline-block;
+  }
+
+  .gold-underline::after {
+    content: '';
+    @apply absolute -bottom-2 left-0 w-16 h-[2px] bg-primary;
+  }
+}
+
+@layer utilities {
+  .font-playfair {
+    font-family: 'Playfair Display', serif;
+  }
+
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-shine {
+    animation: shine 3s ease-in-out infinite;
+  }
+
+  .animate-pulse-gold {
+    animation: pulse-gold 2s ease-in-out infinite;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shine {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes pulse-gold {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px hsl(43, 69%, 53%, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 40px hsl(43, 69%, 53%, 0.4);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(0, 0%, 8%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(43, 69%, 53%, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(43, 69%, 53%, 0.7);
+}
