@@ -31,15 +31,9 @@ import inquiryRoutes from './routes/inquiries'
 export function startServer() {
   const app = express()
 
-  // CORS configuration for production
+  // CORS configuration - Allow all origins
   app.use(cors({
-    origin: [
-      'http://localhost:8081',
-      'http://localhost:5173',
-      'https://lenszora.com',
-      'http://lenszora.com'
-    ],
-    credentials: true,
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
   }))
