@@ -169,17 +169,9 @@ const Header = () => {
           <div className="flex items-center justify-between gap-6 px-4">
             {/* Logo - Left Side */}
             <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
-              {settings.logoUrl ? (
-                <img
-                  src={getImageUrl(settings.logoUrl)}
-                  alt={settings.websiteName || "LensZora"}
-                  className="h-9 md:h-11 w-auto max-w-[220px] object-contain group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <h1 className="font-playfair text-xl md:text-2xl font-bold tracking-wider">
-                  {renderLogoText()}
-                </h1>
-              )}
+              <h1 className="font-playfair text-xl md:text-2xl font-bold tracking-wider">
+                {renderLogoText()}
+              </h1>
             </Link>
 
             {/* Desktop Navigation - Center */}
