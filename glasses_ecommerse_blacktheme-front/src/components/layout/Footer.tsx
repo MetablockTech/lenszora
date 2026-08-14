@@ -23,7 +23,8 @@ const Footer = () => {
 
   const rawName = settings.websiteName || 'LensZora'
   const websiteName = (rawName.includes('.com') || rawName.includes('WWW.') || rawName.includes('buy eyeglasses') || rawName.length > 20) ? 'LensZora' : rawName
-  const contactInfo = settings.contactInfo
+  const contactInfo = settings.contactInfo || {}
+  const socialLinks = settings.socialLinks || []
 
   const helpPointLinks = [
     { name: "FAQ (Frequently Asked Questions)", path: "/faq" },
