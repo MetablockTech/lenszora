@@ -21,7 +21,9 @@ const Footer = () => {
     }
   }
 
-  const { contactInfo, socialLinks, websiteName } = settings
+  const rawName = settings.websiteName || 'LensZora'
+  const websiteName = (rawName.includes('.com') || rawName.includes('WWW.') || rawName.includes('buy eyeglasses') || rawName.length > 20) ? 'LensZora' : rawName
+  const contactInfo = settings.contactInfo
 
   const helpPointLinks = [
     { name: "FAQ (Frequently Asked Questions)", path: "/faq" },

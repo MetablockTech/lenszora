@@ -65,8 +65,9 @@ export default function AuthPage() {
             await auth.sendOTP(values.phone)
             setPhoneNumber(values.phone)
             setStep('otp')
+            otpForm.setValue('otp', '123456')
             setResendCooldown(30)
-            toast.success('OTP sent successfully')
+            toast.success('OTP sent! Use fixed OTP: 123456')
         } catch (error: any) {
             console.error('OTP Send Error:', error)
             toast.error(error.message || 'Failed to send OTP')
@@ -95,8 +96,9 @@ export default function AuthPage() {
         setIsLoading(true)
         try {
             await auth.sendOTP(phoneNumber)
+            otpForm.setValue('otp', '123456')
             setResendCooldown(30)
-            toast.success('OTP resent successfully')
+            toast.success('OTP resent! Use fixed OTP: 123456')
         } catch (error: any) {
             console.error('Resend OTP Error:', error)
             toast.error(error.message || 'Failed to resend OTP')
@@ -130,7 +132,7 @@ export default function AuthPage() {
                                         </div>
                                         <CardTitle className="text-2xl">Login or Register</CardTitle>
                                         <CardDescription className="text-slate-400">
-                                            Enter your mobile number to continue
+                                            Enter any mobile number to continue
                                         </CardDescription>
                                     </motion.div>
                                 ) : (
@@ -145,7 +147,7 @@ export default function AuthPage() {
                                         </div>
                                         <CardTitle className="text-2xl">Verify OTP</CardTitle>
                                         <CardDescription className="text-slate-400">
-                                            We've sent a 6-digit code to {phoneNumber}
+                                            Code for {phoneNumber} (Fixed OTP: <span className="font-bold text-amber-400">123456</span>)
                                         </CardDescription>
                                     </motion.div>
                                 )}
@@ -200,7 +202,7 @@ export default function AuthPage() {
                                                 id="otp"
                                                 type="text"
                                                 maxLength={6}
-                                                placeholder="000000"
+                                                placeholder="123456"
                                                 className="tracking-[1em] text-center text-xl bg-slate-800 border-slate-700"
                                                 {...otpForm.register('otp')}
                                                 autoFocus

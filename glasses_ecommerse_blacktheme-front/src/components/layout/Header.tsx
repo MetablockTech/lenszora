@@ -96,8 +96,13 @@ const Header = () => {
   }, []);
 
   const renderLogoText = () => {
-    const name = settings.websiteName.toUpperCase();
-    const parts = name.split(' ');
+    let name = settings.websiteName || 'LensZora';
+    // Clean up domain/taglines like "WWW.LENSZORA.COM - BUY EYEGLASSES , SUNGLASSES"
+    if (name.toUpperCase().includes('LENSZORA') || name.includes('.COM') || name.includes('WWW.') || name.length > 20) {
+      name = 'LensZora';
+    }
+    const upperName = name.toUpperCase();
+    const parts = upperName.split(' ');
 
     // Always use white for black background
     const firstPartColor = "text-white";
@@ -111,11 +116,11 @@ const Header = () => {
         </>
       );
     } else {
-      const mid = Math.ceil(name.length / 2);
+      const mid = Math.ceil(upperName.length / 2);
       return (
         <>
-          <span className={firstPartColor}>{name.substring(0, mid)}</span>
-          <span className={goldColor}>{name.substring(mid)}</span>
+          <span className={firstPartColor}>{upperName.substring(0, mid)}</span>
+          <span className={goldColor}>{upperName.substring(mid)}</span>
         </>
       );
     }
@@ -163,19 +168,18 @@ const Header = () => {
         <div className="container mx-auto px-0">
           <div className="flex items-center justify-between gap-6 px-4">
             {/* Logo - Left Side */}
-            <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
+            <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
               {settings.logoUrl ? (
-                <div className="h-8 w-8 rounded-lg bg-white/10 p-1 overflow-hidden group-hover:scale-105 transition-transform duration-300">
-                  <img
-                    src={getImageUrl(settings.logoUrl)}
-                    alt={settings.websiteName}
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-              ) : null}
-              <h1 className="font-playfair text-xl md:text-2xl font-bold tracking-wider">
-                {renderLogoText()}
-              </h1>
+                <img
+                  src={getImageUrl(settings.logoUrl)}
+                  alt={settings.websiteName || "LensZora"}
+                  className="h-9 md:h-11 w-auto max-w-[220px] object-contain group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <h1 className="font-playfair text-xl md:text-2xl font-bold tracking-wider">
+                  {renderLogoText()}
+                </h1>
+              )}
             </Link>
 
             {/* Desktop Navigation - Center */}
