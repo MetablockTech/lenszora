@@ -53,36 +53,48 @@ const ProductPage = () => {
     try {
       setLoading(true);
       const data = await products.get(id!);
+      if (!data || !data._id) {
+        throw new Error('Product not found');
+      }
       setProduct(data);
 
-      // Load related products
-      const allProducts = await products.list({ limit: 100 });
-      const currentVendorId = typeof data.vendorId === 'object' ? data.vendorId?._id : data.vendorId;
-      const currentCategoryId = typeof data.category === 'object' ? data.category?._id : data.category;
+      // Load related products safely
+      let sameVendor: any[] = [];
+      let sameCategory: any[] = [];
+      try {
+        const allProductsRes = await products.list({ limit: 100 });
+        const allProducts = Array.isArray(allProductsRes) ? allProductsRes : (allProductsRes?.products || []);
+        const currentVendorId = typeof data.vendorId === 'object' ? data.vendorId?._id : data.vendorId;
+        const currentCategoryId = typeof data.category === 'object' ? data.category?._id : data.category;
 
-      const sameVendor = allProducts.filter((p: any) => {
-        const pVendorId = typeof p.vendorId === 'object' ? p.vendorId?._id : p.vendorId;
-        return pVendorId === currentVendorId && p._id !== data._id;
-      }).slice(0, 10);
+        if (Array.isArray(allProducts)) {
+          sameVendor = allProducts.filter((p: any) => {
+            const pVendorId = typeof p.vendorId === 'object' ? p.vendorId?._id : p.vendorId;
+            return pVendorId && pVendorId === currentVendorId && p._id !== data._id;
+          }).slice(0, 10);
 
-      const sameCategory = allProducts.filter((p: any) => {
-        const pCategoryId = typeof p.category === 'object' ? p.category?._id : p.category;
-        return pCategoryId === currentCategoryId && p._id !== data._id;
-      }).slice(0, 10);
+          sameCategory = allProducts.filter((p: any) => {
+            const pCategoryId = typeof p.category === 'object' ? p.category?._id : p.category;
+            return pCategoryId && pCategoryId === currentCategoryId && p._id !== data._id;
+          }).slice(0, 10);
+        }
+      } catch (e) {
+        console.warn('Failed to load related products:', e);
+      }
 
       // Dynamic vendor details
       if (data.vendorId && typeof data.vendorId === 'object') {
         const v = data.vendorId;
-        const addressObj = v.address || {};
+        const addressObj = (v.address && typeof v.address === 'object') ? v.address : {};
         const locParts = [addressObj.city, addressObj.state, addressObj.country].filter(Boolean);
         const locationStr = locParts.length > 0 ? locParts.join(', ') : (addressObj.street || '');
         
         setVendorData({
           name: v.businessName || v.storeName || "Verified Seller",
           logo: v.logo || null,
-          rating: v.rating || 5.0,
-          totalReviews: v.totalReviews || data.totalReviews || 0,
-          totalProducts: v.totalProducts || sameVendor.length + 1,
+          rating: Number(v.rating) || 5.0,
+          totalReviews: Number(v.totalReviews) || Number(data.totalReviews) || 0,
+          totalProducts: Number(v.totalProducts) || sameVendor.length + 1,
           location: locationStr
         });
       } else if (data.vendorId) {
@@ -90,7 +102,7 @@ const ProductPage = () => {
           name: "Verified Seller",
           logo: null,
           rating: 5.0,
-          totalReviews: data.totalReviews || 0,
+          totalReviews: Number(data.totalReviews) || 0,
           totalProducts: sameVendor.length + 1,
           location: ""
         });
@@ -196,28 +208,30 @@ const ProductPage = () => {
   };
 
   const currentVariant = getCurrentVariant();
-  const basePrice = currentVariant ? currentVariant.price : (product.price || 0);
-  const displayPrice = basePrice + (selectedLens?.package?.price || 0);
+  const basePrice = Number(currentVariant ? currentVariant.price : (product.price || 0));
+  const lensPrice = Number(selectedLens?.package?.price || 0);
+  const displayPrice = basePrice + lensPrice;
   // Treat null/undefined stock as in stock — only disable when explicitly 0
   const displayStock = currentVariant
     ? (currentVariant.stock ?? 999)
     : (product.stock != null ? product.stock : 999);
-  const displayImages = currentVariant?.images?.length > 0 ? currentVariant.images : product.images;
+  const displayImages = currentVariant?.images?.length > 0 ? currentVariant.images : (product.images || []);
 
-  let calculatedOriginal = product.originalPrice;
-  if (!calculatedOriginal && product.discountAmount && product.discountAmount > 0) {
+  let calculatedOriginal = Number(product.originalPrice || 0);
+  if (!calculatedOriginal && product.discountAmount && Number(product.discountAmount) > 0) {
+    const discAmt = Number(product.discountAmount);
     if (product.discountType === 'percentage') {
-      calculatedOriginal = Math.round(basePrice / (1 - Math.min(99, product.discountAmount) / 100));
+      calculatedOriginal = Math.round(basePrice / (1 - Math.min(99, discAmt) / 100));
     } else {
-      calculatedOriginal = basePrice + product.discountAmount;
+      calculatedOriginal = basePrice + discAmt;
     }
-  } else if (!calculatedOriginal && product.discountPrice && product.discountPrice < basePrice) {
+  } else if (!calculatedOriginal && product.discountPrice && Number(product.discountPrice) < basePrice) {
     calculatedOriginal = basePrice;
   }
 
-  const originalPrice = (calculatedOriginal || (product.discountAmount || product.discountPrice ? Math.round(basePrice * 1.25) : 0)) + (selectedLens?.package?.price || 0);
+  const originalPrice = (calculatedOriginal || (product.discountAmount || product.discountPrice ? Math.round(basePrice * 1.25) : 0)) + lensPrice;
   const hasDiscount = originalPrice > displayPrice;
-  const discount = hasDiscount ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100) : 0;
+  const discount = (hasDiscount && originalPrice > 0) ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100) : 0;
 
   const handleAddToCart = (lensData?: any, stayOnPage = true) => {
     if (displayStock <= 0) {
@@ -259,12 +273,14 @@ const ProductPage = () => {
     navigate('/cart');
   };
 
-  const specifications = product.attributes?.map((attr: any) => ({
-    label: attr.name,
-    value: Array.isArray(attr.values) ? attr.values.join(", ") : String(attr.values)
-  })) || [];
+  const specifications = Array.isArray(product.attributes) ? product.attributes.filter(Boolean).map((attr: any) => ({
+    label: String(attr.name || ''),
+    value: Array.isArray(attr.values) ? attr.values.join(", ") : String(attr.values || '')
+  })) : [];
 
-  const productWarranty = product.eyewearDetails?.warranty || product.warranty || '6 Months Warranty';
+  const productWarranty = typeof product.eyewearDetails?.warranty === 'string' 
+    ? product.eyewearDetails.warranty 
+    : (typeof product.warranty === 'string' ? product.warranty : '6 Months Warranty');
 
   if (product.eyewearDetails) {
     const details = product.eyewearDetails;
@@ -591,10 +607,10 @@ const ProductPage = () => {
             {/* Product Story — full width */}
             <div className="premium-card p-8 rounded-2xl bg-secondary/10">
               <h3 className="text-lg font-bold mb-6 border-b border-white/5 pb-4">Product Story</h3>
-              <div className="prose prose-invert max-w-none text-muted-foreground leading-relaxed text-sm font-medium" dangerouslySetInnerHTML={{ __html: product.description }} />
+              <div className="prose prose-invert max-w-none text-muted-foreground leading-relaxed text-sm font-medium" dangerouslySetInnerHTML={{ __html: product.description || '<p>No detailed description available for this product.</p>' }} />
             </div>
 
-            {vendorProducts.length > 0 && (
+            {(vendorProducts && vendorProducts.length > 0) && (
               <ProductSlider
                 title="More From The Store"
                 subtitle="Explore other curated pieces from this vendor"
@@ -604,7 +620,7 @@ const ProductPage = () => {
               />
             )}
 
-            {similarProducts.length > 0 && (
+            {(similarProducts && similarProducts.length > 0) && (
               <ProductSlider
                 title="Similar Masterpieces"
                 subtitle="You might also appreciate these exquisite designs"

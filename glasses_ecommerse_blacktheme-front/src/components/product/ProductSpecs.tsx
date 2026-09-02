@@ -10,8 +10,8 @@ interface ProductSpecsProps {
   warranty?: string;
 }
 
-const ProductSpecs = ({ specifications, warranty }: ProductSpecsProps) => {
-  const warrantyTitle = warranty || "6 Months Warranty";
+const ProductSpecs = ({ specifications = [], warranty }: ProductSpecsProps) => {
+  const warrantyTitle = typeof warranty === 'string' ? warranty : "6 Months Warranty";
   const warrantyAbbr = warrantyTitle.toLowerCase().includes('year') || warrantyTitle.toLowerCase().includes('1 year') || warrantyTitle.toLowerCase().includes('12 month') 
     ? '1YR' 
     : warrantyTitle.match(/\d+\s*(?:M|month|mon)/i) ? warrantyTitle.match(/\d+/)?.[0] + 'M' : '6M';
