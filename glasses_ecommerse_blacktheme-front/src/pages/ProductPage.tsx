@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info } from "lucide-react";
-import { cn, getImageUrl } from "@/lib/utils";
+import { cn, getImageUrl, calculateProductDiscount } from "@/lib/utils";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -209,46 +209,17 @@ const ProductPage = () => {
 
   const computeProductPricing = () => {
     const variant = getCurrentVariant();
-    const rawPrice = Number(variant ? variant.price : (product.price || 0));
     const lensPrice = Number(selectedLens?.package?.price || 0);
 
-    // 1. Determine Effective Selling Price
-    let sellingPrice = rawPrice;
-    if (product.discountPrice && Number(product.discountPrice) < rawPrice) {
-      sellingPrice = Number(product.discountPrice);
-    } else if (product.salePrice && Number(product.salePrice) < rawPrice) {
-      sellingPrice = Number(product.salePrice);
-    } else if (product.discountAmount && Number(product.discountAmount) > 0) {
-      const disc = Number(product.discountAmount);
-      if (product.discountType === 'percentage') {
-        sellingPrice = Math.round(rawPrice * (1 - Math.min(99, disc) / 100));
-      } else if (product.discountType === 'flat') {
-        sellingPrice = Math.max(0, rawPrice - disc);
-      }
-    }
-
-    // 2. Determine Original Strikethrough Price (MRP)
-    let mrpPrice = 0;
-    if (product.originalPrice && Number(product.originalPrice) > sellingPrice) {
-      mrpPrice = Number(product.originalPrice);
-    } else if (sellingPrice < rawPrice) {
-      mrpPrice = rawPrice;
-    } else {
-      // Default dynamic retail MRP calculation (e.g. 20% discount standard)
-      mrpPrice = Math.round(sellingPrice * 1.25);
-    }
-
-    const finalDisplayPrice = sellingPrice + lensPrice;
-    const finalOriginalPrice = mrpPrice + lensPrice;
-    const hasDisc = finalOriginalPrice > finalDisplayPrice;
-    const discPercentage = hasDisc ? Math.round(((finalOriginalPrice - finalDisplayPrice) / finalOriginalPrice) * 100) : 0;
+    const calc = calculateProductDiscount(product, variant);
 
     return {
-      basePrice: sellingPrice,
-      displayPrice: finalDisplayPrice,
-      originalPrice: finalOriginalPrice,
-      hasDiscount: hasDisc,
-      discount: discPercentage
+      basePrice: calc.sellingPrice,
+      displayPrice: calc.sellingPrice + lensPrice,
+      originalPrice: calc.hasDiscount ? calc.mrpPrice + lensPrice : 0,
+      hasDiscount: calc.hasDiscount,
+      discount: calc.discountPercentage,
+      discountLabel: calc.discountLabel
     };
   };
 
@@ -258,7 +229,7 @@ const ProductPage = () => {
     : (product.stock != null ? product.stock : 999);
   const displayImages = currentVariant?.images?.length > 0 ? currentVariant.images : (product.images || []);
 
-  const { basePrice, displayPrice, originalPrice, hasDiscount, discount } = computeProductPricing();
+  const { basePrice, displayPrice, originalPrice, hasDiscount, discount, discountLabel } = computeProductPricing();
 
   const handleAddToCart = (lensData?: any, stayOnPage = true) => {
     if (displayStock <= 0) {
@@ -391,9 +362,9 @@ const ProductPage = () => {
                 <svg viewBox="0 0 76 38" fill="none" width="56" height="28"><rect x="2" y="8" width="30" height="22" rx="11" stroke="#DAAB34" strokeWidth="3" /><rect x="44" y="8" width="30" height="22" rx="11" stroke="#DAAB34" strokeWidth="3" /><line x1="32" y1="19" x2="44" y2="19" stroke="#DAAB34" strokeWidth="2.5" /></svg>
               </div>
             )}
-            {discount > 0 && (
+            {hasDiscount && (
               <div style={{ background: '#ef4444', color: '#fff', fontSize: '.72rem', fontWeight: 700, borderRadius: 6, padding: '3px 7px', textAlign: 'center', marginTop: 4 }}>
-                {discount}% OFF
+                {discountLabel || `${discount}% OFF`}
               </div>
             )}
           </div>
@@ -473,10 +444,10 @@ const ProductPage = () => {
             {/* Price */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: '1.45rem', fontWeight: 700, color: '#DAAB34' }}>₹{displayPrice.toLocaleString()}</span>
-              {discount > 0 && (
+              {hasDiscount && (
                 <>
                   <span style={{ fontSize: '.9rem', color: '#6b7280', textDecoration: 'line-through' }}>₹{originalPrice.toLocaleString()}</span>
-                  <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.12)', padding: '2px 8px', borderRadius: 20 }}>{discount}% OFF</span>
+                  <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.12)', padding: '2px 8px', borderRadius: 20 }}>{discountLabel || `${discount}% OFF`}</span>
                 </>
               )}
             </div>

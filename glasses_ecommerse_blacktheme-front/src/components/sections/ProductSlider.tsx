@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
-import { getImageUrl, getProductImage } from "@/lib/utils";
+import { getImageUrl, getProductImage, calculateProductDiscount } from "@/lib/utils";
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 
@@ -134,16 +134,10 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
                                                 className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-700"
                                             />
                                             {(() => {
-                                                const rawPrice = Number(product.price || 0);
-                                                const sale = Number(product.salePrice || product.discountPrice || rawPrice);
-                                                let mrp = Number(product.originalPrice || 0);
-                                                if (!mrp || mrp <= sale) {
-                                                    mrp = sale < rawPrice ? rawPrice : Math.round(sale * 1.25);
-                                                }
-                                                const discPct = mrp > sale ? Math.round(((mrp - sale) / mrp) * 100) : 0;
-                                                return discPct > 0 ? (
+                                                const calc = calculateProductDiscount(product);
+                                                return calc.hasDiscount ? (
                                                     <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
-                                                        Save {discPct}%
+                                                        Save {calc.discountLabel}
                                                     </div>
                                                 ) : null;
                                             })()}
@@ -202,25 +196,19 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
                                             <div className="mt-auto flex items-center justify-between">
                                                 <div className="flex flex-col">
                                                     {(() => {
-                                                        const rawPrice = Number(product.price || 0);
-                                                        const sale = Number(product.salePrice || product.discountPrice || rawPrice);
-                                                        let mrp = Number(product.originalPrice || 0);
-                                                        if (!mrp || mrp <= sale) {
-                                                            mrp = sale < rawPrice ? rawPrice : Math.round(sale * 1.25);
-                                                        }
-                                                        const hasDisc = mrp > sale;
-                                                        return hasDisc ? (
+                                                        const calc = calculateProductDiscount(product);
+                                                        return calc.hasDiscount ? (
                                                             <>
                                                                 <span className="text-base font-bold text-primary">
-                                                                    ₹{sale.toLocaleString()}
+                                                                    ₹{calc.sellingPrice.toLocaleString()}
                                                                 </span>
                                                                 <span className="text-xs text-slate-500 line-through">
-                                                                    ₹{mrp.toLocaleString()}
+                                                                    ₹{calc.mrpPrice.toLocaleString()}
                                                                 </span>
                                                             </>
                                                         ) : (
                                                             <span className="text-base font-bold text-white">
-                                                                ₹{sale.toLocaleString()}
+                                                                ₹{calc.sellingPrice.toLocaleString()}
                                                             </span>
                                                         );
                                                     })()}

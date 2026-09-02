@@ -59,3 +59,49 @@ export function formatDate(date: string | Date | undefined) {
     minute: '2-digit'
   })
 }
+
+export function calculateProductDiscount(product: any, selectedVariant?: any) {
+  if (!product) {
+    return { sellingPrice: 0, mrpPrice: 0, hasDiscount: false, discountPercentage: 0, discountLabel: '' }
+  }
+
+  const rawPrice = Number(selectedVariant ? selectedVariant.price : (product.price || 0))
+  let sellingPrice = rawPrice
+  let mrpPrice = 0
+
+  const origPrice = Number(product.originalPrice || 0)
+  const discPrice = Number(product.discountPrice || product.salePrice || 0)
+  const discAmount = Number(product.discountAmount || 0)
+  const discType = product.discountType || 'percentage'
+
+  if (origPrice > 0 && origPrice > rawPrice) {
+    mrpPrice = origPrice
+    sellingPrice = rawPrice
+  } else if (discPrice > 0 && discPrice < rawPrice) {
+    mrpPrice = rawPrice
+    sellingPrice = discPrice
+  } else if (discAmount > 0) {
+    if (discType === 'percentage') {
+      mrpPrice = rawPrice
+      sellingPrice = Math.round(rawPrice * (1 - Math.min(99, discAmount) / 100))
+    } else if (discType === 'flat') {
+      mrpPrice = rawPrice
+      sellingPrice = Math.max(0, rawPrice - discAmount)
+    }
+  }
+
+  const hasDiscount = mrpPrice > sellingPrice && sellingPrice > 0
+  const discountPercentage = hasDiscount ? Math.round(((mrpPrice - sellingPrice) / mrpPrice) * 100) : 0
+  const discountLabel = discAmount > 0 && discType === 'flat' 
+    ? `₹${discAmount} OFF` 
+    : `${discountPercentage}% OFF`
+
+  return {
+    sellingPrice,
+    mrpPrice,
+    hasDiscount,
+    discountPercentage,
+    discountLabel
+  }
+}
+
