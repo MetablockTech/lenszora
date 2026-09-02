@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { brands, products } from '@/lib/api'
 import { getToken } from '@/lib/api'
 import { getImageUrl } from '@/lib/utils'
-import { Plus, Edit2, Trash2, X } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const BrandsPage: React.FC = () => {
@@ -11,6 +11,12 @@ const BrandsPage: React.FC = () => {
   const [name, setName] = useState('')
   const [logo, setLogo] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [banner, setBanner] = useState('')
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [horizontalBanner, setHorizontalBanner] = useState('')
+  const [horizontalBannerFile, setHorizontalBannerFile] = useState<File | null>(null)
+  const [tagline, setTagline] = useState('')
+  const [isTrending, setIsTrending] = useState(false)
   const [editing, setEditing] = useState<any | null>(null)
   const [showModal, setShowModal] = useState(false)
   const token = getToken()
@@ -37,6 +43,12 @@ const BrandsPage: React.FC = () => {
     setName('')
     setLogo('')
     setLogoFile(null)
+    setBanner('')
+    setBannerFile(null)
+    setHorizontalBanner('')
+    setHorizontalBannerFile(null)
+    setTagline('')
+    setIsTrending(false)
     setShowModal(true)
   }
 
@@ -45,6 +57,12 @@ const BrandsPage: React.FC = () => {
     setName(b.name)
     setLogo(b.logo || '')
     setLogoFile(null)
+    setBanner(b.banner || '')
+    setBannerFile(null)
+    setHorizontalBanner(b.horizontalBanner || '')
+    setHorizontalBannerFile(null)
+    setTagline(b.tagline || '')
+    setIsTrending(b.isTrending || false)
     setShowModal(true)
   }
 
@@ -52,6 +70,8 @@ const BrandsPage: React.FC = () => {
     setShowModal(false)
     setEditing(null)
     setLogoFile(null)
+    setBannerFile(null)
+    setHorizontalBannerFile(null)
   }
 
   async function save(e?: React.FormEvent) {
@@ -59,13 +79,32 @@ const BrandsPage: React.FC = () => {
     setLoading(true)
     try {
       let finalLogoUrl = logo
+      let finalBannerUrl = banner
+      let finalHorizontalBannerUrl = horizontalBanner
 
       if (logoFile) {
         const res = await products.uploadImage(logoFile, 'brands', '', name, token!)
         finalLogoUrl = res.url
       }
 
-      const payload = { name, logo: finalLogoUrl }
+      if (bannerFile) {
+        const res = await products.uploadImage(bannerFile, 'brands', '', `${name}-banner`, token!)
+        finalBannerUrl = res.url
+      }
+
+      if (horizontalBannerFile) {
+        const res = await products.uploadImage(horizontalBannerFile, 'brands', '', `${name}-horizontal-banner`, token!)
+        finalHorizontalBannerUrl = res.url
+      }
+
+      const payload = {
+        name,
+        logo: finalLogoUrl,
+        banner: finalBannerUrl,
+        horizontalBanner: finalHorizontalBannerUrl,
+        tagline,
+        isTrending
+      }
       if (editing && editing._id) await brands.update(editing._id, payload, token)
       else await brands.create(payload, token)
       await load()
@@ -104,7 +143,21 @@ const BrandsPage: React.FC = () => {
             {paginatedList.map((b) => (
               <div key={b._id} className="bg-card rounded-lg border border-border/30 p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-foreground">{b.name}</h3>
+                  <div>
+                    <h3 className="font-semibold text-foreground">{b.name}</h3>
+                    <div className="flex gap-1.5 items-center mt-1">
+                      {b.isTrending && (
+                        <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">
+                          ★ Trending Card
+                        </span>
+                      )}
+                      {b.horizontalBanner && (
+                        <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                          ✓ Horizontal Banner
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <button onClick={() => openEdit(b)} className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors">
                       <Edit2 className="w-4 h-4" />
@@ -164,7 +217,7 @@ const BrandsPage: React.FC = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-lg border border-border shadow-xl max-w-md w-full">
+          <div className="bg-card rounded-lg border border-border shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-border">
               <h3 className="font-semibold text-foreground">{editing ? 'Edit Brand' : 'New Brand'}</h3>
               <button onClick={closeModal} className="text-muted-foreground hover:text-foreground">
@@ -174,10 +227,10 @@ const BrandsPage: React.FC = () => {
 
             <form onSubmit={save} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Brand Name</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Brand Name *</label>
                 <input
-                  className="w-full bg-background border border-input p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground"
-                  placeholder="Brand name"
+                  className="w-full bg-background border border-input p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground text-sm"
+                  placeholder="e.g. Ray-Ban, Oakley, Batman"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -200,7 +253,7 @@ const BrandsPage: React.FC = () => {
                         setLogo(URL.createObjectURL(file))
                       }
                     }}
-                    className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    className="text-xs text-muted-foreground file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                   />
                   <input
                     className="w-full bg-background border border-input p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground text-xs"
@@ -211,7 +264,88 @@ const BrandsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-4">
+              {/* Full Horizontal Banner Section */}
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 space-y-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                  <ImageIcon className="w-4 h-4" /> Full Horizontal Slider Banner (Widescreen)
+                </label>
+                <p className="text-[11px] text-slate-400">
+                  This banner will be displayed in the full horizontal Brand Slider section right under Trending on the homepage.
+                </p>
+                {horizontalBanner && (
+                  <img src={getImageUrl(horizontalBanner)} alt="Horizontal Banner Preview" className="w-full h-28 object-cover rounded-lg border border-slate-700" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setHorizontalBannerFile(file)
+                      setHorizontalBanner(URL.createObjectURL(file))
+                    }
+                  }}
+                  className="text-xs text-muted-foreground file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-500/10 file:text-blue-400 hover:file:bg-blue-500/20"
+                />
+                <input
+                  className="w-full bg-background border border-input p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground text-xs"
+                  placeholder="Or paste Full Horizontal Banner URL"
+                  value={horizontalBanner}
+                  onChange={(e) => setHorizontalBanner(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Brand Poster Card (For Trending Section)</label>
+                <div className="flex flex-col gap-2">
+                  {banner && (
+                    <img src={getImageUrl(banner)} alt="Banner Preview" className="w-full h-24 object-cover rounded-lg border border-border bg-slate-950" />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setBannerFile(file)
+                        setBanner(URL.createObjectURL(file))
+                      }
+                    }}
+                    className="text-xs text-muted-foreground file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  />
+                  <input
+                    className="w-full bg-background border border-input p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground text-xs"
+                    placeholder="Or paste Poster Banner URL"
+                    value={banner}
+                    onChange={(e) => setBanner(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Tagline / Subtitle</label>
+                <input
+                  className="w-full bg-background border border-input p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground text-xs"
+                  placeholder="e.g. BOLD & BLACK, BATMAN STYLE!"
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="isTrending"
+                  checked={isTrending}
+                  onChange={(e) => setIsTrending(e.target.checked)}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                />
+                <label htmlFor="isTrending" className="text-xs font-semibold text-foreground cursor-pointer">
+                  Feature in #Trending at LENSZORA Cards
+                </label>
+              </div>
+
+              <div className="flex gap-2 pt-4 border-t border-border">
                 <Button className="flex-1 btn-gold" type="submit">Save</Button>
                 <Button type="button" variant="outline" className="flex-1 border-border text-foreground hover:bg-secondary" onClick={closeModal}>Cancel</Button>
               </div>

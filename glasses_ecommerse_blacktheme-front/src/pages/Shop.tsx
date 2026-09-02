@@ -845,7 +845,7 @@ const Shop = () => {
                               </span>
                               <span className="text-slate-600">•</span>
                               <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">
-                                {typeof product.brand === 'string' ? product.brand : product.brand.name}
+                                {product.brand ? (typeof product.brand === 'string' ? product.brand : product.brand.name) : 'LensZora'}
                               </span>
                             </div>
 

@@ -15,9 +15,9 @@ router.get('/', async (req, res) => {
 
 router.post('/', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { name, slug, logo } = req.body
+    const { name, slug, logo, banner, horizontalBanner, tagline, bgColor, isTrending, showHorizontalSlider } = req.body
     if (!name) return res.status(400).json({ error: 'Missing name' })
-    const b = new Brand({ name, slug, logo })
+    const b = new Brand({ name, slug, logo, banner, horizontalBanner, tagline, bgColor, isTrending, showHorizontalSlider })
     await b.save()
     res.json(b)
   } catch (err: any) {

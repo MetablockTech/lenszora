@@ -27,10 +27,10 @@ const Footer = () => {
   const socialLinks = settings.socialLinks || []
 
   const helpPointLinks = [
+    { name: "Customer Support & Assistance", path: "/support" },
     { name: "FAQ (Frequently Asked Questions)", path: "/faq" },
     { name: "Contact Point", path: "/contact" },
     { name: "Track Order", path: "/orders" },
-    { name: "Agent Calling", path: `tel:${contactInfo?.phone || "+919876543210"}` },
   ]
 
   const policyLinks = [

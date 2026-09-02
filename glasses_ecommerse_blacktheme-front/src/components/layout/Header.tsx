@@ -4,6 +4,7 @@ import { Search, Heart, ShoppingBag, User, ChevronDown, Menu, X, LogOut, MapPin,
 import { motion, AnimatePresence } from "framer-motion";
 import MegaMenu from "./MegaMenu";
 import EyewearMegaMenu from "./EyewearMegaMenu";
+import ReferralModal from "./ReferralModal";
 import TopBar from "./TopBar";
 import { useCart } from "@/hooks/use-cart";
 import { useSettings } from "@/context/SettingsContext";
@@ -137,17 +138,21 @@ const Header = () => {
   };
 
   const isLoggedIn = !!getToken();
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+
   const user = isLoggedIn ? getUser() : null;
   const userIdentifier = user ? (user.name || user.email || user.phone || "Account") : "Sign In";
 
   const handleReferFriends = () => {
-    const referCode = `LENSEZORA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const referLink = `${window.location.origin}/auth?ref=${referCode}`;
-    navigator.clipboard.writeText(referLink);
-    toast({
-      title: "Referral Link Copied!",
-      description: `Share this link with your friends to get 50% off! Code: ${referCode}`,
-    });
+    if (!isLoggedIn) {
+      navigate('/auth');
+      toast({
+        title: "Please Sign In",
+        description: "Sign in to access your referral link & rewards!",
+      });
+      return;
+    }
+    setIsReferralModalOpen(true);
   };
 
   const handlePrescriptionNearStore = () => {
@@ -192,10 +197,27 @@ const Header = () => {
                     className="nav-link flex items-center gap-0.5 text-[11px] font-bold py-2 px-2 transition-colors uppercase tracking-wider whitespace-nowrap text-white hover:text-gold"
                   >
                     {category.name}
-                    <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isMegaMenuOpen ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isMegaMenuOpen && activeCategorySlug === category.slug ? "rotate-180" : ""}`} />
                   </Link>
                 </div>
               ))}
+              <div
+                className="relative"
+                onMouseEnter={() => {
+                  setIsMegaMenuOpen(true);
+                  setActiveCategorySlug("brands");
+                }}
+                onMouseLeave={() => setIsMegaMenuOpen(false)}
+              >
+                <Link
+                  to="/brands"
+                  onClick={() => setIsMegaMenuOpen(false)}
+                  className="nav-link flex items-center gap-0.5 text-[11px] font-bold py-2 px-2 transition-colors uppercase tracking-wider whitespace-nowrap text-white hover:text-gold"
+                >
+                  BRANDS
+                  <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isMegaMenuOpen && activeCategorySlug === "brands" ? "rotate-180" : ""}`} />
+                </Link>
+              </div>
               <Link
                 to="/store-locator"
                 className="nav-link flex items-center gap-0.5 text-[11px] font-bold py-2 px-2 transition-colors uppercase tracking-wider whitespace-nowrap text-white hover:text-gold"
@@ -424,6 +446,8 @@ const Header = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ReferralModal open={isReferralModalOpen} onOpenChange={setIsReferralModalOpen} />
     </header>
   );
 };

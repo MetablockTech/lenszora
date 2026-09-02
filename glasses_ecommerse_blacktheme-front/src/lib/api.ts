@@ -22,11 +22,11 @@ export const auth = {
     const data = (await res.json()) as LoginResponse
     return data
   },
-  async sendOTP(phone: string) {
+  async sendOTP(phone: string, referredByCode?: string) {
     const res = await fetch(`${API_URL}/api/auth/send-otp`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ phone })
+      body: JSON.stringify({ phone, referredByCode })
     })
     if (!res.ok) throw new Error(await res.text())
     return res.json()
@@ -1046,6 +1046,81 @@ export const appointments = {
       body: JSON.stringify({ status })
     })
     if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
+}
+
+export const coupons = {
+  async apply(code: string, orderAmount: number, userId?: string) {
+    const res = await fetch(`${API_URL}/api/coupons/apply`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ code, orderAmount, userId })
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Failed to apply coupon')
+    }
+    return res.json()
+  },
+  async getMyCoupons(token?: string) {
+    const res = await fetch(`${API_URL}/api/coupons/my-coupons`, {
+      headers: getHeaders(token)
+    })
+    if (!res.ok) throw new Error('Failed to fetch coupons')
+    return res.json()
+  },
+  async getAllAdmin(token?: string) {
+    const res = await fetch(`${API_URL}/api/coupons/admin/all`, {
+      headers: getHeaders(token)
+    })
+    if (!res.ok) throw new Error('Failed to fetch all coupons')
+    return res.json()
+  },
+  async createAdmin(payload: any, token?: string) {
+    const res = await fetch(`${API_URL}/api/coupons/admin/create`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload)
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Failed to create coupon')
+    }
+    return res.json()
+  },
+  async deleteAdmin(id: string, token?: string) {
+    const res = await fetch(`${API_URL}/api/coupons/admin/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
+    })
+    if (!res.ok) throw new Error('Failed to delete coupon')
+    return res.json()
+  }
+}
+
+export const referrals = {
+  async getMyInfo(token?: string) {
+    const res = await fetch(`${API_URL}/api/referral/my-info`, {
+      headers: getHeaders(token)
+    })
+    if (!res.ok) throw new Error('Failed to fetch referral info')
+    return res.json()
+  },
+  async getAdminSettings(token?: string) {
+    const res = await fetch(`${API_URL}/api/referral/admin/settings`, {
+      headers: getHeaders(token)
+    })
+    if (!res.ok) throw new Error('Failed to fetch referral settings')
+    return res.json()
+  },
+  async updateAdminSettings(settings: any, token?: string) {
+    const res = await fetch(`${API_URL}/api/referral/admin/settings`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(settings)
+    })
+    if (!res.ok) throw new Error('Failed to update referral settings')
     return res.json()
   }
 }

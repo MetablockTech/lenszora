@@ -5,18 +5,18 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from 'sonner'
-import { Loader2, Save, Plus, Trash2, MoveUp, MoveDown } from 'lucide-react'
+import { Loader2, Save, Plus, Trash2, MoveUp, MoveDown, Link as LinkIcon, RotateCcw } from 'lucide-react'
 import { settings, categories, getToken } from '@/lib/api'
+
+interface CustomLink {
+    label: string
+    url: string
+}
 
 interface NavSection {
     title: string
     source: 'subcategories' | 'genders' | 'shapes' | 'brands' | 'custom'
-    customLinks?: { label: string; url: string }[]
-}
-
-interface CategoryNavConfig {
-    categoryId: string
-    columns: NavSection[]
+    customLinks?: CustomLink[]
 }
 
 const NavigationManager: React.FC = () => {
@@ -39,7 +39,8 @@ const NavigationManager: React.FC = () => {
             ])
 
             setMainCategories(cats || [])
-            setNavConfigs(navSettings.value || {})
+            const loadedConfigs = navSettings?.value || {}
+            setNavConfigs(loadedConfigs)
 
             if (cats && cats.length > 0) {
                 setSelectedCategoryId(cats[0]._id)
@@ -52,22 +53,33 @@ const NavigationManager: React.FC = () => {
         }
     }
 
-    const currentColumns = navConfigs[selectedCategoryId] || [
+    const defaultColumns: NavSection[] = [
         { title: 'Shop By Gender', source: 'genders' },
         { title: 'Shop By Type', source: 'subcategories' },
         { title: 'Shop By Shape', source: 'shapes' },
         { title: 'Popular Brands', source: 'brands' }
     ]
 
+    const currentColumns = selectedCategoryId && navConfigs[selectedCategoryId]
+        ? navConfigs[selectedCategoryId]
+        : defaultColumns
+
     function updateColumns(newColumns: NavSection[]) {
-        setNavConfigs({
-            ...navConfigs,
+        if (!selectedCategoryId) return
+        setNavConfigs(prev => ({
+            ...prev,
             [selectedCategoryId]: newColumns
-        })
+        }))
     }
 
     const addColumn = () => {
-        updateColumns([...currentColumns, { title: 'New Section', source: 'subcategories' }])
+        if (!selectedCategoryId) {
+            toast.error('Please select a category first')
+            return
+        }
+        const updated = [...currentColumns, { title: 'New Section', source: 'subcategories' as const, customLinks: [] }]
+        updateColumns(updated)
+        toast.success('New column added')
     }
 
     const removeColumn = (index: number) => {
@@ -93,6 +105,35 @@ const NavigationManager: React.FC = () => {
         updateColumns(newCols)
     }
 
+    const addCustomLink = (colIndex: number) => {
+        const newCols = [...currentColumns]
+        const existingLinks = newCols[colIndex].customLinks || []
+        newCols[colIndex].customLinks = [...existingLinks, { label: 'New Link', url: '/shop' }]
+        updateColumns(newCols)
+    }
+
+    const updateCustomLink = (colIndex: number, linkIndex: number, field: keyof CustomLink, value: string) => {
+        const newCols = [...currentColumns]
+        const links = [...(newCols[colIndex].customLinks || [])]
+        links[linkIndex] = { ...links[linkIndex], [field]: value }
+        newCols[colIndex].customLinks = links
+        updateColumns(newCols)
+    }
+
+    const removeCustomLink = (colIndex: number, linkIndex: number) => {
+        const newCols = [...currentColumns]
+        const links = [...(newCols[colIndex].customLinks || [])]
+        links.splice(linkIndex, 1)
+        newCols[colIndex].customLinks = links
+        updateColumns(newCols)
+    }
+
+    const resetToDefaults = () => {
+        if (!selectedCategoryId) return
+        updateColumns(defaultColumns)
+        toast.info('Reset to default columns layout')
+    }
+
     async function handleSave() {
         setSaving(true)
         const token = getToken()
@@ -102,7 +143,7 @@ const NavigationManager: React.FC = () => {
                 category: 'navigation',
                 type: 'json'
             }, token)
-            toast.success('Navigation configuration saved')
+            toast.success('Navigation configuration saved successfully')
         } catch (error) {
             toast.error('Failed to save configuration')
         } finally {
@@ -118,6 +159,8 @@ const NavigationManager: React.FC = () => {
         )
     }
 
+    const selectedCategoryName = mainCategories.find(c => c._id === selectedCategoryId)?.name || 'selected category'
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -125,7 +168,7 @@ const NavigationManager: React.FC = () => {
                     <h2 className="text-3xl font-bold tracking-tight text-slate-900">Navigation Management</h2>
                     <p className="text-slate-500">Customize the mega menu sections for each category.</p>
                 </div>
-                <Button onClick={handleSave} disabled={saving}>
+                <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Save className="mr-2 h-4 w-4" /> Save All Configs
                 </Button>
@@ -157,61 +200,114 @@ const NavigationManager: React.FC = () => {
                         <div>
                             <CardTitle>Mega Menu Columns</CardTitle>
                             <CardDescription>
-                                Define columns for {mainCategories.find(c => c._id === selectedCategoryId)?.name || 'selected category'}
+                                Define columns for <span className="font-semibold text-slate-900">{selectedCategoryName}</span>
                             </CardDescription>
                         </div>
-                        <Button variant="outline" size="sm" onClick={addColumn}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Column
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={resetToDefaults} title="Reset to Default Layout">
+                                <RotateCcw className="h-4 w-4 mr-1 text-slate-500" /> Reset
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={addColumn} disabled={!selectedCategoryId} className="border-blue-200 text-blue-600 hover:bg-blue-50">
+                                <Plus className="mr-2 h-4 w-4" /> Add Column
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {currentColumns.map((col, idx) => (
-                            <div key={idx} className="flex items-start gap-4 p-4 border rounded-lg bg-slate-50/50">
-                                <div className="flex flex-col gap-1 mt-2">
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveColumn(idx, 'up')} disabled={idx === 0}>
-                                        <MoveUp className="h-3 w-3" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveColumn(idx, 'down')} disabled={idx === currentColumns.length - 1}>
-                                        <MoveDown className="h-3 w-3" />
+                            <div key={idx} className="flex flex-col gap-4 p-4 border rounded-lg bg-slate-50/50">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex flex-col gap-1 mt-2">
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveColumn(idx, 'up')} disabled={idx === 0}>
+                                            <MoveUp className="h-3 w-3" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveColumn(idx, 'down')} disabled={idx === currentColumns.length - 1}>
+                                            <MoveDown className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-600">Column Title</Label>
+                                            <Input
+                                                value={col.title}
+                                                onChange={(e) => updateColumn(idx, 'title', e.target.value)}
+                                                placeholder="e.g. Shop By Gender"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-600">Data Source</Label>
+                                            <Select
+                                                value={col.source}
+                                                onValueChange={(val) => updateColumn(idx, 'source', val)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="genders">Gender List (Men, Women, Kids)</SelectItem>
+                                                    <SelectItem value="subcategories">Database Sub-categories</SelectItem>
+                                                    <SelectItem value="shapes">Frame Shapes (Eyewear specific)</SelectItem>
+                                                    <SelectItem value="brands">Popular Brands</SelectItem>
+                                                    <SelectItem value="custom">Custom Links</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-red-500 hover:text-red-600 hover:bg-red-50 mt-6"
+                                        onClick={() => removeColumn(idx)}
+                                        title="Remove Column"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
 
-                                <div className="flex-1 grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Column Title</Label>
-                                        <Input
-                                            value={col.title}
-                                            onChange={(e) => updateColumn(idx, 'title', e.target.value)}
-                                            placeholder="e.g. Shop By Gender"
-                                        />
+                                {/* Custom Links Editor if source === 'custom' */}
+                                {col.source === 'custom' && (
+                                    <div className="ml-10 p-3 bg-white border border-slate-200 rounded-md space-y-3">
+                                        <div className="flex items-center justify-between border-b pb-2">
+                                            <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                                                <LinkIcon className="w-3.5 h-3.5" /> Custom Links
+                                            </span>
+                                            <Button variant="outline" size="sm" onClick={() => addCustomLink(idx)} className="h-7 text-xs">
+                                                <Plus className="w-3 h-3 mr-1" /> Add Link
+                                            </Button>
+                                        </div>
+                                        {(col.customLinks || []).length === 0 ? (
+                                            <p className="text-xs text-slate-400 italic">No custom links added yet. Click "Add Link" above.</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {(col.customLinks || []).map((link, lIdx) => (
+                                                    <div key={lIdx} className="flex items-center gap-2">
+                                                        <Input
+                                                            value={link.label}
+                                                            onChange={(e) => updateCustomLink(idx, lIdx, 'label', e.target.value)}
+                                                            placeholder="Label (e.g. New Arrivals)"
+                                                            className="h-8 text-xs flex-1"
+                                                        />
+                                                        <Input
+                                                            value={link.url}
+                                                            onChange={(e) => updateCustomLink(idx, lIdx, 'url', e.target.value)}
+                                                            placeholder="URL (e.g. /shop?featured=true)"
+                                                            className="h-8 text-xs flex-1 font-mono"
+                                                        />
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-red-500 hover:bg-red-50"
+                                                            onClick={() => removeCustomLink(idx, lIdx)}
+                                                        >
+                                                            <Trash2 className="h-3.5 h-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Data Source</Label>
-                                        <Select
-                                            value={col.source}
-                                            onValueChange={(val) => updateColumn(idx, 'source', val)}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="genders">Gender List (Men, Women, Kids)</SelectItem>
-                                                <SelectItem value="subcategories">Database Sub-categories</SelectItem>
-                                                <SelectItem value="shapes">Frame Shapes (Eyewear specific)</SelectItem>
-                                                <SelectItem value="brands">Popular Brands</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-red-500 hover:text-red-600 hover:bg-red-50 mt-8"
-                                    onClick={() => removeColumn(idx)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                )}
                             </div>
                         ))}
 

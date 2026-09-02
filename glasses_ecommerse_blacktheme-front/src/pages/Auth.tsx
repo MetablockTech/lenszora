@@ -59,10 +59,12 @@ export default function AuthPage() {
         return () => clearInterval(timer)
     }, [resendCooldown])
 
+    const refCode = searchParams.get('ref') || ''
+
     async function onSendOTP(values: z.infer<typeof phoneSchema>) {
         setIsLoading(true)
         try {
-            await auth.sendOTP(values.phone)
+            await auth.sendOTP(values.phone, refCode)
             setPhoneNumber(values.phone)
             setStep('otp')
             otpForm.setValue('otp', '123456')
@@ -95,7 +97,7 @@ export default function AuthPage() {
         if (resendCooldown > 0) return
         setIsLoading(true)
         try {
-            await auth.sendOTP(phoneNumber)
+            await auth.sendOTP(phoneNumber, refCode)
             otpForm.setValue('otp', '123456')
             setResendCooldown(30)
             toast.success('OTP resent! Use fixed OTP: 123456')

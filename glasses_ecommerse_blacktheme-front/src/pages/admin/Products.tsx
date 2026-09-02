@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { products, categories, brands, vendors, getToken } from '@/lib/api'
-import { Edit2, Trash2, Image as ImageIcon, RotateCcw, Search } from 'lucide-react'
+import { Edit2, Trash2, Image as ImageIcon, RotateCcw, Search, Plus } from 'lucide-react'
 import { getImageUrl } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 const ProductsPage: React.FC = () => {
   const navigate = useNavigate()
@@ -87,10 +88,10 @@ const ProductsPage: React.FC = () => {
   }
 
   const getVendorName = (vendorId: any) => {
-    if (!vendorId) return 'N/A'
+    if (!vendorId) return 'In-House (Admin)'
     if (typeof vendorId === 'object' && vendorId.businessName) return vendorId.businessName
     const v = vendorList.find(v => v._id === vendorId || v._id === vendorId?._id)
-    return v?.businessName || 'N/A'
+    return v?.businessName || 'In-House (Admin)'
   }
 
   async function handleDelete(id: string) {
@@ -113,6 +114,13 @@ const ProductsPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-slate-900">Products</h1>
           <p className="text-sm text-slate-500 mt-1">{list.length} products total</p>
         </div>
+        <Button
+          onClick={() => navigate('/admin/products/new')}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+        >
+          <Plus className="w-5 h-5" />
+          Add New Product
+        </Button>
       </div>
 
       {/* Filter Bar */}

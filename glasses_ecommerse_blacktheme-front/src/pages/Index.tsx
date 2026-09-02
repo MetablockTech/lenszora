@@ -4,6 +4,7 @@ import HeroSection from "@/components/sections/HeroSection";
 import TopCategories from "@/components/sections/TopCategories";
 import OfferBanner from "@/components/sections/OfferBanner";
 import TrendingBanners from "@/components/sections/TrendingBanners";
+import BrandHorizontalSlider from "@/components/sections/BrandHorizontalSlider";
 import ShapeSelection from "@/components/sections/ShapeSelection";
 import CategoryProductSliders from "@/components/sections/CategoryProductSliders";
 import NewArrivals from "@/components/sections/NewArrivals";
@@ -22,12 +23,13 @@ const Index = () => {
         <OfferBanner />
         <ShapeSelection type="eyeglasses" title="Get the perfect shape - Eyeglasses" />
         <TrendingBanners />
+        <BrandHorizontalSlider />
         <ShapeSelection type="sunglasses" title="Get the perfect shape - Sunglasses" />
-        
+
         <div className="bg-background py-6 lg:py-12 border-t border-white/5">
-           <CategoryProductSliders />
+          <CategoryProductSliders />
         </div>
-        
+
         <NewArrivals />
         <EyeCheckupSection />
         <Testimonials />

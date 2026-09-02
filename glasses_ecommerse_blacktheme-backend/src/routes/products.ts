@@ -243,10 +243,7 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
   try {
     // Determine vendorId
     let finalVendorId = vendorId
-    if (req.user!.role === 'vendor') {
-      finalVendorId = req.user!.vendorId || req.user!.id
-    } else if (req.user!.role === 'admin' && !finalVendorId) {
-      // Admin must provide vendorId or we use admin's own vendor profile if exists
+    if (req.user!.role === 'vendor' || !finalVendorId) {
       finalVendorId = req.user!.vendorId || req.user!.id
     }
 

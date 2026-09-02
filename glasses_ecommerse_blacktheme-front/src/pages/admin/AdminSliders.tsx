@@ -331,6 +331,7 @@ const AdminSliders = () => {
                       <SelectItem value="Main Banner">Main Banner</SelectItem>
                       <SelectItem value="Footer Banner">Footer Banner</SelectItem>
                       <SelectItem value="Trending Banner">Trending Banner</SelectItem>
+                      <SelectItem value="Brand Banner">Brand Banner</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

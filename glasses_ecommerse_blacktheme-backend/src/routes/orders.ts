@@ -4,9 +4,60 @@ import crypto from 'crypto'
 import { Order } from '../models/Order'
 import { Product } from '../models/Product'
 import { Vendor } from '../models/Vendor'
+import { User } from '../models/User'
+import { Coupon } from '../models/Coupon'
+import { Setting } from '../models/Setting'
 import { requireAuth, requireAdmin } from '../middleware/auth'
 
 const router = express.Router()
+
+// Helper to trigger referral coupon for referrer when referred user places first order
+async function checkAndTriggerReferralReward(userId: string) {
+  try {
+    const user = await User.findById(userId)
+    if (!user || user.hasPlacedFirstOrder || !user.referredBy) return
+
+    user.hasPlacedFirstOrder = true
+    await user.save()
+
+    const referrer = await User.findById(user.referredBy)
+    if (!referrer) return
+
+    const settingsDoc = await Setting.findOne({ key: 'referral_settings' })
+    const refSettings = settingsDoc?.value || {
+      enabled: true,
+      referrerRewardType: 'flat',
+      referrerRewardValue: 200,
+      minOrderAmount: 500,
+      couponValidityDays: 30
+    }
+
+    if (refSettings.enabled === false) return
+
+    const days = Number(refSettings.couponValidityDays) || 30
+    const expiryDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase()
+    const couponCode = `REF-${referrer.referralCode || 'BONUS'}-${randomSuffix}`
+
+    const rewardCoupon = new Coupon({
+      code: couponCode,
+      discountType: refSettings.referrerRewardType || 'flat',
+      discountValue: Number(refSettings.referrerRewardValue) || 200,
+      minOrderAmount: Number(refSettings.minOrderAmount) || 500,
+      userId: referrer._id,
+      isReferralReward: true,
+      usageLimit: 1,
+      timesUsed: 0,
+      expiryDate,
+      isActive: true
+    })
+
+    await rewardCoupon.save()
+    console.log(`[REFERRAL REWARD] Created reward coupon ${couponCode} for referrer ${referrer._id}`)
+  } catch (err) {
+    console.error('Error triggering referral reward:', err)
+  }
+}
 
 // Initialize Razorpay
 const razorpay = (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
@@ -122,6 +173,14 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
           submittedAt: new Date()
         }
       })
+
+      // Trigger referral reward for referrer if this is user's first order
+      checkAndTriggerReferralReward(userId).catch(err => console.error('Referral trigger error:', err))
+
+      // If a coupon was applied, increment timesUsed
+      if (req.body.couponCode) {
+        Coupon.findOneAndUpdate({ code: String(req.body.couponCode).trim().toUpperCase() }, { $inc: { timesUsed: 1 } }).catch(() => {})
+      }
 
       return res.json({
         orderId: order._id,

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import { Loader2, Save, Lock, Globe, Mail, Share2, CreditCard } from 'lucide-react'
+import { Loader2, Save, Lock, Globe, Mail, Share2, CreditCard, Eye, EyeOff } from 'lucide-react'
 import { settings, adminAuth, getToken } from '@/lib/api'
 import { useSettings } from '@/context/SettingsContext'
 import { getImageUrl } from '@/lib/utils'
@@ -32,6 +32,9 @@ const SettingsPage: React.FC = () => {
     newPassword: '',
     confirmPassword: ''
   })
+  const [showOldPassword, setShowOldPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   useEffect(() => {
     loadSettings()
@@ -207,7 +210,7 @@ const SettingsPage: React.FC = () => {
             <Share2 className="h-4 w-4" /> Social
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
-            <Lock className="h-4 w-4" /> Security
+            <Lock className="h-4 w-4 text-amber-500" /> Change Password
           </TabsTrigger>
           <TabsTrigger value="payment" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" /> Payment
@@ -390,46 +393,94 @@ const SettingsPage: React.FC = () => {
         <TabsContent value="security">
           <Card>
             <CardHeader>
-              <CardTitle>Security Settings</CardTitle>
-              <CardDescription>Update your administrative password.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-amber-500" /> Change Password
+              </CardTitle>
+              <CardDescription>Update your admin account login password.</CardDescription>
             </CardHeader>
             <form onSubmit={handleChangePassword}>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 max-w-md">
                 <div className="space-y-2">
-                  <Label htmlFor="oldPassword">Current Password</Label>
-                  <Input
-                    id="oldPassword"
-                    type="password"
-                    required
-                    value={passwordData.oldPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
-                  />
+                  <Label htmlFor="oldPassword">Current Password *</Label>
+                  <div className="relative">
+                    <Input
+                      id="oldPassword"
+                      type={showOldPassword ? "text" : "password"}
+                      required
+                      placeholder="Enter current password"
+                      value={passwordData.oldPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOldPassword(!showOldPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showOldPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    required
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  />
+                  <Label htmlFor="newPassword">New Password *</Label>
+                  <div className="relative">
+                    <Input
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      placeholder="Enter new password (min 6 characters)"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    required
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  />
+                  <Label htmlFor="confirmPassword">Confirm New Password *</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      placeholder="Re-enter new password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {passwordData.newPassword && passwordData.confirmPassword && (
+                    <p className={`text-xs font-medium mt-1 ${passwordData.newPassword === passwordData.confirmPassword ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {passwordData.newPassword === passwordData.confirmPassword ? '✓ Passwords match' : '✕ Passwords do not match'}
+                    </p>
+                  )}
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" disabled={saving}>
+                <Button
+                  type="submit"
+                  disabled={saving || !passwordData.oldPassword || !passwordData.newPassword || passwordData.newPassword !== passwordData.confirmPassword}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Lock className="mr-2 h-4 w-4" /> Change Password
+                  <Lock className="mr-2 h-4 w-4" /> Update Password
                 </Button>
               </CardFooter>
             </form>

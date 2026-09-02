@@ -429,8 +429,11 @@ const ProductForm = () => {
             }
 
             // 1. Upload all pending files
-            const vId = isAdmin ? data.vendorId : (currentUser?.vendorId || currentUser?.id)
+            const vId = (isAdmin && data.vendorId ? data.vendorId : null) || currentUser?.vendorId || currentUser?.id
             if (!vId) throw new Error('Vendor ID is required for image naming')
+            if (isAdmin && !finalData.vendorId) {
+                finalData.vendorId = currentUser?.vendorId || currentUser?.id
+            }
 
             const subfolder = `vendor_${vId}`
 
@@ -818,16 +821,17 @@ const ProductForm = () => {
                                     render={({ field }) => (
                                         <FormItem className="space-y-1.5 lg:col-span-2">
                                             <div className="flex justify-between items-center">
-                                                <FormLabel className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Assign Vendor *</FormLabel>
+                                                <FormLabel className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Assign Vendor</FormLabel>
                                                 <FormMessage className="text-[8px] font-black uppercase text-red-500" />
                                             </div>
-                                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                                            <Select onValueChange={(val) => field.onChange(val === 'admin_inhouse' ? '' : val)} value={field.value || "admin_inhouse"}>
                                                 <FormControl>
                                                     <SelectTrigger className="bg-slate-900 border-slate-800 text-slate-200 h-9">
                                                         <SelectValue placeholder="Select Business Account" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                                    <SelectItem value="admin_inhouse">In-House / Admin (Store Owner)</SelectItem>
                                                     {allVendors.map((v) => (
                                                         <SelectItem key={v._id} value={v._id}>{v.businessName}</SelectItem>
                                                     ))}
@@ -1189,16 +1193,38 @@ const ProductForm = () => {
                     {/* Pricing & Inventory Section */}
                     <div className="space-y-4 mt-8 bg-slate-900/40 p-6 rounded-xl border border-slate-800 shadow-inner">
                         <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2 mb-4">Pricing & Inventory</h3>
-                        <div className="grid grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <FormField
                                 control={form.control}
                                 name="price"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-slate-300">Unit Price *</FormLabel>
+                                        <FormLabel className="text-slate-300">Unit Price (₹) *</FormLabel>
                                         <FormControl>
-                                            <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} className="bg-slate-800/50 border-slate-700 text-slate-200" />
+                                            <Input type="number" min="0" step="any" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="bg-slate-800/50 border-slate-700 text-slate-200" />
                                         </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="discountType"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-slate-300">Discount Type</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || 'flat'}>
+                                            <FormControl>
+                                                <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200">
+                                                    <SelectValue placeholder="Select Type" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                                <SelectItem value="flat">Flat Discount (₹)</SelectItem>
+                                                <SelectItem value="percent">Percentage Discount (%)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -1209,9 +1235,20 @@ const ProductForm = () => {
                                 name="discountAmount"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-slate-300">Discount Amount</FormLabel>
+                                        <FormLabel className="text-slate-300">
+                                            {form.watch('discountType') === 'percent' ? 'Discount Percentage (%)' : 'Discount Amount (₹)'}
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} className="bg-slate-800/50 border-slate-700 text-slate-200" />
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                max={form.watch('discountType') === 'percent' ? 100 : undefined}
+                                                step="any"
+                                                {...field}
+                                                onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                                placeholder={form.watch('discountType') === 'percent' ? 'e.g. 10' : 'e.g. 200'}
+                                                className="bg-slate-800/50 border-slate-700 text-slate-200"
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -1225,13 +1262,37 @@ const ProductForm = () => {
                                     <FormItem>
                                         <FormLabel className="text-slate-300">Current Stock *</FormLabel>
                                         <FormControl>
-                                            <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} className="bg-slate-800/50 border-slate-700 text-slate-200" />
+                                            <Input type="number" min="0" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} className="bg-slate-800/50 border-slate-700 text-slate-200" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
+
+                        {(() => {
+                            const p = form.watch('price') || 0
+                            const dAmt = form.watch('discountAmount') || 0
+                            const dType = form.watch('discountType') || 'flat'
+                            let calculatedDiscount = 0
+                            if (dType === 'percent') {
+                                calculatedDiscount = (p * dAmt) / 100
+                            } else {
+                                calculatedDiscount = dAmt
+                            }
+                            const finalPrice = Math.max(0, p - calculatedDiscount)
+
+                            return (p > 0 && dAmt > 0) ? (
+                                <div className="mt-3 p-3 bg-blue-950/40 border border-blue-800/50 rounded-lg flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <span className="text-blue-300 font-medium">
+                                        Discount Off: <strong className="text-white">₹{calculatedDiscount.toFixed(2)}</strong> {dType === 'percent' ? `(${dAmt}% OFF)` : '(Flat)'}
+                                    </span>
+                                    <span className="text-emerald-400 font-bold text-sm">
+                                        Effective Final Price: ₹{finalPrice.toFixed(2)}
+                                    </span>
+                                </div>
+                            ) : null
+                        })()}
 
                         <FormField
                             control={form.control}

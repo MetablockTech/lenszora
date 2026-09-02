@@ -7,9 +7,13 @@ export interface IUser extends Document {
   phone: string
   otp?: string
   otpExpires?: Date
-  role: 'user' | 'admin' | 'vendor'
+  role: 'user' | 'admin' | 'vendor' | 'agent'
   vendorId?: Types.ObjectId
   wishlist: Types.ObjectId[]
+  referralCode?: string
+  referredBy?: Types.ObjectId
+  hasPlacedFirstOrder?: boolean
+  referralCount?: number
   createdAt: Date
 }
 
@@ -20,9 +24,13 @@ const UserSchema = new Schema<IUser>({
   phone: { type: String, required: true, unique: true },
   otp: { type: String },
   otpExpires: { type: Date },
-  role: { type: String, enum: ['user', 'admin', 'vendor'], default: 'user' },
+  role: { type: String, enum: ['user', 'admin', 'vendor', 'agent'], default: 'user' },
   vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor' },
-  wishlist: [{ type: Schema.Types.ObjectId, ref: 'Product' }]
+  wishlist: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
+  referralCode: { type: String, unique: true, sparse: true },
+  referredBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  hasPlacedFirstOrder: { type: Boolean, default: false },
+  referralCount: { type: Number, default: 0 }
 }, { timestamps: true })
 
 export const User = model<IUser>('User', UserSchema)

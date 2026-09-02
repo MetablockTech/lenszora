@@ -1,26 +1,70 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { sliders, API_URL } from "@/lib/api";
-import { ChevronRight, ChevronLeft } from "lucide-react";
-import useEmblaCarousel from 'embla-carousel-react';
-import Autoplay from 'embla-carousel-autoplay';
+import { brands, sliders } from "@/lib/api";
+import { getImageUrl } from "@/lib/utils";
+import { ChevronRight, ChevronLeft, Play } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
 
-interface TrendingBanner {
+interface TrendingItem {
   _id: string;
+  title: string;
   image: string;
-  buttonLink: string;
-  bannerType: string;
-  isActive: boolean;
+  logo?: string;
+  tagline?: string;
+  link: string;
 }
 
+const samplePosterImages = [
+  "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=800&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1577803645773-f96470509666?w=800&auto=format&fit=crop&q=80",
+];
+
+const fallbackTrendingCards: TrendingItem[] = [
+  {
+    _id: "demo-t1",
+    title: "Pop Mart x LensZora",
+    image: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&auto=format&fit=crop&q=80",
+    tagline: "SWEET BEAN LIMITED EDITION",
+    link: "/shop",
+  },
+  {
+    _id: "demo-t2",
+    title: "Moody Eyewear",
+    image: "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=800&auto=format&fit=crop&q=80",
+    tagline: "CHIC & ELEGANT FRAMES",
+    link: "/shop",
+  },
+  {
+    _id: "demo-t3",
+    title: "Batman x LensZora",
+    image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&auto=format&fit=crop&q=80",
+    tagline: "BOLD & BLACK, BATMAN STYLE!",
+    link: "/shop",
+  },
+  {
+    _id: "demo-t4",
+    title: "Nuun Premium",
+    image: "https://images.unsplash.com/photo-1577803645773-f96470509666?w=800&auto=format&fit=crop&q=80",
+    tagline: "MINIMALIST JAPANESE DESIGN",
+    link: "/shop",
+  },
+];
+
 const TrendingBanners = () => {
-  const [banners, setBanners] = useState<TrendingBanner[]>([]);
+  const [items, setItems] = useState<TrendingItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: 'start',
-    containScroll: 'trimSnaps',
-    dragFree: true
-  }, [Autoplay({ delay: 4000, stopOnInteraction: false })]);
+
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    {
+      align: "start",
+      containScroll: "trimSnaps",
+      dragFree: true,
+    },
+    [Autoplay({ delay: 3500, stopOnInteraction: false })]
+  );
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -31,74 +75,155 @@ const TrendingBanners = () => {
   }, [emblaApi]);
 
   useEffect(() => {
-    const fetchBanners = async () => {
-      try {
-        const data = await sliders.list();
-        const trending = data.filter((s: TrendingBanner) =>
-          s.bannerType === 'Trending Banner' && s.isActive
-        );
-        setBanners(trending);
-      } catch (error) {
-        console.error("Failed to fetch trending banners:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBanners();
+    fetchTrendingData();
   }, []);
 
-  if (loading || banners.length === 0) return null;
+  async function fetchTrendingData() {
+    try {
+      setLoading(true);
+      const [brandList, sliderList] = await Promise.all([
+        brands.list().catch(() => []),
+        sliders.list().catch(() => []),
+      ]);
+
+      const trendingCards: TrendingItem[] = [];
+
+      // 1. Add Brands from database
+      if (brandList && brandList.length > 0) {
+        brandList.forEach((b: any, index: number) => {
+          trendingCards.push({
+            _id: b._id,
+            title: b.name,
+            image: b.banner || samplePosterImages[index % samplePosterImages.length],
+            logo: b.logo,
+            tagline: b.tagline || (index % 2 === 0 ? "BOLD & BLACK STYLE!" : "EXCLUSIVE EYEWEAR COLLECTION"),
+            link: `/shop?brand=${b._id}`,
+          });
+        });
+      }
+
+      // 2. Add Trending Banner Sliders if created in Admin
+      if (sliderList && sliderList.length > 0) {
+        sliderList.forEach((s: any) => {
+          if (s.bannerType === "Trending Banner" && s.isActive) {
+            trendingCards.push({
+              _id: s._id,
+              title: s.title || "Trending Collection",
+              image: s.image,
+              link: s.buttonLink || "/shop",
+            });
+          }
+        });
+      }
+
+      // 3. Fallback if no brands in DB yet
+      if (trendingCards.length === 0) {
+        setItems(fallbackTrendingCards);
+      } else {
+        setItems(trendingCards);
+      }
+    } catch (error) {
+      console.error("Failed to fetch trending cards:", error);
+      setItems(fallbackTrendingCards);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="py-10 container mx-auto px-4">
+        <div className="h-8 bg-slate-800 animate-pulse rounded w-64 mb-6"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-[380px] bg-slate-900 animate-pulse rounded-[2rem]"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <section className="py-6 lg:py-12 bg-background relative overflow-hidden">
+    <section className="py-10 md:py-14 bg-background relative overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between mb-6 lg:mb-8 px-2">
-          <h2 className="text-xl md:text-2xl font-bold text-white border-l-4 border-[#DAAB34] pl-4">
-            #Trending at LENSZORA
-          </h2>
+        {/* Header matching Lenskart design */}
+        <div className="flex items-center justify-between mb-8 px-1">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+              <span className="text-blue-600 font-black">#Trending</span> at LensZora
+            </h2>
+          </div>
 
-          <div className="flex gap-3">
+          {/* Navigation Controls */}
+          <div className="flex items-center gap-2">
             <button
               onClick={scrollPrev}
-              className="group p-3 rounded-full bg-white/5 hover:bg-gold/20 text-white/70 hover:text-gold transition-all border border-white/10 hover:border-gold/30 shadow-2xl backdrop-blur-sm"
+              className="p-2.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white hover:bg-blue-600 hover:text-white transition-all shadow-sm"
               aria-label="Previous slide"
             >
-              <ChevronLeft className="w-5 h-5 group-active:scale-90 transition-transform" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={scrollNext}
-              className="group p-3 rounded-full bg-white/5 hover:bg-gold/20 text-white/70 hover:text-gold transition-all border border-white/10 hover:border-gold/30 shadow-2xl backdrop-blur-sm"
+              className="p-2.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white hover:bg-blue-600 hover:text-white transition-all shadow-sm"
               aria-label="Next slide"
             >
-              <ChevronRight className="w-5 h-5 group-active:scale-90 transition-transform" />
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        <div className="embla overflow-visible" ref={emblaRef}>
-          <div className="embla__container flex gap-6 px-2">
-            {banners.map((banner) => (
-              <div key={banner._id} className="embla__slide flex-[0_0_85%] sm:flex-[0_0_45%] lg:flex-[0_0_23%]">
+        {/* Carousel Container */}
+        <div className="embla overflow-hidden" ref={emblaRef}>
+          <div className="embla__container flex gap-5 py-2">
+            {items.map((item) => (
+              <div
+                key={item._id}
+                className="embla__slide flex-[0_0_82%] sm:flex-[0_0_46%] md:flex-[0_0_32%] lg:flex-[0_0_24%] min-w-0"
+              >
                 <Link
-                  to={banner.buttonLink}
-                  className="group relative block h-[260px] sm:h-[340px] md:h-[400px] lg:h-[420px] rounded-[2.5rem] overflow-hidden shadow-lg transition-transform hover:scale-[1.02] duration-300"
+                  to={item.link}
+                  className="group relative block h-[380px] sm:h-[400px] md:h-[420px] rounded-[2rem] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] bg-slate-950 border border-slate-800"
                 >
                   {/* Background Image */}
                   <img
-                    src={banner.image.startsWith('http') ? banner.image : `${API_URL}${banner.image}`}
-                    alt="Trending"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-110 duration-500"
+                    src={getImageUrl(item.image)}
+                    alt={item.title}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
 
                   {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent opacity-90 group-hover:opacity-95 transition-opacity" />
 
-                  {/* Content */}
-                  <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                    <div className="flex items-center gap-2 text-white font-bold text-sm">
-                      <span>Shop Now</span>
-                      <div className="p-1 rounded-full bg-white/20 group-hover:bg-white group-hover:text-blue-600 transition-colors">
-                        <ChevronRight className="w-4 h-4" />
+                  {/* Content Footer */}
+                  <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end text-white space-y-2">
+                    {/* Brand Logo or Name */}
+                    {item.logo ? (
+                      <div className="h-10 flex items-center mb-1">
+                        <img
+                          src={getImageUrl(item.logo)}
+                          alt={item.title}
+                          className="max-h-full max-w-[140px] object-contain drop-shadow-md"
+                        />
+                      </div>
+                    ) : (
+                      <h3 className="text-2xl font-black tracking-wider uppercase text-white drop-shadow-md">
+                        {item.title}
+                      </h3>
+                    )}
+
+                    {/* Tagline */}
+                    {item.tagline && (
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-300 drop-shadow">
+                        {item.tagline}
+                      </p>
+                    )}
+
+                    {/* CTA Button */}
+                    <div className="pt-2">
+                      <div className="inline-flex items-center gap-1.5 font-bold text-sm text-white group-hover:text-amber-400 transition-colors">
+                        <span>Shop Now</span>
+                        <Play className="w-3 h-3 fill-current transform group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>
                   </div>

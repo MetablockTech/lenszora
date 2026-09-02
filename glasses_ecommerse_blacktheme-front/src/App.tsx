@@ -42,6 +42,7 @@ import WithdrawalsListPage from "./pages/admin/vendors/WithdrawalsList";
 import AdminVendorProductsPage from "./pages/admin/vendors/VendorProductsPage";
 import EyewearAttributesPage from "./pages/admin/EyewearAttributes";
 import NavigationManagerPage from "./pages/admin/NavigationManager";
+import ReferralManagerPage from "./pages/admin/ReferralManager";
 import GalleryPage from "./pages/admin/Gallery";
 import AdminSliders from "./pages/admin/AdminSliders";
 import AdminStores from "./pages/admin/Stores";
@@ -51,11 +52,10 @@ import VendorStores from "./pages/vendor/Stores";
 import VendorAppointmentsPage from "./pages/vendor/Appointments";
 import AdminLensManagerPage from "./pages/admin/LensManager";
 import FAQPage from "./pages/FAQ";
-import AgentCallingButton from "./components/layout/AgentCallingButton";
+import Support from "./pages/Support";
 
 import { Loader2 } from "lucide-react";
 import ScrollToTop from "./components/layout/ScrollToTop";
-import WhatsAppButton from "./components/layout/WhatsAppButton";
 import VendorLayout from "./pages/vendor/VendorLayout";
 import VendorDashboard from "./pages/vendor/VendorDashboard";
 import VendorProductsPage from "./pages/vendor/Products";
@@ -110,6 +110,7 @@ const AppContent = () => {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/faq" element={<FAQPage />} />
+      <Route path="/support" element={<Support />} />
       <Route path="/addresses" element={<Addresses />} />
       <Route path="/admin/login" element={<AdminLogin />} />
 
@@ -151,6 +152,7 @@ const AppContent = () => {
         <Route path="pincodes" element={<PincodesPage />} />
         <Route path="return-requests" element={<ReturnRequestsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="referrals" element={<ReferralManagerPage />} />
         <Route path="navigation-manager" element={<NavigationManagerPage />} />
         <Route path="vendors" element={<VendorsListPage />} />
         <Route path="vendors/create" element={<CreateVendorPage />} />
@@ -170,8 +172,6 @@ const AppContent = () => {
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <WhatsAppButton />
-      <AgentCallingButton />
     </>
   );
 };

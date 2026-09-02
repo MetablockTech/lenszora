@@ -57,7 +57,7 @@ router.use((req, res, next) => {
 const generateOTP = () => '123456'
 
 router.post('/send-otp', async (req, res) => {
-  const { phone } = req.body
+  const { phone, referredByCode, refCode } = req.body
   if (!phone) return res.status(400).json({ error: 'Phone number is required' })
 
   const otp = '123456'
@@ -66,7 +66,21 @@ router.post('/send-otp', async (req, res) => {
   try {
     let user = await User.findOne({ phone })
     if (!user) {
-      user = new User({ phone, role: 'user' })
+      const generatedRefCode = `LZ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+      user = new User({ phone, role: 'user', referralCode: generatedRefCode })
+
+      // Check if referred by another user
+      const codeToMatch = (referredByCode || refCode || '').trim().toUpperCase()
+      if (codeToMatch) {
+        const referrer = await User.findOne({ referralCode: codeToMatch })
+        if (referrer) {
+          user.referredBy = referrer._id
+          referrer.referralCount = (referrer.referralCount || 0) + 1
+          await referrer.save()
+        }
+      }
+    } else if (!user.referralCode) {
+      user.referralCode = `LZ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
     }
 
     user.otp = otp

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { 
-  Carousel, 
-  CarouselContent, 
-  CarouselItem, 
-  CarouselNext, 
-  CarouselPrevious 
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 import { sliders, API_URL } from "@/lib/api";
@@ -23,7 +23,7 @@ const HeroSection = () => {
     const fetchSliders = async () => {
       try {
         const data = await sliders.list();
-        const mainBanners = data.filter((s: any) => 
+        const mainBanners = data.filter((s: any) =>
           s.bannerType === 'Main Banner' || !s.bannerType
         );
         setSlides(mainBanners);
