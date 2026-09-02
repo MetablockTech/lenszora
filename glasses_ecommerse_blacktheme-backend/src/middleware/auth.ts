@@ -10,7 +10,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string
     email?: string
-    role: 'user' | 'admin' | 'vendor'
+    role: 'user' | 'admin' | 'vendor' | 'agent'
     vendorId?: string
   }
 }
