@@ -273,16 +273,37 @@ const ProductPage = () => {
     navigate('/cart');
   };
 
+  const getReturnPolicyText = (policy: any) => {
+    if (!policy) return '14-day returns';
+    if (typeof policy === 'string') return policy;
+    if (typeof policy === 'object') {
+      if (policy.policyText && typeof policy.policyText === 'string') return policy.policyText;
+      if (policy.returnPeriodDays) return `${policy.returnPeriodDays}-day returns`;
+      if (policy.allowReturns === false) return 'Non-returnable';
+      if (policy.allowReturns) return 'Returns available';
+    }
+    return '14-day returns';
+  };
+
+  const getWarrantyText = (w: any) => {
+    if (!w) return '6 Months Warranty';
+    if (typeof w === 'string') return w;
+    if (typeof w === 'object') {
+      if (w.text) return String(w.text);
+      if (w.duration) return `${w.duration} Warranty`;
+    }
+    return String(w);
+  };
+
   const specifications = Array.isArray(product.attributes) ? product.attributes.filter(Boolean).map((attr: any) => ({
     label: String(attr.name || ''),
-    value: Array.isArray(attr.values) ? attr.values.join(", ") : String(attr.values || '')
+    value: Array.isArray(attr.values) ? attr.values.join(", ") : (typeof attr.values === 'object' ? JSON.stringify(attr.values) : String(attr.values || ''))
   })) : [];
 
-  const productWarranty = typeof product.eyewearDetails?.warranty === 'string' 
-    ? product.eyewearDetails.warranty 
-    : (typeof product.warranty === 'string' ? product.warranty : '6 Months Warranty');
+  const rawWarranty = product.eyewearDetails?.warranty || product.warranty;
+  const productWarranty = getWarrantyText(rawWarranty);
 
-  if (product.eyewearDetails) {
+  if (product.eyewearDetails && typeof product.eyewearDetails === 'object') {
     const details = product.eyewearDetails;
     const detailMap = [
       { key: 'gender', label: 'Gender' },
@@ -305,7 +326,8 @@ const ProductPage = () => {
     detailMap.forEach(item => {
       const val = details[item.key as keyof typeof details];
       if (val !== undefined && val !== null && val !== '') {
-        specifications.push({ label: item.label, value: item.isBool ? (val ? 'Yes' : 'No') : String(val) });
+        const strVal = item.isBool ? (val ? 'Yes' : 'No') : (typeof val === 'object' ? (Array.isArray(val) ? val.join(', ') : JSON.stringify(val)) : String(val));
+        specifications.push({ label: item.label, value: strVal });
       }
     });
   }
@@ -547,7 +569,7 @@ const ProductPage = () => {
 
             {/* Perks */}
             <div style={{ fontSize: '.75rem', color: '#6b7280', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-              <span>🔄 {product.returnPolicy || '14-day returns'}</span>
+              <span>🔄 {getReturnPolicyText(product.returnPolicy)}</span>
               <span>✅ Authentic</span>
               <span>🎁 Free lens kit</span>
             </div>
