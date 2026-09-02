@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { settings } from '@/lib/api';
+import { getImageUrl } from '@/lib/utils';
 
 interface Settings {
     websiteName: string;
@@ -37,6 +38,25 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
     const [loading, setLoading] = useState(true);
 
+    const updateFaviconAndTitle = (logoUrl?: string, websiteName?: string) => {
+        // Dynamically update browser tab Favicon with the uploaded website logo
+        if (logoUrl) {
+            const fullFaviconUrl = getImageUrl(logoUrl);
+            let faviconLink = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
+            if (!faviconLink) {
+                faviconLink = document.createElement('link');
+                faviconLink.rel = 'icon';
+                document.getElementsByTagName('head')[0].appendChild(faviconLink);
+            }
+            faviconLink.href = fullFaviconUrl;
+        }
+
+        // Dynamically update browser tab title
+        if (websiteName) {
+            document.title = `${websiteName} - Premium Eyewear`;
+        }
+    };
+
     const loadSettings = async () => {
         try {
             const [general, contact, social] = await Promise.all([
@@ -48,13 +68,16 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const genMap: any = {};
             general.forEach((s: any) => (genMap[s.key] = s.value));
 
-            setCurrentSettings({
+            const newSettings = {
                 websiteName: genMap.websiteName || 'LensZora',
                 logoUrl: genMap.logoUrl || '',
                 maintenanceMode: genMap.maintenanceMode === true || genMap.maintenanceMode === 'true',
                 contactInfo: contact.value || defaultSettings.contactInfo,
                 socialLinks: social.value || [],
-            });
+            };
+
+            setCurrentSettings(newSettings);
+            updateFaviconAndTitle(newSettings.logoUrl, newSettings.websiteName);
         } catch (error) {
             console.error('Failed to load settings:', error);
         } finally {
