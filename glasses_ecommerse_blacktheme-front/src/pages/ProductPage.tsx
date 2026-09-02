@@ -207,31 +207,58 @@ const ProductPage = () => {
     });
   };
 
+  const computeProductPricing = () => {
+    const variant = getCurrentVariant();
+    const rawPrice = Number(variant ? variant.price : (product.price || 0));
+    const lensPrice = Number(selectedLens?.package?.price || 0);
+
+    // 1. Determine Effective Selling Price
+    let sellingPrice = rawPrice;
+    if (product.discountPrice && Number(product.discountPrice) < rawPrice) {
+      sellingPrice = Number(product.discountPrice);
+    } else if (product.salePrice && Number(product.salePrice) < rawPrice) {
+      sellingPrice = Number(product.salePrice);
+    } else if (product.discountAmount && Number(product.discountAmount) > 0) {
+      const disc = Number(product.discountAmount);
+      if (product.discountType === 'percentage') {
+        sellingPrice = Math.round(rawPrice * (1 - Math.min(99, disc) / 100));
+      } else if (product.discountType === 'flat') {
+        sellingPrice = Math.max(0, rawPrice - disc);
+      }
+    }
+
+    // 2. Determine Original Strikethrough Price (MRP)
+    let mrpPrice = 0;
+    if (product.originalPrice && Number(product.originalPrice) > sellingPrice) {
+      mrpPrice = Number(product.originalPrice);
+    } else if (sellingPrice < rawPrice) {
+      mrpPrice = rawPrice;
+    } else {
+      // Default dynamic retail MRP calculation (e.g. 20% discount standard)
+      mrpPrice = Math.round(sellingPrice * 1.25);
+    }
+
+    const finalDisplayPrice = sellingPrice + lensPrice;
+    const finalOriginalPrice = mrpPrice + lensPrice;
+    const hasDisc = finalOriginalPrice > finalDisplayPrice;
+    const discPercentage = hasDisc ? Math.round(((finalOriginalPrice - finalDisplayPrice) / finalOriginalPrice) * 100) : 0;
+
+    return {
+      basePrice: sellingPrice,
+      displayPrice: finalDisplayPrice,
+      originalPrice: finalOriginalPrice,
+      hasDiscount: hasDisc,
+      discount: discPercentage
+    };
+  };
+
   const currentVariant = getCurrentVariant();
-  const basePrice = Number(currentVariant ? currentVariant.price : (product.price || 0));
-  const lensPrice = Number(selectedLens?.package?.price || 0);
-  const displayPrice = basePrice + lensPrice;
-  // Treat null/undefined stock as in stock — only disable when explicitly 0
   const displayStock = currentVariant
     ? (currentVariant.stock ?? 999)
     : (product.stock != null ? product.stock : 999);
   const displayImages = currentVariant?.images?.length > 0 ? currentVariant.images : (product.images || []);
 
-  let calculatedOriginal = Number(product.originalPrice || 0);
-  if (!calculatedOriginal && product.discountAmount && Number(product.discountAmount) > 0) {
-    const discAmt = Number(product.discountAmount);
-    if (product.discountType === 'percentage') {
-      calculatedOriginal = Math.round(basePrice / (1 - Math.min(99, discAmt) / 100));
-    } else {
-      calculatedOriginal = basePrice + discAmt;
-    }
-  } else if (!calculatedOriginal && product.discountPrice && Number(product.discountPrice) < basePrice) {
-    calculatedOriginal = basePrice;
-  }
-
-  const originalPrice = (calculatedOriginal || (product.discountAmount || product.discountPrice ? Math.round(basePrice * 1.25) : 0)) + lensPrice;
-  const hasDiscount = originalPrice > displayPrice;
-  const discount = (hasDiscount && originalPrice > 0) ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100) : 0;
+  const { basePrice, displayPrice, originalPrice, hasDiscount, discount } = computeProductPricing();
 
   const handleAddToCart = (lensData?: any, stayOnPage = true) => {
     if (displayStock <= 0) {

@@ -139,11 +139,20 @@ const CategoryPage = () => {
                           className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-700"
                         />
 
-                        {product.salePrice && product.price > product.salePrice && (
-                          <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
-                            Save {Math.round(((product.price - product.salePrice) / product.price) * 100)}%
-                          </div>
-                        )}
+                        {(() => {
+                          const rawPrice = Number(product.price || 0);
+                          const sale = Number(product.salePrice || product.discountPrice || rawPrice);
+                          let mrp = Number(product.originalPrice || 0);
+                          if (!mrp || mrp <= sale) {
+                            mrp = sale < rawPrice ? rawPrice : Math.round(sale * 1.25);
+                          }
+                          const discPct = mrp > sale ? Math.round(((mrp - sale) / mrp) * 100) : 0;
+                          return discPct > 0 ? (
+                            <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
+                              Save {discPct}%
+                            </div>
+                          ) : null;
+                        })()}
                         {product.eyewearDetails?.polarized && (
                           <div className="absolute top-2 left-10 ml-2 bg-primary/90 text-black px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
                             Polarized
@@ -204,20 +213,29 @@ const CategoryPage = () => {
 
                         <div className="mt-auto flex items-center justify-between">
                           <div className="flex flex-col">
-                            {product.salePrice && product.salePrice < product.price ? (
-                              <>
-                                <span className="text-base font-bold text-primary">
-                                  ₹{product.salePrice.toLocaleString()}
+                            {(() => {
+                              const rawPrice = Number(product.price || 0);
+                              const sale = Number(product.salePrice || product.discountPrice || rawPrice);
+                              let mrp = Number(product.originalPrice || 0);
+                              if (!mrp || mrp <= sale) {
+                                mrp = sale < rawPrice ? rawPrice : Math.round(sale * 1.25);
+                              }
+                              const hasDisc = mrp > sale;
+                              return hasDisc ? (
+                                <>
+                                  <span className="text-base font-bold text-primary">
+                                    ₹{sale.toLocaleString()}
+                                  </span>
+                                  <span className="text-xs text-slate-500 line-through">
+                                    ₹{mrp.toLocaleString()}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-base font-bold text-white">
+                                  ₹{sale.toLocaleString()}
                                 </span>
-                                <span className="text-xs text-slate-500 line-through">
-                                  ₹{product.price.toLocaleString()}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-base font-bold text-white">
-                                ₹{product.price.toLocaleString()}
-                              </span>
-                            )}
+                              );
+                            })()}
                           </div>
                           <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover/card:bg-primary transition-colors">
                             <ArrowRight className="w-4 h-4 text-white group-hover/card:text-black" />

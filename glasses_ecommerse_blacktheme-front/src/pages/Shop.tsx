@@ -850,24 +850,35 @@ const Shop = () => {
                             </div>
 
                             <div className="mt-auto flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                {product.salePrice && product.salePrice < product.price ? (
-                                  <>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {(() => {
+                                  const rawPrice = Number(product.price || 0);
+                                  const sale = Number(product.salePrice || product.discountPrice || rawPrice);
+                                  let mrp = Number(product.originalPrice || 0);
+                                  if (!mrp || mrp <= sale) {
+                                    mrp = sale < rawPrice ? rawPrice : Math.round(sale * 1.25);
+                                  }
+                                  const hasDisc = mrp > sale;
+                                  const discPct = hasDisc ? Math.round(((mrp - sale) / mrp) * 100) : 0;
+
+                                  return hasDisc ? (
+                                    <>
+                                      <span className="text-sm font-black text-slate-100">
+                                        ₹{sale.toLocaleString()}
+                                      </span>
+                                      <span className="text-[10px] text-slate-500 line-through">
+                                        ₹{mrp.toLocaleString()}
+                                      </span>
+                                      <span className="text-[10px] font-bold text-[#26a69a]">
+                                        ({discPct}% OFF)
+                                      </span>
+                                    </>
+                                  ) : (
                                     <span className="text-sm font-black text-slate-100">
-                                      ₹{product.salePrice.toLocaleString()}
+                                      ₹{sale.toLocaleString()}
                                     </span>
-                                    <span className="text-[10px] text-slate-500 line-through">
-                                      ₹{product.price.toLocaleString()}
-                                    </span>
-                                    <span className="text-[10px] font-black text-[#26a69a]">
-                                      ({Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF)
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span className="text-sm font-black text-slate-100">
-                                    ₹{product.price.toLocaleString()}
-                                  </span>
-                                )}
+                                  );
+                                })()}
                               </div>
 
                               {/* Small Color Circles (Visual Decor) */}
