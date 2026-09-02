@@ -1,15 +1,9 @@
-import { Request, Response, NextFunction } from 'express'
+import { Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import { User } from '../models/User'
+import { AuthRequest } from './auth'
 
-export interface AuthRequest extends Request {
-    user?: {
-        id: string
-        email?: string
-        role: 'user' | 'admin' | 'vendor'
-        vendorId?: string
-    }
-}
+export { AuthRequest }
 
 export const vendorAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
