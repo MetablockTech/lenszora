@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
-import { getImageUrl } from "@/lib/utils";
+import { getImageUrl, getProductImage } from "@/lib/utils";
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 
@@ -129,7 +129,7 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
                                         {/* Product Image */}
                                         <div className="relative aspect-[4/5] overflow-hidden bg-slate-800">
                                             <img
-                                                src={getImageUrl(product.images[0])}
+                                                src={getProductImage(product)}
                                                 alt={product.title}
                                                 className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-700"
                                             />

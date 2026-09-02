@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { Heart, ShoppingBag, Star, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { getImageUrl } from "@/lib/utils";
+import { getImageUrl, getProductImage } from "@/lib/utils";
 
 interface Product {
   _id: string;
@@ -134,7 +134,7 @@ const CategoryPage = () => {
                         </button>
 
                         <img
-                          src={getImageUrl(product.images[0])}
+                          src={getProductImage(product)}
                           alt={product.title}
                           className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-700"
                         />

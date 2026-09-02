@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 import { ShoppingBag, Heart, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { cn, getImageUrl } from "@/lib/utils";
+import { cn, getImageUrl, getProductImage } from "@/lib/utils";
 
 interface Product {
   _id: string;
@@ -812,7 +812,7 @@ const Shop = () => {
                             </button>
 
                             <img
-                              src={getImageUrl(product.images[0])}
+                              src={getProductImage(product)}
                               alt={product.title}
                               className="w-full h-full object-contain group-hover/card:scale-105 transition-transform duration-700"
                             />

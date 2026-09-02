@@ -6,16 +6,35 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function getImageUrl(path?: string | null) {
-  if (!path) return '/placeholder.png'
+export function getImageUrl(path?: string | null | any) {
+  if (!path || path === 'undefined' || path === 'null') return '/placeholder.svg'
   
-  // Directly return if it's already a full URL or a local preview (blob)
-  if (/^https?:\/\//i.test(path) || path.startsWith('blob:') || path.startsWith('data:')) {
-    return path
+  if (Array.isArray(path)) {
+    path = path.find((p: any) => p && typeof p === 'string')
+    if (!path) return '/placeholder.svg'
   }
 
-  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  if (typeof path !== 'string') return '/placeholder.svg'
+
+  // Normalize Windows backslashes to forward slashes
+  const normalizedPath = path.replace(/\\/g, '/')
+
+  // Directly return if it's already a full URL or a local preview (blob)
+  if (/^https?:\/\//i.test(normalizedPath) || normalizedPath.startsWith('blob:') || normalizedPath.startsWith('data:')) {
+    return normalizedPath
+  }
+
+  const cleanPath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`
   return `${API_URL}${cleanPath}`
+}
+
+export function getProductImage(product: any): string {
+  if (!product) return getImageUrl(null)
+  const img = (Array.isArray(product.images) && product.images.length > 0 && product.images.find((i: any) => i && typeof i === 'string'))
+    || product.thumbnail
+    || product.image
+    || (typeof product.images === 'string' ? product.images : null)
+  return getImageUrl(img)
 }
 
 export function getToken() {

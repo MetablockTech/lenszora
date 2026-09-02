@@ -332,15 +332,25 @@ export const orders = {
     return res.json()
   },
   async uploadProof(file: File, token?: string) {
+    const activeToken = token || getToken()
     const fd = new FormData()
     fd.append('folder', 'proofs')
     fd.append('file', file)
     const res = await fetch(`${API_URL}/api/upload`, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined,
       body: fd
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      let errMsg = 'Failed to upload proof'
+      try {
+        const data = await res.json()
+        errMsg = data.message || data.error || errMsg
+      } catch {
+        errMsg = await res.text() || errMsg
+      }
+      throw new Error(errMsg)
+    }
     return res.json()
   }
 }
@@ -752,15 +762,25 @@ export const returnRequests = {
     return res.json()
   },
   async uploadProof(file: File, token?: string) {
+    const activeToken = token || getToken()
     const fd = new FormData()
     fd.append('folder', 'returns')
     fd.append('file', file)
     const res = await fetch(`${API_URL}/api/upload`, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined,
       body: fd
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      let errMsg = 'Failed to upload return proof'
+      try {
+        const data = await res.json()
+        errMsg = data.message || data.error || errMsg
+      } catch {
+        errMsg = await res.text() || errMsg
+      }
+      throw new Error(errMsg)
+    }
     return res.json()
   }
 }

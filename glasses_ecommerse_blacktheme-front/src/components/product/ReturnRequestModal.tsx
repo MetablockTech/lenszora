@@ -71,12 +71,13 @@ const ReturnRequestModal: React.FC<ReturnRequestModalProps> = ({
         try {
             const newImages = []
             for (let i = 0; i < files.length; i++) {
-                const res = await returnRequests.uploadProof(files[i], token)
-                newImages.push(res.path)
+                const res = await returnRequests.uploadProof(files[i], token || undefined)
+                const imgUrl = res.url || res.path
+                if (imgUrl) newImages.push(imgUrl)
             }
             setImages([...images, ...newImages])
-        } catch (error) {
-            toast({ title: "Upload failed", variant: "destructive" })
+        } catch (error: any) {
+            toast({ title: "Upload failed", description: error?.message || "Could not upload image", variant: "destructive" })
         } finally {
             setUploading(false)
         }

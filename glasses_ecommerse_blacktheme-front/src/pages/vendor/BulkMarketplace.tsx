@@ -118,10 +118,13 @@ const BulkMarketplacePage: React.FC = () => {
 
     setUploadingProof(true)
     try {
-      const { url } = await orders.uploadProof(file, token)
-      setPaymentProof(url)
-    } catch (error) {
-      toast({ title: "Upload Failed", description: "Could not upload screenshot", variant: "destructive" })
+      const activeToken = token || getToken()
+      const res = await orders.uploadProof(file, activeToken)
+      const uploadedUrl = res.url || res.path
+      if (!uploadedUrl) throw new Error('Invalid response from server')
+      setPaymentProof(uploadedUrl)
+    } catch (error: any) {
+      toast({ title: "Upload Failed", description: error?.message || "Could not upload screenshot", variant: "destructive" })
     } finally {
       setUploadingProof(false)
     }

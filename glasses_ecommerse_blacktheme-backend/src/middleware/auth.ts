@@ -42,6 +42,31 @@ export async function auth(req: AuthRequest, res: Response, next: NextFunction) 
 
 export const requireAuth = auth
 
+export async function optAuth(req: AuthRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) return next()
+  const token = authHeader.split(' ')[1]
+  try {
+    const secret = process.env.JWT_SECRET || 'secret'
+    const payload = jwt.verify(token, secret) as JwtPayload
+    const user = await User.findById(payload.userId).select('-password')
+    if (user) {
+      req.user = {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        vendorId: user.vendorId?.toString()
+      }
+    }
+  } catch (err) {
+    // Ignore invalid token in optional auth
+  }
+  next()
+}
+
+export const optionalAuth = optAuth
+
+
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' })
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })

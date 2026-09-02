@@ -216,6 +216,7 @@ router.get('/:id', async (req, res) => {
     const p = await Product.findById(req.params.id)
       .populate('category')
       .populate('brand')
+      .populate('vendorId')
       .populate('lensSettings.lensTypes.lensTypeId')
     if (!p) return res.status(404).json({ error: 'Not found' })
     res.json(p)

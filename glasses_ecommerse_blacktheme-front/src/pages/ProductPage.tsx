@@ -55,18 +55,6 @@ const ProductPage = () => {
       const data = await products.get(id!);
       setProduct(data);
 
-      // Fetch related data
-      if (data.vendorId) {
-        setVendorData({
-          name: typeof data.vendorId === 'object' ? data.vendorId.businessName : "Sana Naturals",
-          logo: typeof data.vendorId === 'object' ? data.vendorId.logo : null,
-          rating: 4.5,
-          totalReviews: 120,
-          totalProducts: 45,
-          location: "B.K. college Road Anjali jhoot , chiko"
-        });
-      }
-
       // Load related products
       const allProducts = await products.list({ limit: 100 });
       const currentVendorId = typeof data.vendorId === 'object' ? data.vendorId?._id : data.vendorId;
@@ -81,6 +69,32 @@ const ProductPage = () => {
         const pCategoryId = typeof p.category === 'object' ? p.category?._id : p.category;
         return pCategoryId === currentCategoryId && p._id !== data._id;
       }).slice(0, 10);
+
+      // Dynamic vendor details
+      if (data.vendorId && typeof data.vendorId === 'object') {
+        const v = data.vendorId;
+        const addressObj = v.address || {};
+        const locParts = [addressObj.city, addressObj.state, addressObj.country].filter(Boolean);
+        const locationStr = locParts.length > 0 ? locParts.join(', ') : (addressObj.street || '');
+        
+        setVendorData({
+          name: v.businessName || v.storeName || "Verified Seller",
+          logo: v.logo || null,
+          rating: v.rating || 5.0,
+          totalReviews: v.totalReviews || data.totalReviews || 0,
+          totalProducts: v.totalProducts || sameVendor.length + 1,
+          location: locationStr
+        });
+      } else if (data.vendorId) {
+        setVendorData({
+          name: "Verified Seller",
+          logo: null,
+          rating: 5.0,
+          totalReviews: data.totalReviews || 0,
+          totalProducts: sameVendor.length + 1,
+          location: ""
+        });
+      }
 
       setVendorProducts(sameVendor);
       setSimilarProducts(sameCategory);
@@ -189,8 +203,21 @@ const ProductPage = () => {
     ? (currentVariant.stock ?? 999)
     : (product.stock != null ? product.stock : 999);
   const displayImages = currentVariant?.images?.length > 0 ? currentVariant.images : product.images;
-  const originalPrice = (product.originalPrice || Math.round(basePrice * 1.2)) + (selectedLens?.package?.price || 0);
-  const discount = Math.round(((originalPrice - displayPrice) / originalPrice) * 100);
+
+  let calculatedOriginal = product.originalPrice;
+  if (!calculatedOriginal && product.discountAmount && product.discountAmount > 0) {
+    if (product.discountType === 'percentage') {
+      calculatedOriginal = Math.round(basePrice / (1 - Math.min(99, product.discountAmount) / 100));
+    } else {
+      calculatedOriginal = basePrice + product.discountAmount;
+    }
+  } else if (!calculatedOriginal && product.discountPrice && product.discountPrice < basePrice) {
+    calculatedOriginal = basePrice;
+  }
+
+  const originalPrice = (calculatedOriginal || (product.discountAmount || product.discountPrice ? Math.round(basePrice * 1.25) : 0)) + (selectedLens?.package?.price || 0);
+  const hasDiscount = originalPrice > displayPrice;
+  const discount = hasDiscount ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100) : 0;
 
   const handleAddToCart = (lensData?: any, stayOnPage = true) => {
     if (displayStock <= 0) {
@@ -234,8 +261,10 @@ const ProductPage = () => {
 
   const specifications = product.attributes?.map((attr: any) => ({
     label: attr.name,
-    value: attr.values.join(", ")
+    value: Array.isArray(attr.values) ? attr.values.join(", ") : String(attr.values)
   })) || [];
+
+  const productWarranty = product.eyewearDetails?.warranty || product.warranty || '6 Months Warranty';
 
   if (product.eyewearDetails) {
     const details = product.eyewearDetails;
@@ -255,6 +284,7 @@ const ProductPage = () => {
       { key: 'faceShape', label: 'Ideal for Face Shape' },
       { key: 'weightGroup', label: 'Weight' },
       { key: 'style', label: 'Style' },
+      { key: 'warranty', label: 'Warranty' },
     ];
     detailMap.forEach(item => {
       const val = details[item.key as keyof typeof details];
@@ -501,7 +531,7 @@ const ProductPage = () => {
 
             {/* Perks */}
             <div style={{ fontSize: '.75rem', color: '#6b7280', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-              <span>🔄 14-day returns</span>
+              <span>🔄 {product.returnPolicy || '14-day returns'}</span>
               <span>✅ Authentic</span>
               <span>🎁 Free lens kit</span>
             </div>
@@ -537,7 +567,10 @@ const ProductPage = () => {
                   </div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '.88rem', color: '#f9fafb' }}>{vendorData.name}</div>
-                    <div style={{ fontSize: '.73rem', color: '#6b7280' }}>{vendorProducts.length + 1} products · {product.totalReviews || 0} reviews</div>
+                    <div style={{ fontSize: '.73rem', color: '#6b7280' }}>
+                      {vendorData.totalProducts} products · {vendorData.totalReviews} reviews
+                      {vendorData.location ? ` · 📍 ${vendorData.location}` : ''}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -551,7 +584,7 @@ const ProductPage = () => {
             
             {/* Specs + Reviews — matching layout of product grid above */}
             <div className="flex flex-col items-stretch lg:grid lg:grid-cols-[1fr_400px] gap-6 lg:items-start w-full">
-              <ProductSpecs specifications={specifications} />
+              <ProductSpecs specifications={specifications} warranty={productWarranty} />
               <ProductReviews productId={product._id} averageRating={product.averageRating || 0} totalReviews={product.totalReviews || 0} />
             </div>
 

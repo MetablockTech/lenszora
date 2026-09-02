@@ -239,12 +239,15 @@ const Checkout = () => {
 
     setUploadingProof(true)
     try {
-      // Use correct upload endpoint for proofs
-      const { url } = await import('@/lib/api').then(m => m.orders.uploadProof(file, token))
-      setPaymentProof(url)
-    } catch (error) {
+      const activeToken = token || getToken()
+      const { orders } = await import('@/lib/api')
+      const res = await orders.uploadProof(file, activeToken)
+      const uploadedUrl = res.url || res.path
+      if (!uploadedUrl) throw new Error('Invalid response from server')
+      setPaymentProof(uploadedUrl)
+    } catch (error: any) {
       console.error('Upload failed', error)
-      alert('Failed to upload proof. Please try again.')
+      alert(error?.message || 'Failed to upload proof. Please try again.')
     } finally {
       setUploadingProof(false)
     }

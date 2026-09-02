@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
-import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth'
+import { requireAuth, optAuth, requireAdmin, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
@@ -14,7 +14,11 @@ const sanitizeFilename = (name: string) => {
 // Configure storage
 const storage = multer.diskStorage({
     destination: (req: any, file, cb) => {
-        const { folder = 'others', subfolder = '' } = req.body
+        const rawFolder = req.body?.folder || 'others'
+        const rawSubfolder = req.body?.subfolder || ''
+        const folder = path.basename(rawFolder)
+        const subfolder = rawSubfolder ? path.basename(rawSubfolder) : ''
+
         const baseDir = path.join(__dirname, '../../uploads')
         const targetDir = path.join(baseDir, folder, subfolder)
 
@@ -41,36 +45,54 @@ const upload = multer({
     storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
     fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|webp|svg/
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase())
-        const mimetype = allowedTypes.test(file.mimetype)
-        if (extname && mimetype) {
+        const allowedExtensions = /\.(jpeg|jpg|png|webp|svg|heic|heif|bmp)$/i
+        const isExtValid = allowedExtensions.test(file.originalname)
+        const isMimeValid = file.mimetype.startsWith('image/') || /octet-stream/i.test(file.mimetype)
+        if (isExtValid || isMimeValid) {
             return cb(null, true)
         }
-        cb(new Error('Only images (jpeg, jpg, png, webp, svg) are allowed'))
+        cb(new Error('Only image files (JPEG, PNG, WEBP, HEIC, SVG, BMP) are allowed'))
     }
 })
 
-// Unified Upload Endpoint
-router.post('/', requireAuth, upload.single('file'), (req: Request, res: Response) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'No file uploaded' })
+// Unified Upload Endpoint (Uses optAuth to allow guest payment screenshots)
+router.post('/', optAuth, (req: Request, res: Response) => {
+    upload.single('file')(req, res, (err: any) => {
+        if (err) {
+            console.error('Upload multer error:', err)
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({ message: 'File is too large. Maximum size is 10MB.' })
+                }
+                return res.status(400).json({ message: err.message })
+            }
+            return res.status(400).json({ message: err.message || 'File upload failed' })
         }
 
-        const { folder = 'others', subfolder = '' } = req.body
-        const publicPath = `/uploads/${folder}/${subfolder ? subfolder + '/' : ''}${req.file.filename}`
+        try {
+            if (!req.file) {
+                return res.status(400).json({ message: 'No file uploaded' })
+            }
 
-        res.json({
-            url: publicPath,
-            filename: req.file.filename,
-            mimetype: req.file.mimetype,
-            size: req.file.size
-        })
-    } catch (error: any) {
-        res.status(500).json({ message: error.message })
-    }
+            const rawFolder = req.body?.folder || 'others'
+            const rawSubfolder = req.body?.subfolder || ''
+            const folder = path.basename(rawFolder)
+            const subfolder = rawSubfolder ? path.basename(rawSubfolder) : ''
+            const publicPath = `/uploads/${folder}/${subfolder ? subfolder + '/' : ''}${req.file.filename}`
+
+            res.json({
+                url: publicPath,
+                path: publicPath,
+                filename: req.file.filename,
+                mimetype: req.file.mimetype,
+                size: req.file.size
+            })
+        } catch (error: any) {
+            res.status(500).json({ message: error.message })
+        }
+    })
 })
+
 
 // Gallery API: List images recursively
 router.get('/gallery', requireAuth, async (req: AuthRequest, res: Response) => {

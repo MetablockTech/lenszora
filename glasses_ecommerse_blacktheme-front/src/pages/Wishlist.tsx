@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { ShoppingBag, Trash2, Heart, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { getImageUrl } from "@/lib/utils";
+import { getImageUrl, getProductImage } from "@/lib/utils";
 
 const Wishlist = () => {
     const { wishlistItems, loading, toggleWishlist } = useWishlist();
@@ -18,7 +18,7 @@ const Wishlist = () => {
             title: product.title,
             price: product.price,
             quantity: 1,
-            image: product.images[0],
+            image: getProductImage(product),
         });
         toast({
             title: "Added to Cart",
@@ -81,7 +81,7 @@ const Wishlist = () => {
 
                                         <Link to={`/product/${product._id}`}>
                                             <img
-                                                src={getImageUrl(product.images[0])}
+                                                src={getProductImage(product)}
                                                 alt={product.title}
                                                 className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-700"
                                             />

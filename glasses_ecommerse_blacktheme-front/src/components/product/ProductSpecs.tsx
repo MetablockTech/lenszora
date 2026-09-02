@@ -7,9 +7,15 @@ interface Specification {
 
 interface ProductSpecsProps {
   specifications: Specification[];
+  warranty?: string;
 }
 
-const ProductSpecs = ({ specifications }: ProductSpecsProps) => {
+const ProductSpecs = ({ specifications, warranty }: ProductSpecsProps) => {
+  const warrantyTitle = warranty || "6 Months Warranty";
+  const warrantyAbbr = warrantyTitle.toLowerCase().includes('year') || warrantyTitle.toLowerCase().includes('1 year') || warrantyTitle.toLowerCase().includes('12 month') 
+    ? '1YR' 
+    : warrantyTitle.match(/\d+\s*(?:M|month|mon)/i) ? warrantyTitle.match(/\d+/)?.[0] + 'M' : '6M';
+
   return (
     <div className="space-y-4">
       <h3 className="font-playfair text-xl font-semibold text-foreground gold-underline">
@@ -44,10 +50,10 @@ const ProductSpecs = ({ specifications }: ProductSpecsProps) => {
       {/* Warranty Badge */}
       <div className="flex items-center gap-3 p-4 border border-primary/30 bg-primary/5">
         <div className="w-12 h-12 border border-primary/50 rounded-full flex items-center justify-center">
-          <span className="text-primary font-playfair font-bold">6M</span>
+          <span className="text-primary font-playfair font-bold">{warrantyAbbr}</span>
         </div>
         <div>
-          <p className="font-medium text-foreground">6 Months Warranty</p>
+          <p className="font-medium text-foreground">{warrantyTitle}</p>
           <p className="text-sm text-muted-foreground">Manufacturing defects covered</p>
         </div>
       </div>
