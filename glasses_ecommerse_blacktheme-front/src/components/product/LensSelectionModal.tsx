@@ -76,37 +76,59 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
         }
     }, [isOpen, vendorId, product, initialData]);
 
+const DEFAULT_FALLBACK_TYPES = [
+    { _id: 'with', key: 'with', name: 'With Power', description: 'Positive, Negative or Cylindrical', allowPackages: true },
+    { _id: 'zero', key: 'zero', name: 'Zero Power', description: 'Blue light block for screen protection', allowPackages: true },
+    { _id: 'reading', key: 'reading', name: 'Reading Power', description: 'With power for near vision only', allowPackages: true },
+    { _id: 'progressive', key: 'progressive', name: 'Progressive / Bifocals', description: 'Two powers in one eye', allowPackages: true },
+    { _id: 'frame', key: 'frame', name: 'Frame Only', description: 'With no lenses', allowPackages: false, skipPowerEntry: true }
+];
+
+const DEFAULT_FALLBACK_PACKAGES = [
+    // Packages for 'with' (With Power)
+    { _id: 'pkg-with-1', lensTypeId: 'with', name: 'Standard Anti-Glare Lens', price: 499, originalPrice: 999, description: 'Anti-reflective coating, Scratch resistant', warranty: '6 Months' },
+    { _id: 'pkg-with-2', lensTypeId: 'with', name: 'Blu Cut Screen Protect Lens', price: 999, originalPrice: 1999, description: 'Blue light filter, UV400 Protection, Anti-glare', warranty: '1 Year' },
+    { _id: 'pkg-with-3', lensTypeId: 'with', name: 'Ultra Thin HD Anti-Reflective Lens', price: 1499, originalPrice: 2999, description: 'Super hydrophobic, Ultra lightweight 1.61 index', warranty: '1 Year' },
+
+    // Packages for 'zero' (Zero Power)
+    { _id: 'pkg-zero-1', lensTypeId: 'zero', name: 'Blu Cut Computer Screen Glasses', price: 499, originalPrice: 999, description: 'Blocks harmful digital screen blue light', warranty: '6 Months' },
+    { _id: 'pkg-zero-2', lensTypeId: 'zero', name: 'Premium Anti-Glare Zero Power Lens', price: 899, originalPrice: 1499, description: 'Dust & smudge resistant, Zero distortion view', warranty: '1 Year' },
+
+    // Packages for 'reading' (Reading Power)
+    { _id: 'pkg-reading-1', lensTypeId: 'reading', name: 'Standard Reading Lens', price: 399, originalPrice: 799, description: 'Near vision reading clarity', warranty: '6 Months' },
+    { _id: 'pkg-reading-2', lensTypeId: 'reading', name: 'Anti-Glare Reading Lens', price: 799, originalPrice: 1299, description: 'Anti-reflective near vision reading lens', warranty: '1 Year' },
+
+    // Packages for 'progressive' (Progressive / Bifocal)
+    { _id: 'pkg-prog-1', lensTypeId: 'progressive', name: 'Standard Bifocal Lens (Kryptok)', price: 1299, originalPrice: 2499, description: 'Distance & near vision dual segment', warranty: '6 Months' },
+    { _id: 'pkg-prog-2', lensTypeId: 'progressive', name: 'No-Line Seamless Progressive Lens', price: 2499, originalPrice: 4999, description: 'Smooth transition, wide corridor digital progressive', warranty: '1 Year' }
+];
+
     async function fetchLensData() {
         try {
             setLoading(true);
             const productLensTypes = product?.lensSettings?.lensTypes || [];
 
             if (productLensTypes.length > 0) {
-                // Hierarchical System (Vendor-defined for this specific product)
                 console.log("Using product-specific lens types:", productLensTypes.length);
 
-                // Fetch global vendor lens types as a fallback in case the API didn't populate lensTypeId
                 const hasUnpopulatedTypes = productLensTypes.some((pt: any) => typeof pt.lensTypeId === 'string');
                 let adminGlobalData: any = null;
                 let vendorGlobalData: any = null;
                 if (hasUnpopulatedTypes) {
                     try {
-                        adminGlobalData = await lens.getPublic(); // Fetch platform global types
+                        adminGlobalData = await lens.getPublic();
                         if (vendorId && typeof vendorId === 'string' && vendorId.length > 5) {
-                             vendorGlobalData = await lens.getPublic(vendorId); // Fetch vendor-specific types
+                             vendorGlobalData = await lens.getPublic(vendorId);
                         }
                     } catch (e) {
                         console.error("Fallback global lens fetch failed", e);
                     }
                 }
 
-                // Extract types directly from the populated product data
-                // This avoids calling protected Admin APIs on the storefront
                 const enabledTypes = productLensTypes
                     .map((pt: any) => {
                         let typeInfo = pt.lensTypeId;
                         if (typeof pt.lensTypeId === 'string') {
-                            // Find the original type details from the global fetch if available
                             const fallbackType = 
                                 vendorGlobalData?.types?.find((t: any) => t._id === pt.lensTypeId) ||
                                 adminGlobalData?.types?.find((t: any) => t._id === pt.lensTypeId);
@@ -121,7 +143,6 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                     })
                     .filter((type: any) => type && type._id);
 
-                // Map packages with their lensTypeId for filtering
                 const allProductPackages = productLensTypes.flatMap((pt: any) => {
                     const ptId = pt.lensTypeId?._id || pt.lensTypeId;
                     return (pt.packages || []).map((pkg: any) => ({
@@ -131,21 +152,39 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                     }));
                 });
 
-                setLensTypes(enabledTypes);
-                setLensPackages(allProductPackages);
+                if (enabledTypes.length > 0) {
+                    setLensTypes(enabledTypes);
+                    setLensPackages(allProductPackages.length > 0 ? allProductPackages : DEFAULT_FALLBACK_PACKAGES);
+                } else {
+                    setLensTypes(DEFAULT_FALLBACK_TYPES);
+                    setLensPackages(DEFAULT_FALLBACK_PACKAGES);
+                }
             } else {
-                // Legacy System (Global defaults for vendor)
-                console.log("Product has no custom lens types, falling back to vendor defaults");
-                const data = await lens.getPublic(vendorId);
-                const types = (data.types || []).map((t: any) => ({
-                    ...t,
-                    skipPowerEntry: t.skipPowerEntry === true
-                }));
-                setLensTypes(types);
-                setLensPackages(data.packages || []);
+                let types: any[] = [];
+                let packages: any[] = [];
+                try {
+                    const data = await lens.getPublic(vendorId);
+                    types = (data.types || []).map((t: any) => ({
+                        ...t,
+                        skipPowerEntry: t.skipPowerEntry === true
+                    }));
+                    packages = data.packages || [];
+                } catch (e) {
+                    console.warn("Public lens fetch error, using fallback defaults", e);
+                }
+
+                if (types.length > 0) {
+                    setLensTypes(types);
+                    setLensPackages(packages.length > 0 ? packages : DEFAULT_FALLBACK_PACKAGES);
+                } else {
+                    setLensTypes(DEFAULT_FALLBACK_TYPES);
+                    setLensPackages(DEFAULT_FALLBACK_PACKAGES);
+                }
             }
         } catch (error) {
-            console.error("Failed to fetch lens data:", error);
+            console.error("Failed to fetch lens data, using default fallbacks:", error);
+            setLensTypes(DEFAULT_FALLBACK_TYPES);
+            setLensPackages(DEFAULT_FALLBACK_PACKAGES);
         } finally {
             setLoading(false);
         }
@@ -153,8 +192,8 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
 
     const currentPackages = lensPackages.filter(p => {
         const pkgTypeId = p.lensTypeId?._id || p.lensTypeId;
-        const selTypeId = selectedType?._id;
-        return pkgTypeId === selTypeId;
+        const selTypeId = selectedType?._id || selectedType?.key;
+        return String(pkgTypeId) === String(selTypeId);
     });
     const isFrameOnly = selectedType?.name?.toLowerCase().includes("frame only") || selectedType?.skipPowerEntry;
 
@@ -236,7 +275,7 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
         // Find packages for this specific type to decide if we skip Step 2
         const typePackages = lensPackages.filter(p => {
             const pkgTypeId = p.lensTypeId?._id || p.lensTypeId;
-            const selTypeId = type._id;
+            const selTypeId = type._id || type.key;
             return String(pkgTypeId) === String(selTypeId);
         });
 

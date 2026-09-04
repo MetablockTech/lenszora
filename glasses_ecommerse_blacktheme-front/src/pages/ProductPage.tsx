@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info, Sparkles } from "lucide-react";
+import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info, Sparkles, Check, Glasses, Eye } from "lucide-react";
 import { cn, getImageUrl, calculateProductDiscount } from "@/lib/utils";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
@@ -315,7 +315,8 @@ const ProductPage = () => {
     if (!stayOnPage) setSelectedLens(null);
   };
 
-  const allowLensSelection = product?.lensSettings?.allowLensSelection !== false;
+  // Lens selection is enabled for all eyewear products by default
+  const allowLensSelection = product?.lensSettings?.disableLensSelection !== true;
 
   const handleBuyNow = () => {
     if (displayStock <= 0) {
@@ -664,27 +665,51 @@ const ProductPage = () => {
 
             <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
 
-            {/* Selected Lens Summary Badge (if selected) */}
-            {selectedLens && (
-              <div style={{ background: 'rgba(218,171,52,0.08)', border: '1px solid rgba(218,171,52,0.25)', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 10, marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: '.82rem', fontWeight: 700, color: '#DAAB34', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Sparkles style={{ width: 14, height: 14 }} /> {selectedLens.type?.name} — {selectedLens.package?.name || 'Selected'}
+            {/* Lens Customization Selection Box */}
+            {allowLensSelection && (
+              <div style={{ background: 'rgba(218,171,52,0.06)', border: '1.5px solid rgba(218,171,52,0.25)', borderRadius: 12, padding: 14, marginTop: 10, marginBottom: 12 }}>
+                {selectedLens ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: '.82rem', fontWeight: 700, color: '#DAAB34', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Check style={{ width: 14, height: 14 }} /> {selectedLens.type?.name} — {selectedLens.package?.name || 'Selected'}
+                      </div>
+                      <div style={{ fontSize: '.74rem', color: '#9ca3af', marginTop: 2 }}>
+                        {selectedLens.prescription ? (
+                          selectedLens.prescription.method === 'upload' ? '📄 Prescription Slip Uploaded' :
+                          selectedLens.prescription.method === 'later' ? '📲 Submit Power Later via WhatsApp/Call' :
+                          '✍️ Eye Power Values Entered'
+                        ) : selectedLens.package?.price ? `+₹${selectedLens.package.price}` : 'Frame Only (No Lenses)'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowLensModal(true)}
+                      style={{ background: 'transparent', color: '#DAAB34', border: '1px solid rgba(218,171,52,0.4)', borderRadius: 6, padding: '5px 11px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      Change
+                    </button>
                   </div>
-                  <div style={{ fontSize: '.74rem', color: '#9ca3af', marginTop: 2 }}>
-                    {selectedLens.prescription ? (
-                      selectedLens.prescription.method === 'upload' ? '📄 Prescription Slip Uploaded' :
-                      selectedLens.prescription.method === 'later' ? '📲 Submit Power Later via WhatsApp/Call' :
-                      '✍️ Eye Power Values Entered'
-                    ) : '+₹' + (selectedLens.package?.price || 0)}
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <div style={{ fontSize: '.84rem', fontWeight: 700, color: '#DAAB34', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Glasses style={{ width: 16, height: 16 }} /> Select Lenses & Eye Power
+                      </div>
+                      <span style={{ fontSize: '.68rem', background: '#DAAB34', color: '#000', fontWeight: 800, padding: '2px 7px', borderRadius: 4, textTransform: 'uppercase' }}>
+                        Step 1
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '.76rem', color: '#9ca3af', marginBottom: 10, lineHeight: 1.3 }}>
+                      Choose <strong>With Power</strong> (Prescription / Zero Power) or <strong>Frame Only</strong> before ordering.
+                    </p>
+                    <button
+                      onClick={() => setShowLensModal(true)}
+                      style={{ width: '100%', background: 'rgba(218,171,52,0.14)', color: '#DAAB34', border: '1.5px solid #DAAB34', borderRadius: 8, padding: '10px 0', fontSize: '.84rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all .15s' }}
+                    >
+                      <Sparkles style={{ width: 15, height: 15 }} /> Select Lenses & Add Power →
+                    </button>
                   </div>
-                </div>
-                <button
-                  onClick={() => setShowLensModal(true)}
-                  style={{ background: 'transparent', color: '#DAAB34', border: '1px solid rgba(218,171,52,0.4)', borderRadius: 6, padding: '4px 10px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                >
-                  Change
-                </button>
+                )}
               </div>
             )}
 
