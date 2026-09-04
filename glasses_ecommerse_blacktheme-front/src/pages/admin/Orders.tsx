@@ -147,14 +147,13 @@ const OrdersPage: React.FC = () => {
                       <Button 
                         size="icon" 
                         variant="ghost" 
-                        className="hover:bg-amber-500/10 hover:text-amber-500 transition-colors disabled:opacity-30" 
+                        className="hover:bg-amber-500/10 hover:text-amber-500 transition-colors" 
                         onClick={() => {
                           setSelectedOrder(order)
                           setStatusUpdate({ status: order.orderStatus, note: '' })
                           setIsStatusOpen(true)
                         }}
-                        disabled={['shipped', 'delivered', 'partially_shipped', 'partially_delivered'].includes(order.orderStatus)}
-                        title={['shipped', 'delivered', 'partially_shipped', 'partially_delivered'].includes(order.orderStatus) ? "Cannot change status once fulfillment has started" : "Update Status"}
+                        title="Update Status / Tracking"
                       >
                         <Truck className="h-4 w-4" />
                       </Button>
@@ -504,11 +503,20 @@ const OrdersPage: React.FC = () => {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                  <SelectItem value="pending" disabled={selectedOrder?.orderStatus === 'confirmed'}>
-                    Pending {selectedOrder?.orderStatus === 'confirmed' ? '✓' : ''}
+                  <SelectItem value="pending">
+                    Pending {selectedOrder?.orderStatus === 'pending' ? '✓' : ''}
                   </SelectItem>
                   <SelectItem value="confirmed">
                     Confirmed {selectedOrder?.orderStatus === 'confirmed' ? '✓' : ''}
+                  </SelectItem>
+                  <SelectItem value="shipped">
+                    Shipped {selectedOrder?.orderStatus === 'shipped' ? '✓' : ''}
+                  </SelectItem>
+                  <SelectItem value="delivered">
+                    Delivered {selectedOrder?.orderStatus === 'delivered' ? '✓' : ''}
+                  </SelectItem>
+                  <SelectItem value="cancelled">
+                    Cancelled {selectedOrder?.orderStatus === 'cancelled' ? '✓' : ''}
                   </SelectItem>
                 </SelectContent>
               </Select>

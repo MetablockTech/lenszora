@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info } from "lucide-react";
+import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info, Sparkles } from "lucide-react";
 import { cn, getImageUrl, calculateProductDiscount } from "@/lib/utils";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
@@ -24,6 +24,7 @@ const ProductPage = () => {
   // Lens states
   const [showLensModal, setShowLensModal] = useState(false);
   const [selectedLens, setSelectedLens] = useState<any>(null);
+  const [isBuyNowFlow, setIsBuyNowFlow] = useState(false);
 
   // Dynamic selections
   const [selectedColor, setSelectedColor] = useState<string>("");
@@ -314,9 +315,22 @@ const ProductPage = () => {
     if (!stayOnPage) setSelectedLens(null);
   };
 
+  const allowLensSelection = product?.lensSettings?.allowLensSelection !== false;
+
   const handleBuyNow = () => {
-    handleAddToCart();
-    navigate('/cart');
+    if (displayStock <= 0) {
+      toast({ title: "Out of Stock", description: "This variant is currently out of stock.", variant: "destructive" });
+      return;
+    }
+
+    if (allowLensSelection && !selectedLens) {
+      setIsBuyNowFlow(true);
+      setShowLensModal(true);
+      toast({ title: "Select your Lens & Power", description: "Choose your lens package or zero power option to proceed directly to checkout." });
+    } else {
+      handleAddToCart(selectedLens, true);
+      navigate('/checkout');
+    }
   };
 
   const getReturnPolicyText = (policy: any) => {
@@ -650,84 +664,53 @@ const ProductPage = () => {
 
             <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
 
-            {/* Button row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {/* Selected Lens Summary Badge (if selected) */}
+            {selectedLens && (
+              <div style={{ background: 'rgba(218,171,52,0.08)', border: '1px solid rgba(218,171,52,0.25)', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 10, marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: '.82rem', fontWeight: 700, color: '#DAAB34', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Sparkles style={{ width: 14, height: 14 }} /> {selectedLens.type?.name} — {selectedLens.package?.name || 'Selected'}
+                  </div>
+                  <div style={{ fontSize: '.74rem', color: '#9ca3af', marginTop: 2 }}>
+                    {selectedLens.prescription ? (
+                      selectedLens.prescription.method === 'upload' ? '📄 Prescription Slip Uploaded' :
+                      selectedLens.prescription.method === 'later' ? '📲 Submit Power Later via WhatsApp/Call' :
+                      '✍️ Eye Power Values Entered'
+                    ) : '+₹' + (selectedLens.package?.price || 0)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowLensModal(true)}
+                  style={{ background: 'transparent', color: '#DAAB34', border: '1px solid rgba(218,171,52,0.4)', borderRadius: 6, padding: '4px 10px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  Change
+                </button>
+              </div>
+            )}
+
+            {/* Action Buttons: BUY NOW + ADD TO CART + WISHLIST */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10 }}>
+              <button
+                onClick={handleBuyNow}
+                disabled={displayStock <= 0}
+                style={{ background: 'linear-gradient(135deg, #DAAB34 0%, #F5C542 100%)', color: '#000', border: 'none', borderRadius: 10, padding: '14px 0', fontFamily: "'DM Sans',sans-serif", fontSize: '.92rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: displayStock <= 0 ? 0.4 : 1, boxShadow: '0 4px 14px rgba(218,171,52,0.3)' }}
+              >
+                <Zap style={{ width: 17, height: 17, fill: '#000' }} /> BUY NOW
+              </button>
               <button
                 onClick={() => handleAddToCart()}
                 disabled={displayStock <= 0}
-                style={{ background: '#DAAB34', color: '#000', border: 'none', borderRadius: 10, padding: '13px 0', fontFamily: "'DM Sans',sans-serif", fontSize: '.9rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: displayStock <= 0 ? 0.4 : 1 }}
+                style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '14px 0', fontFamily: "'DM Sans',sans-serif", fontSize: '.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: displayStock <= 0 ? 0.4 : 1 }}
               >
                 <ShoppingCart style={{ width: 16, height: 16 }} /> Add to Cart
               </button>
               <button
                 onClick={() => toggleWishlist(product._id)}
-                style={{ background: 'transparent', color: isWishlisted ? '#ef4444' : '#e5e7eb', border: `1.5px solid ${isWishlisted ? '#ef4444' : 'rgba(255,255,255,0.2)'}`, borderRadius: 10, padding: '12px 0', fontFamily: "'DM Sans',sans-serif", fontSize: '.88rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                style={{ background: 'transparent', color: isWishlisted ? '#ef4444' : '#e5e7eb', border: `1.5px solid ${isWishlisted ? '#ef4444' : 'rgba(255,255,255,0.2)'}`, borderRadius: 10, padding: '12px 14px', fontFamily: "'DM Sans',sans-serif", fontSize: '.88rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <Heart style={{ width: 16, height: 16, fill: isWishlisted ? '#ef4444' : 'none' }} />
-                {isWishlisted ? 'Wishlisted' : 'Wishlist'}
+                <Heart style={{ width: 18, height: 18, fill: isWishlisted ? '#ef4444' : 'none' }} />
               </button>
             </div>
-
-
-
-            {/* Shipping & Features */}
-            <div style={{ fontSize: '.75rem', color: '#9ca3af', display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 12px' }}>
-              <div>
-                {product.shippingCost > 0 ? (
-                  <span>🚚 Shipping: <strong style={{ color: '#DAAB34' }}>₹{product.shippingCost}</strong> {product.shippingCostMultiply ? '(per unit)' : '(flat rate)'}</span>
-                ) : (
-                  <span style={{ color: '#22c55e', fontWeight: 600 }}>🚚 Free Nationwide Delivery</span>
-                )}
-              </div>
-              {product.minOrderQuantity > 1 && (
-                <div style={{ color: '#fb923c', fontWeight: 600 }}>
-                  📦 Minimum Order Quantity: {product.minOrderQuantity} {product.unit || 'units'}
-                </div>
-              )}
-            </div>
-
-            {/* Special Features Pills if available */}
-            {product.eyewearDetails?.features && Array.isArray(product.eyewearDetails.features) && product.eyewearDetails.features.length > 0 && (
-              <div>
-                <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#DAAB34', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>Special Features</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {product.eyewearDetails.features.map((feat: string, idx: number) => (
-                    <span key={idx} style={{ fontSize: '.7rem', color: '#e5e7eb', background: 'rgba(218,171,52,0.08)', border: '1px solid rgba(218,171,52,0.2)', padding: '3px 8px', borderRadius: 6 }}>
-                      ✓ {feat}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Perks */}
-            <div style={{ fontSize: '.75rem', color: '#6b7280', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-              <span>🔄 {getReturnPolicyText(product.returnPolicy)}</span>
-              <span>✅ Authentic</span>
-              <span>🎁 Free lens kit</span>
-            </div>
-
-            {/* Lens Customization */}
-            {product.lensSettings?.allowLensSelection && (
-              <div style={{ background: 'rgba(218,171,52,0.08)', border: '1px solid rgba(218,171,52,0.25)', borderRadius: 10, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                <div>
-                  <div style={{ fontSize: '.85rem', fontWeight: 700, color: '#DAAB34', marginBottom: 2 }}>Lens Customization</div>
-                  {selectedLens ? (
-                    <div style={{ fontSize: '.78rem', color: '#9ca3af' }}>{selectedLens.package?.name} (+₹{selectedLens.package?.price})</div>
-                  ) : (
-                    <div style={{ fontSize: '.78rem', color: '#9ca3af' }}>Add prescription lenses</div>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setShowLensModal(true);
-                  }}
-                  style={{ background: '#DAAB34', color: '#000', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: '.8rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'DM Sans',sans-serif" }}
-                >
-                  {selectedLens ? 'Change Lenses' : 'Choose Lenses'}
-                </button>
-              </div>
-            )}
 
             {/* Vendor info */}
             {vendorData && (
@@ -798,8 +781,12 @@ const ProductPage = () => {
         framePrice={basePrice}
         onSelect={(data) => {
           setSelectedLens(data);
-          handleAddToCart(data);
+          handleAddToCart(data, true);
           setShowLensModal(false);
+          if (isBuyNowFlow) {
+            setIsBuyNowFlow(false);
+            navigate('/checkout');
+          }
         }}
         productTitle={product.title}
         vendorId={typeof product.vendorId === 'object' ? product.vendorId._id : product.vendorId}

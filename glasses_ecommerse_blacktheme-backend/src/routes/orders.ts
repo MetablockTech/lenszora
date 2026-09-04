@@ -449,6 +449,18 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req: Request, res:
       note: note || `Status updated to ${status}`
     })
 
+    // Sync vendorOrders status if present
+    if (order.vendorOrders && order.vendorOrders.length > 0) {
+      order.vendorOrders.forEach(vo => {
+        vo.status = status as any
+        vo.statusHistory.push({
+          status,
+          timestamp: new Date(),
+          note: note || `Status updated to ${status} by admin`
+        })
+      })
+    }
+
     await order.save()
     res.json(order)
   } catch (error: any) {

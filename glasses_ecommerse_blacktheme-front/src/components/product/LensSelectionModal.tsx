@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Zap, Shield, Eye, Waves, Sun, Droplets, Award, Sparkles, Check, Layers } from "lucide-react";
-import { lens, API_URL } from "@/lib/api";
+import { X, ChevronLeft, ChevronRight, Zap, Shield, Eye, Waves, Sun, Droplets, Award, Sparkles, Check, Layers, Upload, MessageCircle, FileText, PhoneCall, Image as ImageIcon } from "lucide-react";
+import { lens, API_URL, returnRequests, getToken } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
 import PrescriptionForm from "./PrescriptionForm";
 
 interface LensSelectionModalProps {
@@ -24,8 +25,11 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     // Selections
     const [selectedType, setSelectedType] = useState<any>(null);
     const [selectedPackage, setSelectedPackage] = useState<any>(null);
-    const [powerOption, setPowerOption] = useState<'later' | 'manual' | null>(null);
+    const [powerOption, setPowerOption] = useState<'later' | 'manual' | 'upload' | null>(null);
     const [prescription, setPrescription] = useState<any>(null);
+    const [prescriptionImage, setPrescriptionImage] = useState<string | null>(null);
+    const [prescriptionFileName, setPrescriptionFileName] = useState<string | null>(null);
+    const [uploadingPrescription, setUploadingPrescription] = useState(false);
     const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
     const [activePackageDetails, setActivePackageDetails] = useState<any>(null);
 
@@ -40,7 +44,15 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                 setPrescription(initialData.prescription || null);
                 
                 if (initialData.prescription) {
-                    setPowerOption('manual');
+                    if (initialData.prescription.method === 'later') {
+                        setPowerOption('later');
+                    } else if (initialData.prescription.method === 'upload') {
+                        setPowerOption('upload');
+                        setPrescriptionImage(initialData.prescription.image || null);
+                        setPrescriptionFileName(initialData.prescription.fileName || null);
+                    } else {
+                        setPowerOption('manual');
+                    }
                 } else if (initialData.type?.allowPackages === false) {
                      setPowerOption(null);
                 }
@@ -57,6 +69,8 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                 setSelectedPackage(null);
                 setPowerOption(null);
                 setPrescription(null);
+                setPrescriptionImage(null);
+                setPrescriptionFileName(null);
                 setShowPrescriptionForm(false);
             }
         }
@@ -155,24 +169,65 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
         if (step === 2) return !!selectedPackage;
         if (step === 3) {
             if (powerOption === 'later') return true;
+            if (powerOption === 'upload') return !!prescriptionImage;
             if (powerOption === 'manual') {
                 if (!showPrescriptionForm) return true;
                 return !!(prescription?.customerName && prescription?.customerPhone && prescription?.od?.sph && prescription?.os?.sph);
             }
-            return !!powerOption;
+            return false;
         }
         return false;
     };
 
     const getContinueLabel = () => {
         if (step === 3) {
-            if (powerOption === 'later') return "Place Order →";
+            if (powerOption === 'later') return "Submit Power Later & Proceed →";
+            if (powerOption === 'upload') return "Use Uploaded Prescription →";
             if (powerOption === 'manual' && showPrescriptionForm) return "Save & Proceed";
-            if (powerOption === 'manual') return "Enter Power →";
+            if (powerOption === 'manual') return "Enter Power Values →";
+            return "Select Power Option";
         }
         if (isFrameOnly && step === 1) return "Confirm – Frame Only";
         return "Continue";
     };
+
+    async function handlePrescriptionFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setUploadingPrescription(true);
+            setPrescriptionFileName(file.name);
+
+            let uploadedUrl = '';
+            const token = getToken();
+            if (token) {
+                try {
+                    const res = await returnRequests.uploadProof(file, token);
+                    uploadedUrl = res.url || res.path || '';
+                } catch (err) {
+                    console.warn("Server upload failed, fallback to local file reader", err);
+                }
+            }
+
+            if (!uploadedUrl) {
+                uploadedUrl = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            setPrescriptionImage(uploadedUrl);
+            setPowerOption('upload');
+            toast({ title: "Prescription uploaded successfully", description: file.name });
+        } catch (error: any) {
+            console.error("Prescription upload error:", error);
+            toast({ title: "Upload failed", description: error?.message || "Could not process file", variant: "destructive" });
+        } finally {
+            setUploadingPrescription(false);
+        }
+    }
 
     const handleTypeSelect = (type: any) => {
         setSelectedType(type);
@@ -193,7 +248,7 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
             console.log(`Skipping package selection for: ${type.name} (Package count: ${typePackages.length})`);
 
             // Check if we should ALSO skip Step 3 (Eye Power)
-            const shouldSkipPower = type.name?.toLowerCase().includes("zero") || type.skipPowerEntry;
+            const shouldSkipPower = type.name?.toLowerCase().includes("zero") || type.name?.toLowerCase().includes("frame only") || type.skipPowerEntry;
 
             if (shouldSkipPower) {
                 onSelect({
@@ -232,13 +287,39 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
             }
         } else if (step === 3) {
             if (powerOption === 'later') {
-                onSelect({ type: selectedType, package: selectedPackage, prescription: null });
+                onSelect({
+                    type: selectedType,
+                    package: selectedPackage,
+                    prescription: {
+                        method: 'later',
+                        text: 'Submit Power Later (WhatsApp / Call after order)'
+                    }
+                });
+                onClose();
+            } else if (powerOption === 'upload') {
+                onSelect({
+                    type: selectedType,
+                    package: selectedPackage,
+                    prescription: {
+                        method: 'upload',
+                        image: prescriptionImage,
+                        fileName: prescriptionFileName,
+                        text: `Uploaded Prescription (${prescriptionFileName || 'Image/PDF'})`
+                    }
+                });
                 onClose();
             } else if (powerOption === 'manual') {
                 if (!showPrescriptionForm) {
                     setShowPrescriptionForm(true);
                 } else {
-                    onSelect({ type: selectedType, package: selectedPackage, prescription });
+                    onSelect({
+                        type: selectedType,
+                        package: selectedPackage,
+                        prescription: {
+                            ...prescription,
+                            method: 'manual'
+                        }
+                    });
                     onClose();
                 }
             }
@@ -270,6 +351,14 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                 <circle cx="43" cy="22" r="5" fill="rgba(96,165,250,0.28)" />
             </svg>
         ),
+        reading: (
+            <svg viewBox="0 0 60 44" fill="none" width="52">
+                <circle cx="17" cy="22" r="13" stroke="#f97316" strokeWidth="2.2" fill="rgba(255,237,213,0.3)" />
+                <circle cx="43" cy="22" r="13" stroke="#f97316" strokeWidth="2.2" fill="rgba(255,237,213,0.3)" />
+                <text x="9" y="26" fontSize="9" fontWeight="bold" fill="#ea580c" fontFamily="sans-serif">+1.00</text>
+                <text x="35" y="26" fontSize="9" fontWeight="bold" fill="#ea580c" fontFamily="sans-serif">+1.00</text>
+            </svg>
+        ),
         progressive: (
             <svg viewBox="0 0 60 44" fill="none" width="52">
                 <circle cx="17" cy="22" r="13" stroke="#aaa" strokeWidth="2.2" fill="rgba(220,220,240,0.3)" />
@@ -289,6 +378,7 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     const getLensTypeSVGKey = (name: string) => {
         const n = name.toLowerCase();
         if (n.includes("zero") || n.includes("blu")) return "zero";
+        if (n.includes("reading")) return "reading";
         if (n.includes("progressive") || n.includes("bifocal")) return "progressive";
         if (n.includes("frame")) return "frame";
         return "default";
@@ -297,6 +387,7 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     const getLensTypeBg = (name: string) => {
         const n = name.toLowerCase();
         if (n.includes("zero") || n.includes("blu")) return "radial-gradient(circle at 40% 40%,#e0f2fe,#f0f8ff)";
+        if (n.includes("reading")) return "radial-gradient(circle at 40% 40%,#fff7ed,#fff0e6)";
         if (n.includes("progressive") || n.includes("bifocal")) return "radial-gradient(circle at 40% 40%,#f0f0f8,#f5f5f5)";
         if (n.includes("frame")) return "#f5f5f5";
         return "radial-gradient(circle at 40% 40%,#fffde7,#f0f0f0)";
@@ -305,7 +396,8 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     const getLensTypeBadge = (name: string) => {
         const n = name.toLowerCase();
         if (n.includes("zero") || n.includes("blu")) return { text: "BLU Screen lenses", bg: "#dbeafe", color: "#1e40af" };
-        if (!n.includes("progressive") && !n.includes("frame")) return { text: "Most common", bg: "#fff3cd", color: "#92400a" };
+        if (n.includes("reading")) return { text: "Near Vision", bg: "#ffedd5", color: "#c2410c" };
+        if (!n.includes("progressive") && !n.includes("frame") && !n.includes("reading")) return { text: "Most common", bg: "#fff3cd", color: "#92400a" };
         return null;
     };
 
@@ -495,6 +587,7 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                                     {[
                                         { key: 'with', name: 'With Power', desc: 'Positive, Negative or Cylindrical', svgKey: 'default', bg: 'radial-gradient(circle at 40% 40%,#fffde7,#f0f0f0)', badge: { text: 'Most common', bg: '#fff3cd', color: '#92400a' } },
                                         { key: 'zero', name: 'Zero Power', desc: 'Blue light block for screen protection', svgKey: 'zero', bg: 'radial-gradient(circle at 40% 40%,#e0f2fe,#f0f8ff)', badge: { text: 'BLU Screen lenses', bg: '#dbeafe', color: '#1e40af' } },
+                                        { key: 'reading', name: 'Reading Power', desc: 'With power for near vision only', svgKey: 'reading', bg: 'radial-gradient(circle at 40% 40%,#fff7ed,#fff0e6)', badge: { text: 'Near Vision', bg: '#ffedd5', color: '#c2410c' } },
                                         { key: 'progressive', name: 'Progressive / Bifocals', desc: 'Two powers in one eye', svgKey: 'progressive', bg: 'radial-gradient(circle at 40% 40%,#f0f0f8,#f5f5f5)', badge: null },
                                         { key: 'frame', name: 'Frame Only', desc: 'With no lenses', svgKey: 'frame', bg: '#f5f5f5', badge: null },
                                     ].map(t => {
@@ -633,36 +726,139 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
 
                     {/* STEP 3: Eye Power */}
                     {step === 3 && !showPrescriptionForm && (
-                        <div>
-                            <div className="flex items-center justify-between mb-5">
-                                <h2 className="text-[1.3rem] font-bold text-slate-900">Enter power manually</h2>
-                                <a className="text-[.8rem] text-teal-600 font-semibold cursor-pointer flex items-center gap-0.5 hover:underline" onClick={() => window.open('tel:+918470007367')}>
-                                    Help? <ChevronRight className="w-3.5 h-3.5" />
+                        <div className="space-y-3.5">
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <h2 className="text-[1.1rem] font-bold text-slate-900">Add Eye Power</h2>
+                                    <p className="text-[.78rem] text-slate-500">Choose how you want to submit your prescription</p>
+                                </div>
+                                <a className="text-[.78rem] text-teal-600 font-semibold cursor-pointer flex items-center gap-0.5 hover:underline" onClick={() => window.open('https://wa.me/918470007367', '_blank')}>
+                                    Need Help? <ChevronRight className="w-3.5 h-3.5" />
                                 </a>
                             </div>
 
-
+                            {/* Option 1: Submit Power Later (WhatsApp / Call) */}
                             <div
-                                onClick={() => { setPowerOption('manual'); }}
-                                className="flex items-center border-[1.5px] rounded-xl overflow-hidden cursor-pointer bg-white transition-all"
-                                style={{ borderColor: powerOption === 'manual' ? '#00b9a8' : '#e5e7eb', boxShadow: powerOption === 'manual' ? '0 3px 14px rgba(0,185,168,0.14)' : undefined }}
+                                onClick={() => setPowerOption('later')}
+                                className={`flex items-start gap-3.5 p-4 border-[1.5px] rounded-xl cursor-pointer bg-white transition-all ${powerOption === 'later' ? 'ep-card-selected border-teal-500 bg-teal-50/20' : 'border-slate-200 hover:border-slate-300'}`}
                             >
-                                <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#e8f0f8,#d0e0f0)' }}>
-                                    <svg viewBox="0 0 72 72" fill="none" width="72" height="72">
-                                        <rect x="24" y="12" width="28" height="42" rx="5" fill="#fff" stroke="#ccc" strokeWidth="1.5" />
-                                        <rect x="27" y="16" width="22" height="30" rx="2" fill="#e8f4ff" />
-                                        <line x1="30" y1="21" x2="46" y2="21" stroke="#a0c0e0" strokeWidth="1.5" />
-                                        <line x1="30" y1="26" x2="46" y2="26" stroke="#a0c0e0" strokeWidth="1.5" />
-                                        <line x1="30" y1="31" x2="40" y2="31" stroke="#a0c0e0" strokeWidth="1.5" />
-                                        <path d="M20 52 Q18 48 22 44 L50 44 Q54 44 54 48 L54 56 Q54 60 50 60 L26 60 Q22 60 20 56 Z" fill="#d4a574" />
-                                    </svg>
+                                <div className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                    <MessageCircle className="w-6 h-6 text-emerald-600" />
                                 </div>
-                                <div className="flex-1 px-3 py-3.5">
-                                    <div className="text-[.88rem] font-bold text-slate-900 mb-0.5">Enter Power Manually</div>
-                                    <div className="text-[.76rem] text-slate-500">Input your latest eye prescription</div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-0.5 flex-wrap gap-1">
+                                        <span className="text-[.92rem] font-bold text-slate-900">Submit Power Later (WhatsApp / Call)</span>
+                                        <span className="text-[.62rem] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">Fastest</span>
+                                    </div>
+                                    <div className="text-[.78rem] text-slate-500 leading-snug">
+                                        Submit via WhatsApp or phone call after placing your order.
+                                    </div>
+                                    {powerOption === 'later' && (
+                                        <div className="mt-2.5 p-2 rounded-lg bg-emerald-50 border border-emerald-200/60 text-[.74rem] text-emerald-800 flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                                            <span>Selected! We will contact you on WhatsApp / Call after checkout.</span>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="px-3.5">
-                                    <ChevronRight className="w-4 h-4 text-slate-300" />
+                            </div>
+
+                            {/* Option 2: Enter Power Manually */}
+                            <div
+                                onClick={() => setPowerOption('manual')}
+                                className={`flex items-start gap-3.5 p-4 border-[1.5px] rounded-xl cursor-pointer bg-white transition-all ${powerOption === 'manual' ? 'ep-card-selected border-teal-500 bg-teal-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                            >
+                                <div className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center bg-blue-50 text-blue-600 border border-blue-100">
+                                    <FileText className="w-6 h-6 text-blue-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-0.5 flex-wrap gap-1">
+                                        <span className="text-[.92rem] font-bold text-slate-900">Enter Power Manually</span>
+                                        {prescription?.od?.sph && (
+                                            <span className="text-[.62rem] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 uppercase">Power Saved</span>
+                                        )}
+                                    </div>
+                                    <div className="text-[.78rem] text-slate-500 leading-snug">
+                                        Input your latest eye prescription values (SPH, CYL, AXIS, ADD & PD)
+                                    </div>
+                                    {powerOption === 'manual' && (
+                                        <div className="mt-2.5">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowPrescriptionForm(true);
+                                                }}
+                                                className="px-3.5 py-1.5 rounded-lg bg-teal-600 text-white text-[.78rem] font-semibold flex items-center gap-1.5 hover:bg-teal-700 transition-colors shadow-sm"
+                                            >
+                                                {prescription?.od?.sph ? 'Edit Prescription Values' : 'Fill Prescription Form'} <ChevronRight className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Option 3: Upload Prescription Photo / PDF */}
+                            <div
+                                onClick={() => setPowerOption('upload')}
+                                className={`flex items-start gap-3.5 p-4 border-[1.5px] rounded-xl cursor-pointer bg-white transition-all ${powerOption === 'upload' ? 'ep-card-selected border-teal-500 bg-teal-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                            >
+                                <div className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center bg-purple-50 text-purple-600 border border-purple-100">
+                                    <Upload className="w-6 h-6 text-purple-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-0.5 flex-wrap gap-1">
+                                        <span className="text-[.92rem] font-bold text-slate-900">Upload Prescription Photo / PDF</span>
+                                        {prescriptionImage && (
+                                            <span className="text-[.62rem] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 uppercase">Uploaded</span>
+                                        )}
+                                    </div>
+                                    <div className="text-[.78rem] text-slate-500 leading-snug">
+                                        Upload image (JPG, PNG) or PDF document of prescription
+                                    </div>
+
+                                    {powerOption === 'upload' && (
+                                        <div className="mt-3">
+                                            {prescriptionImage ? (
+                                                <div className="p-3 bg-white border border-purple-200 rounded-xl flex items-center justify-between gap-3 shadow-sm">
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 overflow-hidden border border-purple-100">
+                                                            {prescriptionImage.endsWith('.pdf') ? (
+                                                                <FileText className="w-5 h-5 text-purple-600" />
+                                                            ) : (
+                                                                <img src={getImageUrl(prescriptionImage)} className="w-full h-full object-cover" alt="Prescription" />
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="text-[.8rem] font-bold text-slate-800 truncate">
+                                                                {prescriptionFileName || 'Prescription Document'}
+                                                            </div>
+                                                            <div className="text-[.7rem] text-teal-600 font-medium">Ready to use</div>
+                                                        </div>
+                                                    </div>
+                                                    <label className="text-[.74rem] font-semibold text-purple-600 hover:text-purple-800 cursor-pointer px-2 py-1 bg-purple-50 rounded-md">
+                                                        Change
+                                                        <input type="file" accept="image/*,.pdf" onChange={handlePrescriptionFileUpload} className="hidden" />
+                                                    </label>
+                                                </div>
+                                            ) : (
+                                                <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-purple-200 hover:border-purple-400 rounded-xl bg-purple-50/50 cursor-pointer transition-colors text-center">
+                                                    {uploadingPrescription ? (
+                                                        <div className="flex items-center gap-2 text-purple-600 text-[.82rem] font-medium py-1">
+                                                            <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                                                            Uploading prescription...
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <Upload className="w-5 h-5 text-purple-500 mb-1" />
+                                                            <span className="text-[.82rem] font-semibold text-purple-700">Click to upload photo or PDF</span>
+                                                            <span className="text-[.7rem] text-slate-400 mt-0.5">Supports JPG, PNG, WEBP, PDF (Max 10MB)</span>
+                                                        </>
+                                                    )}
+                                                    <input type="file" accept="image/*,.pdf" onChange={handlePrescriptionFileUpload} disabled={uploadingPrescription} className="hidden" />
+                                                </label>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
