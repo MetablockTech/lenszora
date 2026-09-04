@@ -315,8 +315,21 @@ const ProductPage = () => {
     if (!stayOnPage) setSelectedLens(null);
   };
 
-  // Lens selection is enabled for all eyewear products by default
-  const allowLensSelection = product?.lensSettings?.disableLensSelection !== true;
+  const checkIsAccessory = (prod: any) => {
+    if (!prod) return false;
+    const catName = (typeof prod.category === 'object' ? prod.category?.name || prod.category?.slug : '')?.toLowerCase() || '';
+    const title = (prod.title || '').toLowerCase();
+    const tags = Array.isArray(prod.searchTags) ? prod.searchTags.join(' ').toLowerCase() : '';
+
+    return catName.includes('accessori') || catName.includes('accessory') || catName.includes('solution')
+      || catName.includes('cleaner') || catName.includes('cloth') || catName.includes('spray') || catName.includes('case')
+      || title.includes('lens cleaner') || title.includes('cleaning solution') || title.includes('microfiber') || title.includes('eyewear case') || title.includes('contact lens solution')
+      || tags.includes('accessory') || tags.includes('solution')
+      || prod?.lensSettings?.allowLensSelection === false;
+  };
+
+  // Enable lens selection for eyewear products, but disable for Accessories & Solutions
+  const allowLensSelection = !checkIsAccessory(product) && product?.lensSettings?.disableLensSelection !== true;
 
   const handleBuyNow = () => {
     if (displayStock <= 0) {
