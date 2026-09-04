@@ -72,7 +72,7 @@ export function calculateProductDiscount(product: any, selectedVariant?: any) {
   const origPrice = Number(product.originalPrice || 0)
   const discPrice = Number(product.discountPrice || product.salePrice || 0)
   const discAmount = Number(product.discountAmount || 0)
-  const discType = product.discountType || 'percentage'
+  const discType = String(product.discountType || 'percent').toLowerCase()
 
   if (origPrice > 0 && origPrice > rawPrice) {
     mrpPrice = origPrice
@@ -81,7 +81,7 @@ export function calculateProductDiscount(product: any, selectedVariant?: any) {
     mrpPrice = rawPrice
     sellingPrice = discPrice
   } else if (discAmount > 0) {
-    if (discType === 'percentage') {
+    if (discType === 'percent' || discType === 'percentage') {
       mrpPrice = rawPrice
       sellingPrice = Math.round(rawPrice * (1 - Math.min(99, discAmount) / 100))
     } else if (discType === 'flat') {
@@ -94,13 +94,13 @@ export function calculateProductDiscount(product: any, selectedVariant?: any) {
   const discountPercentage = hasDiscount ? Math.round(((mrpPrice - sellingPrice) / mrpPrice) * 100) : 0
   const discountLabel = discAmount > 0 && discType === 'flat' 
     ? `₹${discAmount} OFF` 
-    : `${discountPercentage}% OFF`
+    : `${discountPercentage || discAmount}% OFF`
 
   return {
     sellingPrice,
     mrpPrice,
     hasDiscount,
-    discountPercentage,
+    discountPercentage: discountPercentage || (discType !== 'flat' ? discAmount : 0),
     discountLabel
   }
 }

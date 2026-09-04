@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { getImageUrl, getProductImage, calculateProductDiscount } from "@/lib/utils";
@@ -121,8 +122,8 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
                                 key={product._id}
                                 className="flex-[0_0_auto] w-52 md:w-60 pl-4"
                             >
-                                <a
-                                    href={`/product/${product._id}`}
+                                <Link
+                                    to={`/product/${product._id}`}
                                     className="block group/card h-full"
                                 >
                                     <div className="bg-slate-900/40 rounded-xl overflow-hidden border border-slate-800 hover:border-primary/50 transition-all duration-300 h-full flex flex-col">
@@ -219,7 +220,7 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
                                             </div>
                                         </div>
                                     </div>
-                                </a>
+                                </Link>
                             </div>
                         ))}
                     </div>

@@ -52,37 +52,33 @@ const ProductPage = () => {
   async function loadProduct() {
     try {
       setLoading(true);
+      setSelectedImageIndex(0);
       const data = await products.get(id!);
       if (!data || !data._id) {
         throw new Error('Product not found');
       }
       setProduct(data);
 
-      // Load related products safely
-      let sameVendor: any[] = [];
-      let sameCategory: any[] = [];
-      try {
-        const allProductsRes = await products.list({ limit: 100 });
-        const allProducts = Array.isArray(allProductsRes) ? allProductsRes : (allProductsRes?.products || []);
-        const currentVendorId = typeof data.vendorId === 'object' ? data.vendorId?._id : data.vendorId;
-        const currentCategoryId = typeof data.category === 'object' ? data.category?._id : data.category;
-
-        if (Array.isArray(allProducts)) {
-          sameVendor = allProducts.filter((p: any) => {
-            const pVendorId = typeof p.vendorId === 'object' ? p.vendorId?._id : p.vendorId;
-            return pVendorId && pVendorId === currentVendorId && p._id !== data._id;
-          }).slice(0, 10);
-
-          sameCategory = allProducts.filter((p: any) => {
-            const pCategoryId = typeof p.category === 'object' ? p.category?._id : p.category;
-            return pCategoryId && pCategoryId === currentCategoryId && p._id !== data._id;
-          }).slice(0, 10);
-        }
-      } catch (e) {
-        console.warn('Failed to load related products:', e);
+      // Set defaults immediately
+      if (data.colors && data.colors.length > 0) {
+        setSelectedColor(data.colors[0]);
+      } else {
+        setSelectedColor("");
       }
 
-      // Dynamic vendor details
+      if (data.attributes && data.attributes.length > 0) {
+        const defaults: Record<string, string> = {};
+        data.attributes.forEach((attr: any) => {
+          if (attr.values && attr.values.length > 0) {
+            defaults[attr.name] = attr.values[0];
+          }
+        });
+        setSelectedAttributes(defaults);
+      } else {
+        setSelectedAttributes({});
+      }
+
+      // Vendor details initialization
       if (data.vendorId && typeof data.vendorId === 'object') {
         const v = data.vendorId;
         const addressObj = (v.address && typeof v.address === 'object') ? v.address : {};
@@ -94,37 +90,25 @@ const ProductPage = () => {
           logo: v.logo || null,
           rating: Number(v.rating) || 5.0,
           totalReviews: Number(v.totalReviews) || Number(data.totalReviews) || 0,
-          totalProducts: Number(v.totalProducts) || sameVendor.length + 1,
+          totalProducts: Number(v.totalProducts) || 1,
           location: locationStr
         });
-      } else if (data.vendorId) {
+      } else {
         setVendorData({
           name: "Verified Seller",
           logo: null,
           rating: 5.0,
           totalReviews: Number(data.totalReviews) || 0,
-          totalProducts: sameVendor.length + 1,
+          totalProducts: 1,
           location: ""
         });
       }
 
-      setVendorProducts(sameVendor);
-      setSimilarProducts(sameCategory);
+      // Page is ready instantly!
+      setLoading(false);
 
-      // Set defaults
-      if (data.colors && data.colors.length > 0) {
-        setSelectedColor(data.colors[0]);
-      }
-
-      if (data.attributes && data.attributes.length > 0) {
-        const defaults: Record<string, string> = {};
-        data.attributes.forEach((attr: any) => {
-          if (attr.values && attr.values.length > 0) {
-            defaults[attr.name] = attr.values[0];
-          }
-        });
-        setSelectedAttributes(defaults);
-      }
+      // Load related products asynchronously in background
+      loadRelatedProducts(data);
     } catch (err) {
       console.error('Failed to load product:', err);
       toast({
@@ -132,9 +116,39 @@ const ProductPage = () => {
         description: "Failed to load product details",
         variant: "destructive"
       });
-      navigate('/shop');
-    } finally {
       setLoading(false);
+      navigate('/shop');
+    }
+  }
+
+  async function loadRelatedProducts(data: any) {
+    try {
+      const currentVendorId = typeof data.vendorId === 'object' ? data.vendorId?._id : data.vendorId;
+      const currentCategoryId = typeof data.category === 'object' ? data.category?._id : data.category;
+
+      let sameVendor: any[] = [];
+      let sameCategory: any[] = [];
+
+      if (currentVendorId) {
+        try {
+          const vRes = await products.list({ vendorId: currentVendorId, limit: 12 });
+          const vList = Array.isArray(vRes) ? vRes : (vRes?.products || []);
+          sameVendor = vList.filter((p: any) => p._id !== data._id);
+        } catch (e) {}
+      }
+
+      if (currentCategoryId) {
+        try {
+          const cRes = await products.list({ category: currentCategoryId, limit: 12 });
+          const cList = Array.isArray(cRes) ? cRes : (cRes?.products || []);
+          sameCategory = cList.filter((p: any) => p._id !== data._id);
+        } catch (e) {}
+      }
+
+      setVendorProducts(sameVendor);
+      setSimilarProducts(sameCategory);
+    } catch (e) {
+      console.warn('Failed to load related products:', e);
     }
   }
 
@@ -172,6 +186,52 @@ const ProductPage = () => {
     }
   };
 
+  const getCurrentVariant = () => {
+    if (!product || !product.hasVariants || !product.variants || product.variants.length === 0) return null;
+    const currentSelection: Record<string, string> = { ...selectedAttributes };
+    if (selectedColor) currentSelection["Color"] = selectedColor;
+    return product.variants.find((variant: any) => {
+      const variantValues = variant.variantValues || {};
+      return Object.keys(currentSelection).every(key => variantValues[key] === currentSelection[key]);
+    });
+  };
+
+  const currentVariant = getCurrentVariant();
+
+  const getValidImages = () => {
+    if (!product) return [];
+    let list: string[] = [];
+    if (currentVariant?.images && Array.isArray(currentVariant.images) && currentVariant.images.length > 0) {
+      list = currentVariant.images;
+    } else if (Array.isArray(product?.images) && product.images.length > 0) {
+      list = product.images;
+    } else if (typeof product?.images === 'string' && product.images) {
+      try {
+        const parsed = JSON.parse(product.images);
+        if (Array.isArray(parsed)) list = parsed;
+        else list = [product.images];
+      } catch {
+        list = [product.images];
+      }
+    }
+
+    if (list.length === 0 && product) {
+      if (product.thumbnail) list.push(product.thumbnail);
+      if (product.image && !list.includes(product.image)) list.push(product.image);
+    }
+
+    return list.filter((img: any) => typeof img === 'string' && img.trim() !== '');
+  };
+
+  const displayImages = getValidImages();
+
+  // All Hooks MUST be declared at top-level before early returns!
+  useEffect(() => {
+    if (displayImages.length > 0 && selectedImageIndex >= displayImages.length) {
+      setSelectedImageIndex(0);
+    }
+  }, [displayImages.length, selectedImageIndex]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -197,16 +257,6 @@ const ProductPage = () => {
     );
   }
 
-  const getCurrentVariant = () => {
-    if (!product.hasVariants || !product.variants || product.variants.length === 0) return null;
-    const currentSelection: Record<string, string> = { ...selectedAttributes };
-    if (selectedColor) currentSelection["Color"] = selectedColor;
-    return product.variants.find((variant: any) => {
-      const variantValues = variant.variantValues || {};
-      return Object.keys(currentSelection).every(key => variantValues[key] === currentSelection[key]);
-    });
-  };
-
   const computeProductPricing = () => {
     const variant = getCurrentVariant();
     const lensPrice = Number(selectedLens?.package?.price || 0);
@@ -223,11 +273,9 @@ const ProductPage = () => {
     };
   };
 
-  const currentVariant = getCurrentVariant();
   const displayStock = currentVariant
     ? (currentVariant.stock ?? 999)
-    : (product.stock != null ? product.stock : 999);
-  const displayImages = currentVariant?.images?.length > 0 ? currentVariant.images : (product.images || []);
+    : (product?.stock && product.stock > 0 ? product.stock : 999);
 
   const { basePrice, displayPrice, originalPrice, hasDiscount, discount, discountLabel } = computeProductPricing();
 
@@ -237,7 +285,7 @@ const ProductPage = () => {
       return;
     }
     const variantInfo = currentVariant ? { sku: currentVariant.sku, variantValues: currentVariant.variantValues } : null;
-    const activeLens = lensData; // Only include lens if explicitly provided (e.g. from modal)
+    const activeLens = lensData || selectedLens; // Use passed lens or state selected lens
     const lensInfo = activeLens?.type ? {
       typeId: activeLens.type._id,
       typeName: activeLens.type.name,
@@ -293,41 +341,76 @@ const ProductPage = () => {
     return String(w);
   };
 
-  const specifications = Array.isArray(product.attributes) ? product.attributes.filter(Boolean).map((attr: any) => ({
-    label: String(attr.name || ''),
-    value: Array.isArray(attr.values) ? attr.values.join(", ") : (typeof attr.values === 'object' ? JSON.stringify(attr.values) : String(attr.values || ''))
-  })) : [];
-
   const rawWarranty = product.eyewearDetails?.warranty || product.warranty;
   const productWarranty = getWarrantyText(rawWarranty);
 
-  if (product.eyewearDetails && typeof product.eyewearDetails === 'object') {
-    const details = product.eyewearDetails;
-    const detailMap = [
-      { key: 'gender', label: 'Gender' },
-      { key: 'frameType', label: 'Frame Type' },
-      { key: 'frameShape', label: 'Frame Shape' },
-      { key: 'frameMaterial', label: 'Frame Material' },
-      { key: 'frameColor', label: 'Frame Color' },
-      { key: 'glassColor', label: 'Lens Color' },
-      { key: 'frameSize', label: 'Frame Size' },
-      { key: 'bridgeSize', label: 'Bridge Size (mm)' },
-      { key: 'templeLength', label: 'Temple Length (mm)' },
-      { key: 'lensWidth', label: 'Lens Width (mm)' },
-      { key: 'uvProtection', label: 'UV Protection' },
-      { key: 'polarized', label: 'Polarized', isBool: true },
-      { key: 'faceShape', label: 'Ideal for Face Shape' },
-      { key: 'weightGroup', label: 'Weight' },
-      { key: 'style', label: 'Style' },
-      { key: 'warranty', label: 'Warranty' },
-    ];
-    detailMap.forEach(item => {
-      const val = details[item.key as keyof typeof details];
-      if (val !== undefined && val !== null && val !== '') {
-        const strVal = item.isBool ? (val ? 'Yes' : 'No') : (typeof val === 'object' ? (Array.isArray(val) ? val.join(', ') : JSON.stringify(val)) : String(val));
-        specifications.push({ label: item.label, value: strVal });
-      }
-    });
+  const specifications: { label: string; value: string }[] = [];
+
+  if (product) {
+    if (product.sku) specifications.push({ label: "SKU / Model Code", value: String(product.sku) });
+    
+    if (product.brand) {
+      const bName = typeof product.brand === 'object' ? product.brand.name : product.brand;
+      if (bName) specifications.push({ label: "Brand", value: String(bName) });
+    }
+
+    if (product.category) {
+      const cName = typeof product.category === 'object' ? product.category.name : product.category;
+      if (cName) specifications.push({ label: "Category", value: String(cName) });
+    }
+
+    if (product.eyewearDetails && typeof product.eyewearDetails === 'object') {
+      const details = product.eyewearDetails;
+      const detailMap = [
+        { key: 'gender', label: 'Gender' },
+        { key: 'frameType', label: 'Frame Type' },
+        { key: 'frameShape', label: 'Frame Shape' },
+        { key: 'frameMaterial', label: 'Frame Material' },
+        { key: 'frameColor', label: 'Frame Color' },
+        { key: 'glassColor', label: 'Lens / Glass Color' },
+        { key: 'frameSize', label: 'Frame Size' },
+        { key: 'frameWidth', label: 'Frame Width' },
+        { key: 'frameDimensions', label: 'Frame Dimensions' },
+        { key: 'bridgeSize', label: 'Bridge Size' },
+        { key: 'templeLength', label: 'Temple Length' },
+        { key: 'lensWidth', label: 'Lens Width' },
+        { key: 'weight', label: 'Weight' },
+        { key: 'weightGroup', label: 'Weight Group' },
+        { key: 'countryOfOrigin', label: 'Country of Origin' },
+        { key: 'modelNo', label: 'Model Number' },
+        { key: 'prescriptionAvailable', label: 'Prescription Supported', isBool: true },
+        { key: 'uvProtection', label: 'UV Protection' },
+        { key: 'polarized', label: 'Polarized', isBool: true },
+        { key: 'faceShape', label: 'Ideal for Face Shape' },
+        { key: 'style', label: 'Style' },
+        { key: 'features', label: 'Special Features' },
+      ];
+      detailMap.forEach(item => {
+        const val = details[item.key as keyof typeof details];
+        if (val !== undefined && val !== null && val !== '' && !(Array.isArray(val) && val.length === 0)) {
+          const strVal = item.isBool
+            ? (val ? 'Yes' : 'No')
+            : (typeof val === 'object' ? (Array.isArray(val) ? val.join(', ') : JSON.stringify(val)) : String(val));
+          specifications.push({ label: item.label, value: strVal });
+        }
+      });
+    }
+
+    if (Array.isArray(product.attributes)) {
+      product.attributes.forEach((attr: any) => {
+        if (attr && attr.name && attr.values) {
+          if (!specifications.some(s => s.label.toLowerCase() === String(attr.name).toLowerCase())) {
+            const val = Array.isArray(attr.values) ? attr.values.join(", ") : String(attr.values);
+            if (val) specifications.push({ label: String(attr.name), value: val });
+          }
+        }
+      });
+    }
+
+    if (product.unit) specifications.push({ label: "Unit", value: String(product.unit) });
+    if (product.minOrderQuantity && product.minOrderQuantity > 1) {
+      specifications.push({ label: "Minimum Order Quantity", value: String(product.minOrderQuantity) });
+    }
   }
 
   return (
@@ -349,12 +432,12 @@ const ProductPage = () => {
 
           {/* Thumbnails */}
           <div className="flex flex-row lg:flex-col gap-2.5 p-4 lg:pl-3.5 overflow-x-auto border-b lg:border-b-0 lg:border-r border-white/10 bg-[#111] order-2 lg:order-1 no-scrollbar">
-            {(displayImages || []).slice(0, 5).map((img: string, i: number) => (
+            {(displayImages || []).map((img: string, i: number) => (
               <div
                 key={i}
                 onClick={() => setSelectedImageIndex(i)}
                 style={{ minWidth: 72, width: 72, height: 72, border: `1.5px solid ${selectedImageIndex === i ? '#DAAB34' : 'rgba(255,255,255,0.15)'}`, borderRadius: 8, overflow: 'hidden', cursor: 'pointer', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color .15s', flexShrink: 0 }}>
-                <img src={getImageUrl(img)} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={getImageUrl(img)} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '3px' }} />
               </div>
             ))}
             {(displayImages || []).length === 0 && (
@@ -439,16 +522,38 @@ const ProductPage = () => {
                   <Layers style={{ width: 11, height: 11 }} />{String(typeof product.category === 'object' ? product.category.name : product.category).toUpperCase()}
                 </div>
               )}
+              {product.eyewearDetails?.polarized && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(234,179,8,0.4)', borderRadius: 6, fontSize: '.67rem', fontWeight: 700, color: '#eab308', background: 'rgba(234,179,8,0.1)', letterSpacing: '.3px' }}>
+                  ⚡ POLARIZED
+                </div>
+              )}
+              {product.eyewearDetails?.uvProtection && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(34,197,94,0.4)', borderRadius: 6, fontSize: '.67rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', letterSpacing: '.3px' }}>
+                  <Shield style={{ width: 11, height: 11 }} />{String(product.eyewearDetails.uvProtection).toUpperCase()}
+                </div>
+              )}
+              {product.eyewearDetails?.prescriptionAvailable && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(56,189,248,0.4)', borderRadius: 6, fontSize: '.67rem', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.1)', letterSpacing: '.3px' }}>
+                  👓 PRESCRIPTION READY
+                </div>
+              )}
             </div>
 
             {/* Price */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '1.45rem', fontWeight: 700, color: '#DAAB34' }}>₹{displayPrice.toLocaleString()}</span>
-              {hasDiscount && (
-                <>
-                  <span style={{ fontSize: '.9rem', color: '#6b7280', textDecoration: 'line-through' }}>₹{originalPrice.toLocaleString()}</span>
-                  <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.12)', padding: '2px 8px', borderRadius: 20 }}>{discountLabel || `${discount}% OFF`}</span>
-                </>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '1.55rem', fontWeight: 800, color: '#DAAB34' }}>₹{displayPrice.toLocaleString()}</span>
+                {hasDiscount && (
+                  <>
+                    <span style={{ fontSize: '.95rem', color: '#6b7280', textDecoration: 'line-through' }}>₹{originalPrice.toLocaleString()}</span>
+                    <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.14)', padding: '3px 9px', borderRadius: 20 }}>{discountLabel || `${discount}% OFF`}</span>
+                  </>
+                )}
+              </div>
+              {hasDiscount && originalPrice > displayPrice && (
+                <div style={{ fontSize: '.78rem', color: '#22c55e', fontWeight: 600, marginTop: 4 }}>
+                  🎉 You save ₹{(originalPrice - displayPrice).toLocaleString()}!
+                </div>
               )}
             </div>
 
@@ -564,6 +669,36 @@ const ProductPage = () => {
             </div>
 
 
+
+            {/* Shipping & Features */}
+            <div style={{ fontSize: '.75rem', color: '#9ca3af', display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 12px' }}>
+              <div>
+                {product.shippingCost > 0 ? (
+                  <span>🚚 Shipping: <strong style={{ color: '#DAAB34' }}>₹{product.shippingCost}</strong> {product.shippingCostMultiply ? '(per unit)' : '(flat rate)'}</span>
+                ) : (
+                  <span style={{ color: '#22c55e', fontWeight: 600 }}>🚚 Free Nationwide Delivery</span>
+                )}
+              </div>
+              {product.minOrderQuantity > 1 && (
+                <div style={{ color: '#fb923c', fontWeight: 600 }}>
+                  📦 Minimum Order Quantity: {product.minOrderQuantity} {product.unit || 'units'}
+                </div>
+              )}
+            </div>
+
+            {/* Special Features Pills if available */}
+            {product.eyewearDetails?.features && Array.isArray(product.eyewearDetails.features) && product.eyewearDetails.features.length > 0 && (
+              <div>
+                <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#DAAB34', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>Special Features</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {product.eyewearDetails.features.map((feat: string, idx: number) => (
+                    <span key={idx} style={{ fontSize: '.7rem', color: '#e5e7eb', background: 'rgba(218,171,52,0.08)', border: '1px solid rgba(218,171,52,0.2)', padding: '3px 8px', borderRadius: 6 }}>
+                      ✓ {feat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Perks */}
             <div style={{ fontSize: '.75rem', color: '#6b7280', display: 'flex', gap: 14, flexWrap: 'wrap' }}>

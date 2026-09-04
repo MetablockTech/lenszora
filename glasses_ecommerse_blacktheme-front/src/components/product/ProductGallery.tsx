@@ -30,7 +30,7 @@ const ProductGallery = ({ images, productName, hideThumbnails, currentImage, onI
         <img
           src={getImageUrl(images[selectedImage] || images[0])}
           alt={`${productName} - View ${selectedImage + 1}`}
-          className="w-full h-full object-cover transition-all duration-700"
+          className="w-full h-full object-contain p-3 transition-all duration-500"
         />
 
         {/* Gold corner accents */}
