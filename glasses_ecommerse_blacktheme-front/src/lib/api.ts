@@ -554,7 +554,16 @@ export const users = {
     const res = await fetch(`${API_URL}/api/users`, {
       headers: getHeaders(token)
     })
-    if (!res.ok) throw new Error('Failed to fetch users')
+    if (!res.ok) {
+      let errMsg = 'Failed to fetch users'
+      try {
+        const data = await res.json()
+        errMsg = data.error || data.message || errMsg
+      } catch {
+        errMsg = await res.text() || errMsg
+      }
+      throw new Error(errMsg)
+    }
     return res.json()
   },
   async updateRole(id: string, role: string, token?: string) {
@@ -563,7 +572,16 @@ export const users = {
       headers: getHeaders(token),
       body: JSON.stringify({ role })
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      let errMsg = 'Failed to update role'
+      try {
+        const data = await res.json()
+        errMsg = data.error || data.message || errMsg
+      } catch {
+        errMsg = await res.text() || errMsg
+      }
+      throw new Error(errMsg)
+    }
     return res.json()
   },
   async delete(id: string, token?: string) {
@@ -571,7 +589,16 @@ export const users = {
       method: 'DELETE',
       headers: getHeaders(token)
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      let errMsg = 'Failed to delete user'
+      try {
+        const data = await res.json()
+        errMsg = data.error || data.message || errMsg
+      } catch {
+        errMsg = await res.text() || errMsg
+      }
+      throw new Error(errMsg)
+    }
     return res.json()
   }
 }

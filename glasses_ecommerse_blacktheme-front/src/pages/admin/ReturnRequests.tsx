@@ -15,20 +15,24 @@ import { Button } from '@/components/ui/button'
 const ReturnRequests = () => {
     const [requests, setRequests] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const [selectedRequest, setSelectedRequest] = useState<any>(null)
-    const [actionLoading, setActionLoading] = useState(false)
-    const [filterStatus, setFilterStatus] = useState('all')
-    const [filterType, setFilterType] = useState('all')
+    const [adminNotesInput, setAdminNotesInput] = useState('')
+    const [refundAmountInput, setRefundAmountInput] = useState<string>('')
     const token = getToken()
 
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
-    const totalPages = Math.ceil(requests.length / itemsPerPage)
+    const totalPages = Math.max(1, Math.ceil(requests.length / itemsPerPage))
     const paginatedList = requests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
     useEffect(() => {
         loadRequests()
     }, [filterStatus, filterType])
+
+    const openRequestModal = (req: any) => {
+        setSelectedRequest(req)
+        setAdminNotesInput(req.adminNotes || '')
+        setRefundAmountInput(req.refundAmount?.toString() || req.productId?.price?.toString() || '')
+    }
 
     async function loadRequests() {
         setLoading(true)
@@ -50,15 +54,14 @@ const ReturnRequests = () => {
         }
     }
 
-    async function handleStatusUpdate(id: string, status: string, notes?: string) {
-        // if (!confirm(`Are you sure you want to mark this request as ${status}?`)) return
-        console.log('[DEBUG] starting status update...', { id, status, notes })
-
+    async function handleStatusUpdate(id: string, status: string) {
         setActionLoading(true)
         try {
-            console.log('[DEBUG] calling API...')
-            await returnRequests.updateStatus(id, { status, adminNotes: notes }, token!)
-            console.log('[DEBUG] API success')
+            await returnRequests.updateStatus(id, {
+                status,
+                adminNotes: adminNotesInput,
+                refundAmount: refundAmountInput ? parseFloat(refundAmountInput) : undefined
+            }, token!)
             toast({ title: "Success", description: "Request status updated" })
             setSelectedRequest(null)
             loadRequests()
@@ -172,7 +175,7 @@ const ReturnRequests = () => {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <button
-                                            onClick={() => setSelectedRequest(req)}
+                                            onClick={() => openRequestModal(req)}
                                             className="text-primary hover:text-primary/90 font-medium text-sm"
                                         >
                                             Details
@@ -301,9 +304,33 @@ const ReturnRequests = () => {
                                 </div>
                             )}
 
+                            {/* Admin Notes & Refund Inputs */}
+                            <div className="space-y-3 border-t border-border pt-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-foreground block mb-1">Refund Amount (₹)</label>
+                                    <input
+                                        type="number"
+                                        value={refundAmountInput}
+                                        onChange={(e) => setRefundAmountInput(e.target.value)}
+                                        placeholder="e.g. 500"
+                                        className="w-full bg-secondary border border-border/50 rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-foreground block mb-1">Admin Notes / Reason</label>
+                                    <textarea
+                                        value={adminNotesInput}
+                                        onChange={(e) => setAdminNotesInput(e.target.value)}
+                                        placeholder="Internal notes or customer notification..."
+                                        rows={2}
+                                        className="w-full bg-secondary border border-border/50 rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                    />
+                                </div>
+                            </div>
+
                             {/* Actions */}
                             {selectedRequest.status === 'pending' && (
-                                <div className="border-t border-border pt-6 space-y-4">
+                                <div className="border-t border-border pt-4 space-y-4">
                                     <h5 className="font-semibold text-foreground">Admin Actions</h5>
                                     <div className="flex gap-3">
                                         <Button
@@ -331,7 +358,7 @@ const ReturnRequests = () => {
                             )}
 
                             {selectedRequest.status === 'approved' && (
-                                <div className="border-t border-border pt-6">
+                                <div className="border-t border-border pt-4">
                                     <Button
                                         onClick={() => handleStatusUpdate(selectedRequest._id, 'completed')}
                                         disabled={actionLoading}

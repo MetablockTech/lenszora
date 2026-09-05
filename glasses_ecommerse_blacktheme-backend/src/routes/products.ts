@@ -244,13 +244,17 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
   try {
     // Determine vendorId
     let finalVendorId = vendorId
-    if (req.user!.role === 'vendor' || !finalVendorId) {
+    if (req.user!.role === 'vendor' || !finalVendorId || finalVendorId === '') {
       finalVendorId = req.user!.vendorId || req.user!.id
     }
 
     if (!finalVendorId) {
       return res.status(400).json({ error: 'Vendor ID is required' })
     }
+
+    // Sanitize category & brand (convert empty strings or 'none' to null)
+    const finalCategory = (category && category !== '' && category !== 'none') ? category : null
+    const finalBrand = (brand && brand !== '' && brand !== 'none') ? brand : null
 
     // New products from vendors are 'pending' by default unless auto-approval is enabled.
     // Admins can specify status.
@@ -264,8 +268,8 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
     }
 
     const product = new Product({
-      title, description, price, images: images || [], thumbnail, stock: stock || 0,
-      category: category || null, brand: brand || null,
+      title, description, price, images: images || [], thumbnail: thumbnail || (images && images[0]) || undefined, stock: stock || 0,
+      category: finalCategory, brand: finalBrand,
       vendorId: finalVendorId,
       productType: productType || 'physical',
       sku, unit, searchTags: searchTags || [],
@@ -309,8 +313,10 @@ router.put('/:id', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, r
     // For now let's say if a vendor edits an active product, it stays active or goes back to pending?
     // In many marketplaces, edits trigger re-approval. For now, let's keep it simple.
     const updateData = { ...req.body }
-    if (req.user!.role === 'vendor' && product.status === 'active') {
-      // Option: updateData.status = 'pending' // Force re-approval
+    if (updateData.category === '' || updateData.category === 'none') updateData.category = null
+    if (updateData.brand === '' || updateData.brand === 'none') updateData.brand = null
+    if (updateData.vendorId === '') {
+      updateData.vendorId = req.user!.vendorId || req.user!.id
     }
 
     const updated = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true })

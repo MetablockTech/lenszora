@@ -133,10 +133,14 @@ const VendorStores = () => {
         finalImageUrl = uploadRes.url || uploadRes.path
       }
 
+      const parsedServices = typeof formData.services === 'string'
+        ? formData.services.split(',').map(s => s.trim()).filter(Boolean)
+        : (Array.isArray(formData.services) ? formData.services : [])
+
       const payload = {
         ...formData,
         images: finalImageUrl ? [finalImageUrl] : [],
-        services: formData.services.split(',').map(s => s.trim()),
+        services: parsedServices,
         location: {
           type: 'Point',
           coordinates: [parseFloat(formData.longitude) || 0, parseFloat(formData.latitude) || 0]
@@ -167,17 +171,21 @@ const VendorStores = () => {
   const handleEdit = (store: any) => {
     setEditingStore(store)
     const storeImage = store.images?.[0] || ''
+    const servicesStr = Array.isArray(store.services)
+      ? store.services.join(', ')
+      : (typeof store.services === 'string' ? store.services : '')
+
     setFormData({
-      name: store.name,
-      addressLine: store.addressLine,
-      city: store.city,
-      state: store.state,
-      pincode: store.pincode,
-      phone: store.phone,
+      name: store.name || '',
+      addressLine: store.addressLine || '',
+      city: store.city || '',
+      state: store.state || '',
+      pincode: store.pincode || '',
+      phone: store.phone || '',
       email: store.email || '',
-      hours: store.hours,
-      services: store.services.join(', '),
-      isActive: store.isActive,
+      hours: store.hours || '10:00 AM - 9:00 PM',
+      services: servicesStr,
+      isActive: store.isActive ?? true,
       freeGift: store.freeGift || false,
       image: storeImage,
       latitude: store.location?.coordinates?.[1]?.toString() || '',

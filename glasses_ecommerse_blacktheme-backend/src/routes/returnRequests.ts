@@ -135,13 +135,26 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req, res) => {
         }
 
         request.status = status
-        if (adminNotes) request.adminNotes = adminNotes
-        if (refundAmount) request.refundAmount = refundAmount
-        if (status === 'approved' || status === 'rejected' || status === 'completed') {
+        if (adminNotes !== undefined) request.adminNotes = adminNotes
+        if (refundAmount !== undefined) request.refundAmount = refundAmount
+        if (['approved', 'rejected', 'completed'].includes(status)) {
             request.respondedAt = new Date()
         }
 
         await request.save()
+
+        // Sync with Order model if completed or approved
+        if (status === 'completed' || status === 'approved') {
+            try {
+                const targetOrderStatus = request.requestType === 'refund' ? 'refunded' : 'returned'
+                await Order.findByIdAndUpdate(request.orderId, {
+                    $set: { status: targetOrderStatus }
+                })
+            } catch (syncErr) {
+                console.error('Failed to sync order status for return request:', syncErr)
+            }
+        }
+
         res.json(request)
     } catch (err: any) {
         res.status(500).json({ error: err.message })

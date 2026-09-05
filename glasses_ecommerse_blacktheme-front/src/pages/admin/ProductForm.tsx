@@ -18,8 +18,8 @@ const productSchema = z.object({
     title: z.string().min(1, 'Title is required'),
     description: z.string().min(1, 'Description is required'),
     productType: z.enum(['physical', 'digital']).default('physical'),
-    category: z.string().min(1, 'Category is required'),
-    brand: z.string().min(1, 'Brand is required'),
+    category: z.string().optional(),
+    brand: z.string().optional(),
     sku: z.string().min(1, 'SKU is required'),
     unit: z.string().min(1, 'Unit is required'),
     searchTags: z.array(z.string()).default([]),
@@ -47,7 +47,7 @@ const productSchema = z.object({
         variantValues: z.record(z.string()).default({}),
         isDefault: z.boolean().default(false)
     })).default([]),
-    thumbnail: z.string().min(1, 'Thumbnail is required'),
+    thumbnail: z.string().optional(),
     images: z.array(z.string()).default([]),
     vendorId: z.string().optional(),
     eyewearDetails: z.object({
@@ -449,6 +449,18 @@ const ProductForm = () => {
                     console.error(`Failed to upload ${path}:`, err)
                     throw new Error(`Failed to upload ${file.name}`)
                 }
+            }
+
+            // Fallback thumbnail to first gallery image if thumbnail not set
+            if (!finalData.thumbnail && finalData.images && finalData.images.length > 0) {
+                finalData.thumbnail = finalData.images[0]
+            }
+
+            // Clean up empty string fields to prevent Mongoose CastErrors
+            if (!finalData.category || finalData.category === '') delete finalData.category
+            if (!finalData.brand || finalData.brand === '') delete finalData.brand
+            if (!finalData.vendorId || finalData.vendorId === '') {
+                finalData.vendorId = currentUser?.vendorId || currentUser?.id
             }
 
             // 2. Save product

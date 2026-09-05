@@ -46,6 +46,8 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
     
     if (req.user!.role === 'vendor') {
       storeData.vendorId = req.user!.vendorId || req.user!.id
+    } else if (!storeData.vendorId || storeData.vendorId === '' || storeData.vendorId === 'none') {
+      delete storeData.vendorId
     }
 
     const store = new Store(storeData)
@@ -67,7 +69,12 @@ router.put('/:id', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, r
       return res.status(403).json({ error: 'Forbidden: You do not own this store' })
     }
 
-    const updated = await Store.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    const updateData = { ...req.body }
+    if (!updateData.vendorId || updateData.vendorId === '' || updateData.vendorId === 'none') {
+      delete updateData.vendorId
+    }
+
+    const updated = await Store.findByIdAndUpdate(req.params.id, updateData, { new: true })
     res.json(updated)
   } catch (err: any) {
     res.status(400).json({ error: err.message })
