@@ -259,9 +259,9 @@ const Shop = () => {
         if (cat) {
           setSelectedMainCategory(cat._id);
         } else if (normCatParam.includes("accessor") || normCatParam.includes("accessory")) {
-          if (!searchParams.get('search')) {
-            setSearchQuery("accessory");
-          }
+          setSelectedMainCategory("accessories");
+        } else {
+          setSelectedMainCategory(categoryParam);
         }
       }
 
@@ -444,327 +444,337 @@ const Shop = () => {
   );
 
   // Reusable Filter Content Component
-  const FilterSidebarContent = () => (
-    <div className="space-y-4">
-      {/* Category Filter */}
-      <div className="border border-primary/20 rounded-lg p-4">
-        <h3 className="font-semibold text-foreground mb-3">Categories</h3>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="mainCategory"
-              value=""
-              checked={!selectedMainCategory}
-              onChange={() => {
-                setSelectedMainCategory("");
-                setSelectedSubCategory("");
-                setSelectedSubSubCategory("");
-              }}
-              className="w-4 h-4 accent-amber-400"
-            />
-            <span className={cn("text-sm transition-colors", !selectedMainCategory ? "text-amber-400 font-bold" : "text-muted-foreground hover:text-foreground")}>
-              All Categories
-            </span>
-          </label>
-          {allMainCategories.map((cat) => {
-            const normSel = (selectedMainCategory || '').toLowerCase();
-            const normSlug = (cat.slug || '').toLowerCase();
-            const normName = (cat.name || '').toLowerCase();
-            const isCatSelected =
-              selectedMainCategory === cat._id ||
-              (normSel !== '' && (normSel === normSlug || normSel === normName)) ||
-              (normSlug.includes('accessor') && (normSel.includes('accessor') || (searchParams.get('category')?.toLowerCase().includes('accessor') ?? false)));
-            return (
-              <label key={cat._id} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mainCategory"
-                  value={cat._id}
-                  checked={isCatSelected}
-                  onChange={() => {
-                    setSelectedMainCategory(cat._id);
-                    setSelectedSubCategory("");
-                    setSelectedSubSubCategory("");
-                  }}
-                  className="w-4 h-4 accent-amber-400"
-                />
-                <span className={cn(
-                  "text-sm transition-colors",
-                  isCatSelected ? "text-amber-400 font-bold" : "text-muted-foreground hover:text-foreground"
-                )}>
-                  {cat.name}
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </div>
-      {/* Frame Type Filter (Visual Grid) */}
-      <div className="border border-primary/10 rounded overflow-hidden">
-        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[2px] bg-secondary/30 p-2 border-b border-primary/10">Frame Type</h3>
-        <div className="p-2 grid grid-cols-3 gap-1.5">
-          <button
-            onClick={() => setSelectedFrameType("")}
-            className={cn(
-              "flex flex-col items-center justify-center p-2 rounded border transition-all h-16 text-center",
-              selectedFrameType === ""
-                ? "border-[#DAAB34] bg-[#DAAB34]/10 text-white"
-                : "border-primary/10 bg-transparent text-muted-foreground hover:border-[#DAAB34]/50"
-            )}
-          >
-            <span className="text-[9px] font-bold uppercase">All Types</span>
-          </button>
-          {frameTypeOptions.map((opt: any) => (
-            <button
-              key={opt.name}
-              onClick={() => setSelectedFrameType(opt.name)}
-              className={cn(
-                "flex flex-col items-center justify-center p-1 rounded border transition-all h-16 text-center gap-0.5 group relative overflow-hidden",
-                selectedFrameType === opt.name
-                  ? "border-[#DAAB34] bg-[#DAAB34]/5 text-[#DAAB34] shadow-sm font-black"
-                  : "border-primary/5 bg-transparent text-muted-foreground hover:border-[#DAAB34]/30"
-              )}
-            >
-              {opt.image ? (
-                <img src={getImageUrl(opt.image)} alt={opt.name} className="h-6 w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
-              ) : (
-                <div className="w-8 h-5 bg-slate-800/50 rounded flex items-center justify-center overflow-hidden">
-                  <span className="text-[7px] text-slate-500 font-mono">ICON</span>
-                </div>
-              )}
-              <span className="text-[8px] font-bold uppercase tracking-tighter truncate w-full">{opt.name}</span>
-              {selectedFrameType === opt.name && (
-                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#DAAB34] rounded-full shadow-[0_0_8px_rgba(218,171,52,0.5)]"></div>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
+  const FilterSidebarContent = () => {
+    const urlCat = (searchParams.get('category') || '').toLowerCase();
+    const normSel = (selectedMainCategory || '').toLowerCase();
+    const isAccessorySelected = urlCat.includes('accessor') || normSel.includes('accessor') || normSel === 'accessories';
 
-      {/* Frame Shape Filter (Visual Grid) */}
-      <div className="border border-primary/10 rounded overflow-hidden">
-        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[2px] bg-secondary/30 p-2 border-b border-primary/10">Frame Shape</h3>
-        <div className="p-2 grid grid-cols-3 gap-1.5">
-          <button
-            onClick={() => setSelectedFrameShape("")}
-            className={cn(
-              "flex flex-col items-center justify-center p-2 rounded border transition-all h-16 text-center",
-              selectedFrameShape === ""
-                ? "border-[#DAAB34] bg-[#DAAB34]/10 text-white"
-                : "border-primary/10 bg-transparent text-muted-foreground hover:border-[#DAAB34]/50"
-            )}
-          >
-            <span className="text-[9px] font-bold uppercase">All Shapes</span>
-          </button>
-          {frameShapeOptions.map((opt: any) => (
-            <button
-              key={opt.name}
-              onClick={() => setSelectedFrameShape(opt.name)}
-              className={cn(
-                "flex flex-col items-center justify-center p-1 rounded border transition-all h-16 text-center gap-0.5 group relative overflow-hidden",
-                selectedFrameShape === opt.name
-                  ? "border-[#DAAB34] bg-[#DAAB34]/5 text-[#DAAB34] shadow-sm font-black"
-                  : "border-primary/5 bg-transparent text-muted-foreground hover:border-[#DAAB34]/30"
-              )}
-            >
-              {opt.image ? (
-                <img src={getImageUrl(opt.image)} alt={opt.name} className="h-6 w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
-              ) : (
-                <div className="w-8 h-5 bg-slate-800/50 rounded flex items-center justify-center overflow-hidden">
-                  <span className="text-[7px] text-slate-500 font-mono">ICON</span>
-                </div>
-              )}
-              <span className="text-[8px] font-bold uppercase tracking-tighter truncate w-full">{opt.name}</span>
-              {selectedFrameShape === opt.name && (
-                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#DAAB34] rounded-full shadow-[0_0_8px_rgba(218,171,52,0.5)]"></div>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Face Shape Filter (Visual Grid) */}
-      <div className="border border-primary/10 rounded overflow-hidden">
-        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[2px] bg-secondary/30 p-2 border-b border-primary/10">Face Shape</h3>
-        <div className="p-2 grid grid-cols-3 gap-1.5">
-          <button
-            onClick={() => setSelectedFaceShape("")}
-            className={cn(
-              "flex flex-col items-center justify-center p-2 rounded border transition-all h-16 text-center",
-              selectedFaceShape === ""
-                ? "border-[#DAAB34] bg-[#DAAB34]/10 text-white"
-                : "border-primary/10 bg-transparent text-muted-foreground hover:border-[#DAAB34]/50"
-            )}
-          >
-            <span className="text-[9px] font-bold uppercase">All Shapes</span>
-          </button>
-          {faceShapeOptions.map((opt: any) => (
-            <button
-              key={opt.name}
-              onClick={() => setSelectedFaceShape(opt.name)}
-              className={cn(
-                "flex flex-col items-center justify-center p-1 rounded border transition-all h-16 text-center gap-0.5 group relative overflow-hidden",
-                selectedFaceShape === opt.name
-                  ? "border-[#DAAB34] bg-[#DAAB34]/5 text-[#DAAB34] shadow-sm font-black"
-                  : "border-primary/5 bg-transparent text-muted-foreground hover:border-[#DAAB34]/30"
-              )}
-            >
-              {opt.image ? (
-                <img src={getImageUrl(opt.image)} alt={opt.name} className="h-6 w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
-              ) : (
-                <div className="w-8 h-5 bg-slate-800/50 rounded flex items-center justify-center overflow-hidden">
-                  <span className="text-[7px] text-slate-500 font-mono">ICON</span>
-                </div>
-              )}
-              <span className="text-[8px] font-bold uppercase tracking-tighter truncate w-full">{opt.name}</span>
-              {selectedFaceShape === opt.name && (
-                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#DAAB34] rounded-full shadow-[0_0_8px_rgba(218,171,52,0.5)]"></div>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Brand Filter */}
-      <div className="border border-primary/20 rounded-lg p-4">
-        <h3 className="font-semibold text-foreground mb-3">Brands</h3>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="brand"
-              value=""
-              checked={selectedBrand === ""}
-              onChange={(e) => setSelectedBrand(e.target.value)}
-              className="w-4 h-4"
-            />
-            <span className="text-sm text-muted-foreground hover:text-foreground">
-              All Brands
-            </span>
-          </label>
-          {brandList.map((brand) => (
-            <label key={brand._id} className="flex items-center gap-2 cursor-pointer">
+    return (
+      <div className="space-y-4">
+        {/* Category Filter */}
+        <div className="border border-primary/20 rounded-lg p-4">
+          <h3 className="font-semibold text-foreground mb-3">Categories</h3>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="brand"
-                value={brand._id}
-                checked={selectedBrand === brand._id}
-                onChange={(e) => setSelectedBrand(e.target.value)}
-                className="w-4 h-4"
+                name="mainCategory"
+                value=""
+                checked={!selectedMainCategory}
+                onChange={() => {
+                  setSelectedMainCategory("");
+                  setSelectedSubCategory("");
+                  setSelectedSubSubCategory("");
+                }}
+                className="w-4 h-4 accent-amber-400"
               />
-              <span className="text-sm text-muted-foreground hover:text-foreground">
-                {brand.name}
+              <span className={cn("text-sm transition-colors", !selectedMainCategory ? "text-amber-400 font-bold" : "text-muted-foreground hover:text-foreground")}>
+                All Categories
               </span>
             </label>
-          ))}
-        </div>
-      </div>
+            {allMainCategories.map((cat) => {
+              const normSlug = (cat.slug || '').toLowerCase();
+              const normName = (cat.name || '').toLowerCase();
+              const isAccessoryCat = normSlug.includes('accessor') || normName.includes('accessor') || cat._id === 'accessories';
 
-      {/* Gender Filter */}
-      <div className="border border-primary/20 rounded-lg p-4">
-        <h3 className="font-semibold text-foreground mb-3">Gender</h3>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="gender"
-              value=""
-              checked={selectedGender === ""}
-              onChange={(e) => setSelectedGender(e.target.value)}
-              className="w-4 h-4"
-            />
-            <span className="text-sm text-muted-foreground hover:text-foreground">
-              All
-            </span>
-          </label>
-          {genderOptions.map((gender) => (
-            <label key={gender} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="gender"
-                value={gender}
-                checked={selectedGender === gender}
-                onChange={(e) => setSelectedGender(e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm text-muted-foreground hover:text-foreground">
-                {gender}
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
+              const isCatSelected = isAccessoryCat
+                ? isAccessorySelected
+                : (!isAccessorySelected && (selectedMainCategory === cat._id || (normSel !== '' && (normSel === normSlug || normSel === normName))));
 
-      {/* Frame Material Filter */}
-      <div className="border border-primary/20 rounded-lg p-4">
-        <h3 className="font-semibold text-foreground mb-3">Frame Material</h3>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="frameMaterial"
-              value=""
-              checked={selectedFrameMaterial === ""}
-              onChange={(e) => setSelectedFrameMaterial(e.target.value)}
-              className="w-4 h-4"
-            />
-            <span className="text-sm text-muted-foreground hover:text-foreground">
-              All
-            </span>
-          </label>
-          {frameMaterialOptions.map((material) => (
-            <label key={material} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="frameMaterial"
-                value={material}
-                checked={selectedFrameMaterial === material}
-                onChange={(e) => setSelectedFrameMaterial(e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm text-muted-foreground hover:text-foreground">
-                {material}
-              </span>
-            </label>
-          ))}
+              return (
+                <label key={cat._id} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="mainCategory"
+                    value={cat._id}
+                    checked={isCatSelected}
+                    onChange={() => {
+                      setSelectedMainCategory(cat._id);
+                      setSelectedSubCategory("");
+                      setSelectedSubSubCategory("");
+                    }}
+                    className="w-4 h-4 accent-amber-400"
+                  />
+                  <span className={cn(
+                    "text-sm transition-colors",
+                    isCatSelected ? "text-amber-400 font-bold" : "text-muted-foreground hover:text-foreground"
+                  )}>
+                    {cat.name}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
         </div>
-      </div>
+        {!isAccessorySelected && (
+          <>
+            {/* Frame Type Filter (Visual Grid) */}
+            <div className="border border-primary/10 rounded overflow-hidden">
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[2px] bg-secondary/30 p-2 border-b border-primary/10">Frame Type</h3>
+              <div className="p-2 grid grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => setSelectedFrameType("")}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2 rounded border transition-all h-16 text-center",
+                    selectedFrameType === ""
+                      ? "border-[#DAAB34] bg-[#DAAB34]/10 text-white"
+                      : "border-primary/10 bg-transparent text-muted-foreground hover:border-[#DAAB34]/50"
+                  )}
+                >
+                  <span className="text-[9px] font-bold uppercase">All Types</span>
+                </button>
+                {frameTypeOptions.map((opt: any) => (
+                  <button
+                    key={opt.name}
+                    onClick={() => setSelectedFrameType(opt.name)}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-1 rounded border transition-all h-16 text-center gap-0.5 group relative overflow-hidden",
+                      selectedFrameType === opt.name
+                        ? "border-[#DAAB34] bg-[#DAAB34]/5 text-[#DAAB34] shadow-sm font-black"
+                        : "border-primary/5 bg-transparent text-muted-foreground hover:border-[#DAAB34]/30"
+                    )}
+                  >
+                    {opt.image ? (
+                      <img src={getImageUrl(opt.image)} alt={opt.name} className="h-6 w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
+                    ) : (
+                      <div className="w-8 h-5 bg-slate-800/50 rounded flex items-center justify-center overflow-hidden">
+                        <span className="text-[7px] text-slate-500 font-mono">ICON</span>
+                      </div>
+                    )}
+                    <span className="text-[8px] font-bold uppercase tracking-tighter truncate w-full">{opt.name}</span>
+                    {selectedFrameShape === opt.name && (
+                      <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#DAAB34] rounded-full shadow-[0_0_8px_rgba(218,171,52,0.5)]"></div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-      {/* Weight Group Filter */}
-      <div className="border border-primary/20 rounded-lg p-4">
-        <h3 className="font-semibold text-foreground mb-3">Weight</h3>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="weightGroup"
-              value=""
-              checked={selectedWeightGroup === ""}
-              onChange={(e) => setSelectedWeightGroup(e.target.value)}
-              className="w-4 h-4"
-            />
-            <span className="text-sm text-muted-foreground hover:text-foreground">
-              All
-            </span>
-          </label>
-          {weightGroupOptions.map((weight) => (
-            <label key={weight} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="weightGroup"
-                value={weight}
-                checked={selectedWeightGroup === weight}
-                onChange={(e) => setSelectedWeightGroup(e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm text-muted-foreground hover:text-foreground">
-                {weight}
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
+            {/* Frame Shape Filter (Visual Grid) */}
+            <div className="border border-primary/10 rounded overflow-hidden">
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[2px] bg-secondary/30 p-2 border-b border-primary/10">Frame Shape</h3>
+              <div className="p-2 grid grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => setSelectedFrameShape("")}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2 rounded border transition-all h-16 text-center",
+                    selectedFrameShape === ""
+                      ? "border-[#DAAB34] bg-[#DAAB34]/10 text-white"
+                      : "border-primary/10 bg-transparent text-muted-foreground hover:border-[#DAAB34]/50"
+                  )}
+                >
+                  <span className="text-[9px] font-bold uppercase">All Shapes</span>
+                </button>
+                {frameShapeOptions.map((opt: any) => (
+                  <button
+                    key={opt.name}
+                    onClick={() => setSelectedFrameShape(opt.name)}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-1 rounded border transition-all h-16 text-center gap-0.5 group relative overflow-hidden",
+                      selectedFrameShape === opt.name
+                        ? "border-[#DAAB34] bg-[#DAAB34]/5 text-[#DAAB34] shadow-sm font-black"
+                        : "border-primary/5 bg-transparent text-muted-foreground hover:border-[#DAAB34]/30"
+                    )}
+                  >
+                    {opt.image ? (
+                      <img src={getImageUrl(opt.image)} alt={opt.name} className="h-6 w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
+                    ) : (
+                      <div className="w-8 h-5 bg-slate-800/50 rounded flex items-center justify-center overflow-hidden">
+                        <span className="text-[7px] text-slate-500 font-mono">ICON</span>
+                      </div>
+                    )}
+                    <span className="text-[8px] font-bold uppercase tracking-tighter truncate w-full">{opt.name}</span>
+                    {selectedFrameShape === opt.name && (
+                      <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#DAAB34] rounded-full shadow-[0_0_8px_rgba(218,171,52,0.5)]"></div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Face Shape Filter (Visual Grid) */}
+            <div className="border border-primary/10 rounded overflow-hidden">
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[2px] bg-secondary/30 p-2 border-b border-primary/10">Face Shape</h3>
+              <div className="p-2 grid grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => setSelectedFaceShape("")}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2 rounded border transition-all h-16 text-center",
+                    selectedFaceShape === ""
+                      ? "border-[#DAAB34] bg-[#DAAB34]/10 text-white"
+                      : "border-primary/10 bg-transparent text-muted-foreground hover:border-[#DAAB34]/50"
+                  )}
+                >
+                  <span className="text-[9px] font-bold uppercase">All Shapes</span>
+                </button>
+                {faceShapeOptions.map((opt: any) => (
+                  <button
+                    key={opt.name}
+                    onClick={() => setSelectedFaceShape(opt.name)}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-1 rounded border transition-all h-16 text-center gap-0.5 group relative overflow-hidden",
+                      selectedFaceShape === opt.name
+                        ? "border-[#DAAB34] bg-[#DAAB34]/5 text-[#DAAB34] shadow-sm font-black"
+                        : "border-primary/5 bg-transparent text-muted-foreground hover:border-[#DAAB34]/30"
+                    )}
+                  >
+                    {opt.image ? (
+                      <img src={getImageUrl(opt.image)} alt={opt.name} className="h-6 w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
+                    ) : (
+                      <div className="w-8 h-5 bg-slate-800/50 rounded flex items-center justify-center overflow-hidden">
+                        <span className="text-[7px] text-slate-500 font-mono">ICON</span>
+                      </div>
+                    )}
+                    <span className="text-[8px] font-bold uppercase tracking-tighter truncate w-full">{opt.name}</span>
+                    {selectedFaceShape === opt.name && (
+                      <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#DAAB34] rounded-full shadow-[0_0_8px_rgba(218,171,52,0.5)]"></div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Brand Filter */}
+            <div className="border border-primary/20 rounded-lg p-4">
+              <h3 className="font-semibold text-foreground mb-3">Brands</h3>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="brand"
+                    value=""
+                    checked={selectedBrand === ""}
+                    onChange={(e) => setSelectedBrand(e.target.value)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-muted-foreground hover:text-foreground">
+                    All Brands
+                  </span>
+                </label>
+                {brandList.map((brand) => (
+                  <label key={brand._id} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="brand"
+                      value={brand._id}
+                      checked={selectedBrand === brand._id}
+                      onChange={(e) => setSelectedBrand(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-muted-foreground hover:text-foreground">
+                      {brand.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Gender Filter */}
+            <div className="border border-primary/20 rounded-lg p-4">
+              <h3 className="font-semibold text-foreground mb-3">Gender</h3>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value=""
+                    checked={selectedGender === ""}
+                    onChange={(e) => setSelectedGender(e.target.value)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-muted-foreground hover:text-foreground">
+                    All
+                  </span>
+                </label>
+                {genderOptions.map((gender) => (
+                  <label key={gender} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="gender"
+                      value={gender}
+                      checked={selectedGender === gender}
+                      onChange={(e) => setSelectedGender(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-muted-foreground hover:text-foreground">
+                      {gender}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Frame Material Filter */}
+            <div className="border border-primary/20 rounded-lg p-4">
+              <h3 className="font-semibold text-foreground mb-3">Frame Material</h3>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="frameMaterial"
+                    value=""
+                    checked={selectedFrameMaterial === ""}
+                    onChange={(e) => setSelectedFrameMaterial(e.target.value)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-muted-foreground hover:text-foreground">
+                    All
+                  </span>
+                </label>
+                {frameMaterialOptions.map((material) => (
+                  <label key={material} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="frameMaterial"
+                      value={material}
+                      checked={selectedFrameMaterial === material}
+                      onChange={(e) => setSelectedFrameMaterial(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-muted-foreground hover:text-foreground">
+                      {material}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Weight Group Filter */}
+            <div className="border border-primary/20 rounded-lg p-4">
+              <h3 className="font-semibold text-foreground mb-3">Weight</h3>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="weightGroup"
+                    value=""
+                    checked={selectedWeightGroup === ""}
+                    onChange={(e) => setSelectedWeightGroup(e.target.value)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-muted-foreground hover:text-foreground">
+                    All
+                  </span>
+                </label>
+                {weightGroupOptions.map((weight) => (
+                  <label key={weight} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="weightGroup"
+                      value={weight}
+                      checked={selectedWeightGroup === weight}
+                      onChange={(e) => setSelectedWeightGroup(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-muted-foreground hover:text-foreground">
+                      {weight}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
       {/* Price Filter */}
       <div className="border border-primary/10 rounded overflow-hidden">

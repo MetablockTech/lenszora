@@ -215,60 +215,18 @@ const AdminLayout: React.FC = () => {
               </SidebarMenuItem>
 
               {/* Category Setup Hierarchy */}
-              <Collapsible defaultOpen={isCategorySetupActive} className="group/collapsible">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton className={isCategorySetupActive ? "bg-slate-800 text-blue-400 font-medium" : inactiveClass}>
-                      <Tag className="w-5 h-5 shrink-0" />
-                      <span className="group-data-[collapsible=icon]:hidden">Category Setup</span>
-                      <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
+              <SidebarMenuItem>
+                <NavLink to="/admin/categories">
+                  {({ isActive }) => (
+                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
+                      <a>
+                        <Tag className="w-5 h-5 shrink-0 text-blue-400" />
+                        <span className="group-data-[collapsible=icon]:hidden font-medium">Category Tree Manager</span>
+                      </a>
                     </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub className="mt-1 ml-4 border-l border-slate-700/50 space-y-1">
-                      <SidebarMenuSubItem>
-                        <Link to="/admin/categories?level=main">
-                          <SidebarMenuSubButton isActive={currentLevel === 'main'} className={`w-full ${currentLevel === 'main' ? activeSubClass : inactiveSubClass}`}>
-                            <span>Categories</span>
-                          </SidebarMenuSubButton>
-                        </Link>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <Link to="/admin/categories?level=sub">
-                          <SidebarMenuSubButton isActive={currentLevel === 'sub'} className={`w-full ${currentLevel === 'sub' ? activeSubClass : inactiveSubClass}`}>
-                            <span>Sub Categories</span>
-                          </SidebarMenuSubButton>
-                        </Link>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <Link to="/admin/categories?level=subsub">
-                          <SidebarMenuSubButton isActive={currentLevel === 'subsub'} className={`w-full ${currentLevel === 'subsub' ? activeSubClass : inactiveSubClass}`}>
-                            <span>Sub Sub Categories</span>
-                          </SidebarMenuSubButton>
-                        </Link>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <NavLink to="/admin/eyewear-attributes">
-                          {({ isActive }) => (
-                            <SidebarMenuSubButton isActive={isActive} className={`w-full ${isActive ? activeSubClass : inactiveSubClass}`}>
-                              <span>Eyewear Attributes</span>
-                            </SidebarMenuSubButton>
-                          )}
-                        </NavLink>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <NavLink to="/admin/lens-manager">
-                          {({ isActive }) => (
-                            <SidebarMenuSubButton isActive={isActive} className={`w-full ${isActive ? activeSubClass : inactiveSubClass}`}>
-                              <span>Lens Management</span>
-                            </SidebarMenuSubButton>
-                          )}
-                        </NavLink>
-                      </SidebarMenuSubItem>
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
+                  )}
+                </NavLink>
+              </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <NavLink to="/admin/brands">
