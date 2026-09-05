@@ -47,12 +47,86 @@ async function ensureCleanCategoryStructure() {
       )
     }
 
-    // 4. Ensure Eyewear Cases, Cleaning Kits, Chains & Straps point to Accessories main category
+    // 4. Ensure exact Accessories subcategories and sub-subcategories structure
     if (accCat) {
-      await Category.updateMany(
-        { slug: { $in: ['eyewear-cases', 'cleaning-kits', 'chains-straps'] } },
-        { $set: { parentId: accCat._id, level: 'sub' } }
-      )
+      const accessoryStructure = [
+        {
+          name: 'Cleaning & Sprays',
+          slug: 'cleaning-sprays',
+          subsubs: [
+            { name: 'Anti-Fog Cleaning Sprays', slug: 'anti-fog-cleaning-sprays' },
+            { name: 'Lens Cleaning Solutions', slug: 'lens-cleaning-solutions' },
+            { name: 'Microfiber Cleaning Cloths', slug: 'microfiber-cleaning-cloths' },
+            { name: 'Pre-Moistened Lens Wipes', slug: 'pre-moistened-lens-wipes' }
+          ]
+        },
+        {
+          name: 'Cases & Pouches',
+          slug: 'cases-pouches',
+          subsubs: [
+            { name: 'Hard Shell Eyewear Cases', slug: 'hard-shell-eyewear-cases' },
+            { name: 'Leather Glasses Cases', slug: 'leather-glasses-cases' },
+            { name: 'Soft Microfiber Travel Pouches', slug: 'soft-microfiber-travel-pouches' },
+            { name: 'Contact Lens Storage Cases', slug: 'contact-lens-storage-cases' }
+          ]
+        },
+        {
+          name: 'Chains & Straps',
+          slug: 'chains-straps',
+          subsubs: [
+            { name: 'Stylish Metal Eyewear Chains', slug: 'stylish-metal-eyewear-chains' },
+            { name: 'Beaded Glass Chains & Cords', slug: 'beaded-glass-chains-cords' },
+            { name: 'Sports Silicone Eyewear Straps', slug: 'sports-silicone-eyewear-straps' },
+            { name: 'Anti-Slip Ear Hook Grips', slug: 'anti-slip-ear-hook-grips' },
+            { name: 'Eyewear Screw Repair Kits', slug: 'eyewear-screw-repair-kits' }
+          ]
+        }
+      ]
+
+      for (const subItem of accessoryStructure) {
+        let subCat = await Category.findOne({
+          $or: [
+            { slug: subItem.slug },
+            { name: subItem.name },
+            ...(subItem.slug === 'cleaning-sprays' ? [{ slug: 'cleaning-kits' }] : []),
+            ...(subItem.slug === 'cases-pouches' ? [{ slug: 'eyewear-cases' }] : [])
+          ]
+        })
+
+        if (subCat) {
+          subCat.name = subItem.name
+          subCat.slug = subItem.slug
+          subCat.level = 'sub'
+          subCat.parentId = accCat._id
+          await subCat.save()
+        } else {
+          subCat = new Category({
+            name: subItem.name,
+            slug: subItem.slug,
+            level: 'sub',
+            parentId: accCat._id
+          })
+          await subCat.save()
+        }
+
+        for (const subsubItem of subItem.subsubs) {
+          let ssCat = await Category.findOne({ slug: subsubItem.slug })
+          if (ssCat) {
+            ssCat.name = subsubItem.name
+            ssCat.level = 'subsub'
+            ssCat.parentId = subCat._id
+            await ssCat.save()
+          } else {
+            ssCat = new Category({
+              name: subsubItem.name,
+              slug: subsubItem.slug,
+              level: 'subsub',
+              parentId: subCat._id
+            })
+            await ssCat.save()
+          }
+        }
+      }
     }
 
     // 5. Remove orphan test categories

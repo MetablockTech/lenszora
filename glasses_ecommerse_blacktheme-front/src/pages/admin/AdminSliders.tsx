@@ -181,7 +181,7 @@ const AdminSliders = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-8">
-        <h1 className="text-2xl font-bold text-black flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           Banner Setup <span className="text-blue-600 text-lg font-normal">(Default)</span>
         </h1>
       </div>

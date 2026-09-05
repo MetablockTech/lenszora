@@ -92,11 +92,11 @@ const AccessoriesAdminPage: React.FC = () => {
     <div className="py-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-2.5">
-            <Sparkles className="w-7 h-7 text-amber-400" />
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-2.5">
+            <Sparkles className="w-7 h-7 text-amber-500" />
             Eyewear Accessories & Care Kits
           </h1>
-          <p className="text-xs text-slate-400 mt-1 font-medium">
+          <p className="text-xs text-slate-600 mt-1 font-medium">
             Manage cleaning sprays, microfiber cloths, hard cases, travel pouches, chains & care kits ({list.length} items total)
           </p>
         </div>

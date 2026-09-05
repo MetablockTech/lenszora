@@ -15,6 +15,10 @@ import { Button } from '@/components/ui/button'
 const ReturnRequests = () => {
     const [requests, setRequests] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [filterType, setFilterType] = useState('all')
+    const [filterStatus, setFilterStatus] = useState('all')
+    const [selectedRequest, setSelectedRequest] = useState<any>(null)
+    const [actionLoading, setActionLoading] = useState(false)
     const [adminNotesInput, setAdminNotesInput] = useState('')
     const [refundAmountInput, setRefundAmountInput] = useState<string>('')
     const token = getToken()

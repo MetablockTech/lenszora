@@ -310,11 +310,11 @@ const AccessoryFormPage: React.FC = () => {
 
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-3">
-            <Sparkles className="w-7 h-7 text-amber-400" />
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-3">
+            <Sparkles className="w-7 h-7 text-amber-500" />
             {isEdit ? 'Edit Accessory Item' : 'Add New Accessory / Care Kit'}
           </h1>
-          <p className="text-xs text-slate-400 mt-1.5 font-medium">
+          <p className="text-xs text-slate-600 mt-1.5 font-medium">
             Configure cleaning spray, microfiber cloth, leather case, pouch, or complete care kit details
           </p>
         </div>

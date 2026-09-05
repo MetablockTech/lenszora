@@ -156,6 +156,7 @@ const AppContent = () => {
         <Route path="users" element={<UsersPage />} />
         <Route path="pincodes" element={<PincodesPage />} />
         <Route path="return-requests" element={<ReturnRequestsPage />} />
+        <Route path="return-request" element={<ReturnRequestsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="referrals" element={<ReferralManagerPage />} />
         <Route path="navigation-manager" element={<NavigationManagerPage />} />

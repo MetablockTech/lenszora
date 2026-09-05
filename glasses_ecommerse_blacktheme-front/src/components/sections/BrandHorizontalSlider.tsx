@@ -86,7 +86,7 @@ const BrandHorizontalSlider = () => {
             brandName: b.name,
             image: bannerImage,
             logo: b.logo,
-            tagline: b.tagline || `${b.name.toUpperCase()} EXCLUSIVE COLLECTION`,
+            tagline: (b.tagline && b.tagline.trim().toLowerCase() !== b.name.trim().toLowerCase()) ? b.tagline : `${b.name.toUpperCase()} EXCLUSIVE COLLECTION`,
             shopLink: `/shop?brand=${b._id}`,
           });
         });

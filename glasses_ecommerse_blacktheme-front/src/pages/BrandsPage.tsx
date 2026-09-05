@@ -102,14 +102,12 @@ const BrandsPage = () => {
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-6" />
-                  <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end text-white space-y-1.5">
-                    {brand.logo ? (
-                      <img src={getImageUrl(brand.logo)} alt={brand.name} className="h-8 object-contain mb-1" />
-                    ) : (
-                      <h3 className="text-2xl font-bold uppercase">{brand.name}</h3>
+                  <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end text-white space-y-1.5 z-10">
+                    <h3 className="text-2xl font-extrabold uppercase text-amber-400 tracking-wide">{brand.name}</h3>
+                    {brand.tagline && brand.tagline.trim().toLowerCase() !== brand.name.trim().toLowerCase() && (
+                      <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">{brand.tagline}</p>
                     )}
-                    {brand.tagline && <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">{brand.tagline}</p>}
-                    <div className="pt-2 text-xs font-bold uppercase tracking-wider text-white group-hover:text-amber-400 flex items-center gap-1">
+                    <div className="pt-2 text-xs font-bold uppercase tracking-wider text-white group-hover:text-amber-400 flex items-center gap-1 transition-colors">
                       <span>Shop Collection →</span>
                     </div>
                   </div>
