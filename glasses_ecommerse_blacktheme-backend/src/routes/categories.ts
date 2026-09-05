@@ -59,6 +59,20 @@ async function ensureCleanCategoryStructure() {
     await Category.deleteMany({
       slug: { $in: ['sunglasses-', 'eyeglass'] }
     })
+
+    // 6. Re-assign any glasses products miscategorized under Accessories back to Eyeglasses
+    if (accCat && eyeglassCat) {
+      const { Product } = require('../models/Product')
+      await Product.updateMany(
+        {
+          category: accCat._id,
+          title: { $regex: /glasses|clubmaster|cateye|aviator|wayfarer/i }
+        },
+        {
+          $set: { category: eyeglassCat._id }
+        }
+      )
+    }
   } catch (err) {
     console.error('Error ensuring category structure:', err)
   }
