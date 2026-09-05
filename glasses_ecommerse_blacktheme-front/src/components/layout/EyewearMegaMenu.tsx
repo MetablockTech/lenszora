@@ -49,16 +49,33 @@ const DEFAULT_FALLBACK_BRANDS: Brand[] = [
 ];
 
 const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onItemClick }: EyewearMegaMenuProps) => {
-  const normalizedSlug = (categorySlug || "").toLowerCase();
-  const isLensCategory = normalizedSlug.includes("contact") || normalizedSlug.includes("lens");
-  const isSunglasses = normalizedSlug.includes("sunglasses");
-  const isBrands = normalizedSlug === "brands" || normalizedSlug.includes("brand");
-  const isAccessories = normalizedSlug.includes("accessor") || normalizedSlug.includes("care");
-
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeBrands = (Array.isArray(brands) && brands.length > 0) ? brands : DEFAULT_FALLBACK_BRANDS;
 
-  const currentCategory = safeCategories.find(cat => cat && cat.slug === categorySlug) || safeCategories[0];
+  const normalizedSlug = (categorySlug || "").toLowerCase();
+
+  const currentCategory = safeCategories.find(cat => 
+    cat && (
+      cat.slug?.toLowerCase() === normalizedSlug || 
+      cat.name?.toLowerCase() === normalizedSlug ||
+      cat._id === categorySlug
+    )
+  ) || safeCategories[0];
+
+  const currentCatSlug = (currentCategory?.slug || normalizedSlug || "").toLowerCase();
+  const currentCatName = (currentCategory?.name || "").toLowerCase();
+
+  const isBrands = normalizedSlug === "brands" || currentCatSlug === "brands" || normalizedSlug.includes("brand");
+  const isLensCategory = normalizedSlug.includes("contact") || currentCatSlug.includes("contact") || currentCatName.includes("contact");
+  const isSunglasses = normalizedSlug.includes("sunglass") || currentCatSlug.includes("sunglass") || currentCatName.includes("sunglass");
+  const isAccessories = (normalizedSlug.includes("accessor") || currentCatSlug.includes("accessor") || currentCatName.includes("accessor")) && 
+                        !normalizedSlug.includes("eyeglass") && !currentCatSlug.includes("eyeglass") && !currentCatName.includes("eyeglass");
+
+  const eyeglassesCategory = safeCategories.find(c => 
+    c && (c.name?.toLowerCase().includes("eyeglass") || c.slug?.toLowerCase().includes("eyeglass"))
+  ) || currentCategory;
+
+  const dbSubCategories = Array.isArray(eyeglassesCategory?.subcategories) ? eyeglassesCategory.subcategories : [];
 
   // 1. BRANDS MEGA MENU
   if (isBrands) {
@@ -424,15 +441,15 @@ const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onIt
         className="absolute left-0 right-0 top-full bg-slate-950 shadow-2xl border-t border-white/10 z-50 py-8 px-6 text-white backdrop-blur-2xl"
       >
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             {/* Column 1: For (Gender) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
                 <Users className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">For</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Gender</h3>
               </div>
               <ul className="space-y-2 text-xs font-semibold">
-                {["Men", "Women", "Kids"].map((gender) => (
+                {["Men", "Women", "Kids", "Unisex"].map((gender) => (
                   <li key={gender}>
                     <Link
                       to={`/shop?category=sunglasses&gender=${gender.toLowerCase()}`}
@@ -446,38 +463,11 @@ const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onIt
               </ul>
             </div>
 
-            {/* Column 2: Type */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
-                <Sun className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Type</h3>
-              </div>
-              <ul className="space-y-2 text-xs font-semibold">
-                {[
-                  { name: "Polarized", query: "polarized" },
-                  { name: "UV Protection", query: "uv-protection" },
-                  { name: "Sports", query: "sports" },
-                  { name: "Driving", query: "driving" },
-                  { name: "Fashion", query: "fashion" },
-                ].map((typeItem) => (
-                  <li key={typeItem.name}>
-                    <Link
-                      to={`/shop?category=sunglasses&type=${typeItem.query}`}
-                      onClick={onItemClick}
-                      className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
-                    >
-                      {typeItem.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Column 3: Shape */}
+            {/* Column 2: Shape */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
                 <Shapes className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Shape</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Frame Shape</h3>
               </div>
               <ul className="space-y-2 text-xs font-semibold">
                 {[
@@ -500,19 +490,76 @@ const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onIt
               </ul>
             </div>
 
-            {/* Column 4: Sunglasses Care Kit & Accessories */}
-            <div className="space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
-              <div className="flex items-center gap-2 border-b border-amber-500/30 pb-2 mb-3">
-                <PackageCheck className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Care Kit & Accessories</h3>
+            {/* Column 3: Top Brands */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
+                <Tag className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Top Brands</h3>
+              </div>
+              <ul className="space-y-2 text-xs font-semibold">
+                {safeBrands.slice(0, 6).map((brand) => (
+                  <li key={brand._id || brand.slug}>
+                    <Link
+                      to={`/shop?category=sunglasses&brand=${brand._id}`}
+                      onClick={onItemClick}
+                      className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5 flex items-center justify-between"
+                    >
+                      <span>{brand.name}</span>
+                    </Link>
+                  </li>
+                ))}
+                <li>
+                  <Link
+                    to="/brands"
+                    onClick={onItemClick}
+                    className="text-amber-400 hover:underline text-[11px] font-bold block pt-1"
+                  >
+                    View All Brands →
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 4: Type & Protection */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
+                <Sun className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Type & Feature</h3>
               </div>
               <ul className="space-y-2 text-xs font-semibold">
                 {[
-                  { name: "Anti-Glare Lens Cleaner Spray", search: "lens cleaner" },
+                  { name: "Polarized Lenses", query: "polarized" },
+                  { name: "100% UV Protection", query: "uv-protection" },
+                  { name: "Sports & Outdoor", query: "sports" },
+                  { name: "Driving Sunglasses", query: "driving" },
+                  { name: "Fashion & Luxury", query: "fashion" },
+                ].map((typeItem) => (
+                  <li key={typeItem.name}>
+                    <Link
+                      to={`/shop?category=sunglasses&type=${typeItem.query}`}
+                      onClick={onItemClick}
+                      className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
+                    >
+                      {typeItem.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Column 5: Sunglasses Care Kit & Accessories */}
+            <div className="space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
+              <div className="flex items-center gap-2 border-b border-amber-500/30 pb-2 mb-3">
+                <PackageCheck className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Care Kits</h3>
+              </div>
+              <ul className="space-y-2 text-xs font-semibold">
+                {[
+                  { name: "Anti-Glare Cleaner Spray", search: "lens cleaner" },
                   { name: "Microfiber Cleaning Cloth", search: "microfiber" },
-                  { name: "Hard Leather Sunglasses Case", search: "leather case" },
+                  { name: "Hard Leather Case", search: "leather case" },
                   { name: "UV Travel Pouch & Chain", search: "pouch" },
-                  { name: "Deluxe Sunglasses Care Kit", search: "care kit" },
+                  { name: "Sunglasses Care Kit", search: "care kit" },
                 ].map((item) => (
                   <li key={item.name}>
                     <Link
@@ -520,7 +567,7 @@ const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onIt
                       onClick={onItemClick}
                       className="text-slate-200 hover:text-amber-400 transition-colors block py-0.5 flex items-center justify-between"
                     >
-                      <span>{item.name}</span>
+                      <span className="truncate">{item.name}</span>
                       <span className="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-mono uppercase">CARE</span>
                     </Link>
                   </li>
@@ -548,17 +595,17 @@ const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onIt
           <div className="space-y-3">
             <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
               <Users className="w-4 h-4 text-amber-400" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Shop By Gender</h3>
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Gender</h3>
             </div>
             <ul className="space-y-2 text-xs font-semibold">
               {["Men", "Women", "Kids", "Unisex"].map((g) => (
                 <li key={g}>
                   <Link
-                    to={`/shop?category=${currentCategory?.slug || "eyeglasses"}&gender=${g.toLowerCase()}`}
+                    to={`/shop?category=${eyeglassesCategory?.slug || "eyeglasses"}&gender=${g.toLowerCase()}`}
                     onClick={onItemClick}
                     className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
                   >
-                    {g}
+                    {g} Eyeglasses
                   </Link>
                 </li>
               ))}
@@ -569,13 +616,13 @@ const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onIt
           <div className="space-y-3">
             <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
               <Shapes className="w-4 h-4 text-amber-400" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Shop By Shape</h3>
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Frame Shape</h3>
             </div>
             <ul className="space-y-2 text-xs font-semibold">
               {["Rectangle", "Square", "Round", "Cat-Eye", "Aviator", "Wayfarer"].map((shape) => (
                 <li key={shape}>
                   <Link
-                    to={`/shop?category=${currentCategory?.slug || "eyeglasses"}&frameShape=${shape.toLowerCase()}`}
+                    to={`/shop?category=${eyeglassesCategory?.slug || "eyeglasses"}&frameShape=${shape.toLowerCase()}`}
                     onClick={onItemClick}
                     className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
                   >
@@ -586,22 +633,25 @@ const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onIt
             </ul>
           </div>
 
-          {/* Column 3: Frame Type / Rim */}
+          {/* Column 3: Frame Types & Lens Categories */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
               <Layers className="w-4 h-4 text-amber-400" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Frame Type</h3>
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Types & Lenses</h3>
             </div>
             <ul className="space-y-2 text-xs font-semibold">
               {[
                 { name: "Full Rim Frames", query: "full-rim" },
                 { name: "Half Rim / Supra", query: "half-rim" },
-                { name: "Rimless / Minimalist", query: "rimless" },
-                { name: "Geometric & Hexagonal", query: "geometric" },
+                { name: "Rimless Minimalist", query: "rimless" },
+                { name: "Computer & Blue Light", query: "blue-filter" },
+                { name: "Reading Glasses", query: "reading" },
+                { name: "Progressive & Bifocal Lenses", query: "progressive" },
+                { name: "Zero Power Frames", query: "zero-power" },
               ].map((rim) => (
                 <li key={rim.name}>
                   <Link
-                    to={`/shop?category=${currentCategory?.slug || "eyeglasses"}&frameType=${rim.query}`}
+                    to={`/shop?category=${eyeglassesCategory?.slug || "eyeglasses"}&frameType=${rim.query}`}
                     onClick={onItemClick}
                     className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
                   >
@@ -612,31 +662,33 @@ const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onIt
             </ul>
           </div>
 
-          {/* Column 4: Eyeglasses Care Kit & Accessories */}
-          <div className="space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
-            <div className="flex items-center gap-2 border-b border-amber-500/30 pb-2 mb-3">
-              <PackageCheck className="w-4 h-4 text-amber-400" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Care Kit & Accessories</h3>
+          {/* Column 4: Top Eyeglasses Brands */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
+              <Tag className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Eyewear Brands</h3>
             </div>
             <ul className="space-y-2 text-xs font-semibold">
-              {[
-                { name: "Anti-Fog Spray & Wipes", search: "anti-fog" },
-                { name: "Microfiber Cleaning Cloth", search: "microfiber" },
-                { name: "Frame Repair Kit & Screwdriver", search: "repair kit" },
-                { name: "Hard Shell Protective Case", search: "hard case" },
-                { name: "Complete Eyewear Care Kit", search: "care kit" },
-              ].map((item) => (
-                <li key={item.name}>
+              {safeBrands.slice(0, 6).map((brand) => (
+                <li key={brand._id || brand.slug}>
                   <Link
-                    to={`/shop?category=accessories&search=${encodeURIComponent(item.search)}`}
+                    to={`/shop?category=eyeglasses&brand=${brand._id}`}
                     onClick={onItemClick}
-                    className="text-slate-200 hover:text-amber-400 transition-colors block py-0.5 flex items-center justify-between"
+                    className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
                   >
-                    <span>{item.name}</span>
-                    <span className="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-mono uppercase">CARE</span>
+                    {brand.name}
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  to="/brands"
+                  onClick={onItemClick}
+                  className="text-amber-400 hover:underline text-[11px] font-bold block pt-1"
+                >
+                  View All Brands →
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

@@ -26,6 +26,13 @@ const AccessoryFormPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [allCats, setAllCats] = useState<any[]>([])
+  const [mainCats, setMainCats] = useState<any[]>([])
+  const [subCats, setSubCats] = useState<any[]>([])
+  const [subSubCats, setSubSubCats] = useState<any[]>([])
+
+  const [selectedMain, setSelectedMain] = useState('')
+  const [selectedSub, setSelectedSub] = useState('')
+  const [selectedSubSub, setSelectedSubSub] = useState('')
 
   // Form Fields
   const [title, setTitle] = useState('')
@@ -55,14 +62,22 @@ const AccessoryFormPage: React.FC = () => {
     try {
       const cats = await categories.list()
       setAllCats(cats)
+      const mains = cats.filter((c: any) => c.level === 'main' || !c.parentId)
+      setMainCats(mains)
 
       // Find default Accessories category if exists
-      const accCat = cats.find((c: any) => 
+      const accCat = mains.find((c: any) => 
         c.name.toLowerCase().includes('accessor') || 
         c.slug?.toLowerCase().includes('accessor')
       )
-      if (accCat && !category) {
+      if (accCat && !selectedMain) {
+        setSelectedMain(accCat._id)
         setCategory(accCat._id)
+        const subs = cats.filter((c: any) => {
+          const pId = typeof c.parentId === 'object' ? c.parentId?._id : c.parentId
+          return pId === accCat._id
+        })
+        setSubCats(subs)
       }
     } catch (err) {
       console.error('Failed to load categories', err)
@@ -72,14 +87,50 @@ const AccessoryFormPage: React.FC = () => {
   async function loadAccessoryData(productId: string) {
     setLoading(true)
     try {
-      const data = await products.get(productId)
+      const [data, cats] = await Promise.all([
+        products.get(productId),
+        categories.list().catch(() => [])
+      ])
+
       if (data) {
         setTitle(data.title || '')
         setSku(data.sku || generateUniqueSKU('ACC'))
         setPrice(data.price || '')
         setDiscountAmount(data.discountAmount || 0)
         setStock(data.stock ?? 100)
-        setCategory(typeof data.category === 'object' ? data.category?._id : data.category || '')
+        
+        const prodCatId = typeof data.category === 'object' ? data.category?._id : data.category || ''
+        setCategory(prodCatId)
+
+        // Resolve hierarchy in categories
+        if (prodCatId && cats.length > 0) {
+          const currentCat = cats.find((c: any) => c._id === prodCatId)
+          if (currentCat) {
+            if (currentCat.level === 'subsub') {
+              const subCat = cats.find((c: any) => c._id === (typeof currentCat.parentId === 'object' ? currentCat.parentId?._id : currentCat.parentId))
+              const mainCat = subCat ? cats.find((c: any) => c._id === (typeof subCat.parentId === 'object' ? subCat.parentId?._id : subCat.parentId)) : null
+
+              setSelectedMain(mainCat?._id || '')
+              setSelectedSub(subCat?._id || '')
+              setSelectedSubSub(currentCat._id)
+
+              if (mainCat) setSubCats(cats.filter((c: any) => (typeof c.parentId === 'object' ? c.parentId?._id : c.parentId) === mainCat._id))
+              if (subCat) setSubSubCats(cats.filter((c: any) => (typeof c.parentId === 'object' ? c.parentId?._id : c.parentId) === subCat._id))
+            } else if (currentCat.level === 'sub') {
+              const mainCat = cats.find((c: any) => c._id === (typeof currentCat.parentId === 'object' ? currentCat.parentId?._id : currentCat.parentId))
+
+              setSelectedMain(mainCat?._id || '')
+              setSelectedSub(currentCat._id)
+
+              if (mainCat) setSubCats(cats.filter((c: any) => (typeof c.parentId === 'object' ? c.parentId?._id : c.parentId) === mainCat._id))
+              setSubSubCats(cats.filter((c: any) => (typeof c.parentId === 'object' ? c.parentId?._id : c.parentId) === currentCat._id))
+            } else {
+              setSelectedMain(currentCat._id)
+              setSubCats(cats.filter((c: any) => (typeof c.parentId === 'object' ? c.parentId?._id : c.parentId) === currentCat._id))
+            }
+          }
+        }
+
         setDescription(data.description || '')
         setSearchTags(Array.isArray(data.searchTags) ? data.searchTags : ['accessories'])
         setThumbnail(data.thumbnail || (Array.isArray(data.images) && data.images[0] ? data.images[0] : ''))
@@ -91,6 +142,37 @@ const AccessoryFormPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleMainCategoryChange = (mainId: string) => {
+    setSelectedMain(mainId)
+    setSelectedSub('')
+    setSelectedSubSub('')
+    setCategory(mainId)
+
+    const subs = allCats.filter((c: any) => {
+      const pId = typeof c.parentId === 'object' ? c.parentId?._id : c.parentId
+      return pId === mainId
+    })
+    setSubCats(subs)
+    setSubSubCats([])
+  }
+
+  const handleSubCategoryChange = (subId: string) => {
+    setSelectedSub(subId)
+    setSelectedSubSub('')
+    setCategory(subId || selectedMain)
+
+    const subSubs = allCats.filter((c: any) => {
+      const pId = typeof c.parentId === 'object' ? c.parentId?._id : c.parentId
+      return pId === subId
+    })
+    setSubSubCats(subSubs)
+  }
+
+  const handleSubSubCategoryChange = (subSubId: string) => {
+    setSelectedSubSub(subSubId)
+    setCategory(subSubId || selectedSub || selectedMain)
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isThumb = false) => {
@@ -181,7 +263,7 @@ const AccessoryFormPage: React.FC = () => {
         discountAmount: Number(discountAmount || 0),
         discountType: 'flat',
         stock: Number(stock || 0),
-        category: category || undefined,
+        category: selectedSubSub || selectedSub || selectedMain || category || undefined,
         searchTags: Array.from(new Set(['accessories', 'accessory', ...searchTags])),
         thumbnail: thumbnail || (images.length > 0 ? images[0] : ''),
         images: images.length > 0 ? images : (thumbnail ? [thumbnail] : []),
@@ -306,19 +388,60 @@ const AccessoryFormPage: React.FC = () => {
               />
             </div>
 
+            {/* Dynamic Main Category */}
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Category</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                Main Category <span className="text-red-400">*</span>
+              </label>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={selectedMain}
+                onChange={(e) => handleMainCategoryChange(e.target.value)}
                 className="w-full h-11 px-3 bg-slate-950 border border-slate-800 rounded-md text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
               >
-                <option value="" className="bg-slate-900 text-slate-400">Select Category</option>
-                {allCats.map((c: any) => (
-                  <option key={c._id} value={c._id} className="bg-slate-900 text-white">{c.name}</option>
+                <option value="" className="bg-slate-900 text-slate-400">Select Main Category</option>
+                {mainCats.map((c: any) => (
+                  <option key={c._id} value={c._id} className="bg-slate-900 text-white font-bold">{c.name}</option>
                 ))}
               </select>
             </div>
+
+            {/* Dynamic Subcategory (If available in DB) */}
+            {subCats.length > 0 && (
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Subcategory
+                </label>
+                <select
+                  value={selectedSub}
+                  onChange={(e) => handleSubCategoryChange(e.target.value)}
+                  className="w-full h-11 px-3 bg-slate-950 border border-amber-500/30 rounded-md text-sm text-amber-300 font-semibold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                >
+                  <option value="" className="bg-slate-900 text-slate-400">Select Subcategory (Optional)</option>
+                  {subCats.map((c: any) => (
+                    <option key={c._id} value={c._id} className="bg-slate-900 text-white">{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Dynamic Sub-subcategory (If available in DB) */}
+            {subSubCats.length > 0 && (
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Sub-Subcategory
+                </label>
+                <select
+                  value={selectedSubSub}
+                  onChange={(e) => handleSubSubCategoryChange(e.target.value)}
+                  className="w-full h-11 px-3 bg-slate-950 border border-amber-500/30 rounded-md text-sm text-amber-400 font-semibold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                >
+                  <option value="" className="bg-slate-900 text-slate-400">Select Sub-Subcategory (Optional)</option>
+                  {subSubCats.map((c: any) => (
+                    <option key={c._id} value={c._id} className="bg-slate-900 text-white">{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div>
