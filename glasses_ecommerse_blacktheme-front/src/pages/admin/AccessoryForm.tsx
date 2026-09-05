@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { Sparkles, ArrowLeft, Loader2, Upload, Plus, X, Check, PackageCheck } from 'lucide-react'
+import { Sparkles, ArrowLeft, Loader2, Upload, Plus, X, Check, PackageCheck, ShieldCheck, Tag, Link2, Image as ImageIcon } from 'lucide-react'
 
 const DEFAULT_ACCESSORY_TAGS = [
   'accessories', 'care kit', 'lens cleaner', 'microfiber',
@@ -40,6 +40,7 @@ const AccessoryFormPage: React.FC = () => {
   const [thumbnail, setThumbnail] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [status, setStatus] = useState<'active' | 'inactive'>('active')
+  const [urlInput, setUrlInput] = useState('')
 
   useEffect(() => {
     loadCategories()
@@ -98,65 +99,73 @@ const AccessoryFormPage: React.FC = () => {
 
     setUploading(true)
     try {
-      const formData = new FormData()
       for (let i = 0; i < files.length; i++) {
-        formData.append('images', files[i])
-      }
+        const file = files[i]
+        const data = await products.uploadImage(file, 'products', 'accessories', undefined, token || undefined)
+        const uploadedUrl = data.url || data.path
 
-      const res = await fetch(`${API_URL}/api/upload/products`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData
-      })
-
-      if (!res.ok) throw new Error('Upload failed')
-      const data = await res.json()
-      const uploadedUrls: string[] = data.urls || []
-
-      if (uploadedUrls.length > 0) {
-        if (isThumb) {
-          setThumbnail(uploadedUrls[0])
-          if (!images.includes(uploadedUrls[0])) {
-            setImages(prev => [...prev, uploadedUrls[0]])
+        if (uploadedUrl) {
+          if (isThumb) {
+            setThumbnail(uploadedUrl)
+            setImages(prev => Array.from(new Set([uploadedUrl, ...prev])))
+          } else {
+            setImages(prev => Array.from(new Set([...prev, uploadedUrl])))
+            if (!thumbnail) {
+              setThumbnail(uploadedUrl)
+            }
           }
-        } else {
-          setImages(prev => [...prev, ...uploadedUrls])
-          if (!thumbnail) setThumbnail(uploadedUrls[0])
         }
-        toast({ title: 'Success', description: 'Images uploaded successfully' })
       }
+      toast({ title: 'Success', description: 'Image(s) uploaded successfully.' })
     } catch (err: any) {
-      toast({ title: 'Upload Failed', description: err.message || 'Image upload failed', variant: 'destructive' })
+      toast({ title: 'Upload Error', description: err.message || 'Image upload failed', variant: 'destructive' })
     } finally {
       setUploading(false)
+      e.target.value = ''
     }
+  }
+
+  const handleAddImageUrl = () => {
+    const trimmed = urlInput.trim()
+    if (!trimmed) return
+
+    if (!thumbnail) {
+      setThumbnail(trimmed)
+    }
+    if (!images.includes(trimmed)) {
+      setImages(prev => [...prev, trimmed])
+    }
+    setUrlInput('')
+    toast({ title: 'Added!', description: 'Image URL added successfully.' })
   }
 
   const handleToggleTag = (tag: string) => {
-    if (searchTags.includes(tag)) {
-      setSearchTags(searchTags.filter(t => t !== tag))
-    } else {
-      setSearchTags([...searchTags, tag])
-    }
+    setSearchTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    )
   }
 
   const handleAddCustomTag = () => {
-    const clean = tagInput.trim().toLowerCase()
-    if (clean && !searchTags.includes(clean)) {
-      setSearchTags([...searchTags, clean])
+    const trimmed = tagInput.trim().toLowerCase()
+    if (trimmed && !searchTags.includes(trimmed)) {
+      setSearchTags(prev => [...prev, trimmed])
       setTagInput('')
     }
+  }
+
+  const handleRemoveTag = (tag: string) => {
+    setSearchTags(prev => prev.filter(t => t !== tag))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!title.trim()) {
-      toast({ title: 'Validation Error', description: 'Title is required', variant: 'destructive' })
+      toast({ title: 'Validation Error', description: 'Accessory Title is required', variant: 'destructive' })
       return
     }
     if (!price || Number(price) <= 0) {
-      toast({ title: 'Validation Error', description: 'Valid price is required', variant: 'destructive' })
+      toast({ title: 'Validation Error', description: 'Valid selling price is required', variant: 'destructive' })
       return
     }
 
@@ -200,125 +209,141 @@ const AccessoryFormPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      <div className="flex flex-col items-center justify-center py-24 bg-slate-950 min-h-screen">
+        <Loader2 className="w-10 h-10 animate-spin text-amber-500 mb-3" />
+        <p className="text-slate-400 text-xs font-semibold">Loading Accessory Details...</p>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-4">
+    <div className="max-w-4xl mx-auto py-6 px-4">
       <button
         onClick={() => navigate('/admin/accessories')}
-        className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm font-semibold mb-4 transition-colors"
+        className="inline-flex items-center gap-2 text-slate-400 hover:text-amber-400 text-xs font-bold mb-6 transition-colors bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl hover:border-amber-500/40"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Accessories
+        Back to Accessories List
       </button>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-amber-500" />
+          <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-3">
+            <Sparkles className="w-7 h-7 text-amber-400" />
             {isEdit ? 'Edit Accessory Item' : 'Add New Accessory / Care Kit'}
           </h1>
-          <p className="text-xs text-slate-500 mt-1">Configure cleaning spray, microfiber cloth, leather case, or care kit details</p>
+          <p className="text-xs text-slate-400 mt-1.5 font-medium">
+            Configure cleaning spray, microfiber cloth, leather case, pouch, or complete care kit details
+          </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">Basic Details</h2>
+        {/* Section 1: Basic Info */}
+        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-5">
+          <h2 className="text-xs font-black text-amber-400 uppercase tracking-widest border-b border-slate-800 pb-3 flex items-center gap-2">
+            <PackageCheck className="w-4 h-4 text-amber-400" />
+            Basic Accessory Details
+          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Accessory Title *</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                Accessory Title <span className="text-red-400">*</span>
+              </label>
               <Input
                 type="text"
                 placeholder="e.g. Anti-Fog Lens Cleaner Spray (100ml)"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="bg-slate-50"
+                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20 h-11"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">SKU Code</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">SKU Code</label>
               <Input
                 type="text"
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
-                className="bg-slate-50 font-mono"
+                className="bg-slate-950 border-slate-800 text-amber-400 font-mono h-11"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Selling Price (₹) *</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                Selling Price (₹) <span className="text-red-400">*</span>
+              </label>
               <Input
                 type="number"
                 placeholder="399"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="bg-slate-50"
+                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-amber-500 h-11"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Discount Amount (₹)</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Discount Amount (₹)</label>
               <Input
                 type="number"
                 placeholder="0"
                 value={discountAmount}
                 onChange={(e) => setDiscountAmount(e.target.value)}
-                className="bg-slate-50"
+                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-amber-500 h-11"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Stock Quantity</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Stock Quantity</label>
               <Input
                 type="number"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
-                className="bg-slate-50"
+                className="bg-slate-950 border-slate-800 text-white focus:border-amber-500 h-11"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Category</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Category</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-500/20"
+                className="w-full h-11 px-3 bg-slate-950 border border-slate-800 rounded-md text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
               >
-                <option value="">Select Category</option>
+                <option value="" className="bg-slate-900 text-slate-400">Select Category</option>
                 {allCats.map((c: any) => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
+                  <option key={c._id} value={c._id} className="bg-slate-900 text-white">{c.name}</option>
                 ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Description</label>
             <Textarea
               rows={3}
               placeholder="Describe the care kit, cleaning solution, cloth size, or case material..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="bg-slate-50"
+              className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-amber-500"
             />
           </div>
         </div>
 
-        {/* Search & Mega Menu Matching Tags */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">Search Tags & Mega Menu Keywords</h2>
-          <p className="text-xs text-slate-500">Select keywords to ensure this accessory appears under Header Mega Menu links (Care Kits, Spray, Cloth, Case, etc.).</p>
+        {/* Section 2: Search & Mega Menu Tags */}
+        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+          <h2 className="text-xs font-black text-amber-400 uppercase tracking-widest border-b border-slate-800 pb-3 flex items-center gap-2">
+            <Tag className="w-4 h-4 text-amber-400" />
+            Search & Mega Menu Matching Keywords
+          </h2>
+          <p className="text-xs text-slate-400">
+            Click preset keywords to automatically display this item under Header Mega Menu care kit dropdowns.
+          </p>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5 pt-1">
             {DEFAULT_ACCESSORY_TAGS.map((tag) => {
               const active = searchTags.includes(tag)
               return (
@@ -326,18 +351,42 @@ const AccessoryFormPage: React.FC = () => {
                   type="button"
                   key={tag}
                   onClick={() => handleToggleTag(tag)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                     active
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 scale-105'
+                      : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-amber-500/40 hover:text-amber-400'
                   }`}
                 >
-                  {active && <Check className="w-3 h-3" />}
+                  {active && <Check className="w-3.5 h-3.5 text-slate-950" />}
                   {tag}
                 </button>
               )
             })}
           </div>
+
+          {/* Active Tags Pills */}
+          {searchTags.length > 0 && (
+            <div className="pt-3 border-t border-slate-800/80">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Active Applied Tags:</label>
+              <div className="flex flex-wrap gap-2">
+                {searchTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold"
+                  >
+                    #{tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="hover:text-red-400 transition-colors ml-1"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-2 max-w-sm pt-2">
             <Input
@@ -351,104 +400,163 @@ const AccessoryFormPage: React.FC = () => {
                   handleAddCustomTag()
                 }
               }}
-              className="bg-slate-50 h-9 text-xs"
+              className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 h-10"
             />
             <Button
               type="button"
               onClick={handleAddCustomTag}
-              variant="outline"
-              size="sm"
-              className="h-9 text-xs"
+              className="bg-slate-800 hover:bg-slate-700 text-white font-bold h-10 px-4 shrink-0"
             >
-              Add Tag
+              Add
             </Button>
           </div>
         </div>
 
-        {/* Images Upload Section */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">Images & Thumbnail</h2>
+        {/* Section 3: Product Media Upload */}
+        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+          <h2 className="text-xs font-black text-amber-400 uppercase tracking-widest border-b border-slate-800 pb-3 flex items-center gap-2">
+            <Upload className="w-4 h-4 text-amber-400" />
+            Accessory Media & Photos
+          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Main Cover Upload */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Upload Thumbnail Image</label>
-              <label className="border-2 border-dashed border-slate-200 hover:border-amber-500 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-slate-50">
-                <Upload className="w-6 h-6 text-slate-400 mb-1" />
-                <span className="text-xs font-semibold text-slate-600">Click to upload main image</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileUpload(e, true)}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Main Cover Photo</label>
+              <div className="border-2 border-dashed border-slate-800 hover:border-amber-500/50 bg-slate-950 rounded-2xl p-4 text-center transition-colors relative min-h-[160px] flex items-center justify-center">
+                {uploading && (
+                  <div className="absolute inset-0 bg-slate-950/80 rounded-2xl z-20 flex flex-col items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-amber-400 mb-1" />
+                    <span className="text-[10px] text-amber-400 font-bold uppercase">Uploading...</span>
+                  </div>
+                )}
+                {thumbnail ? (
+                  <div className="relative group rounded-xl overflow-hidden bg-slate-900 border border-slate-800 w-full aspect-video flex items-center justify-center">
+                    <img src={getImageUrl(thumbnail)} alt="Thumbnail" className="h-full object-contain p-2" />
+                    <button
+                      type="button"
+                      onClick={() => setThumbnail('')}
+                      className="absolute top-2 right-2 bg-red-600/90 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full py-4">
+                    <Upload className="w-8 h-8 text-amber-400 mb-2" />
+                    <span className="text-xs font-bold text-white">Upload Cover Photo</span>
+                    <span className="text-[10px] text-slate-500 mt-1">PNG, JPG, WEBP up to 10MB</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileUpload(e, true)}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                  </label>
+                )}
+              </div>
             </div>
 
+            {/* Gallery Images Upload */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Upload Product Gallery Images</label>
-              <label className="border-2 border-dashed border-slate-200 hover:border-amber-500 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-slate-50">
-                <Upload className="w-6 h-6 text-slate-400 mb-1" />
-                <span className="text-xs font-semibold text-slate-600">Click to upload multiple photos</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => handleFileUpload(e, false)}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Gallery Photos</label>
+              <div className="border-2 border-dashed border-slate-800 hover:border-amber-500/50 bg-slate-950 rounded-2xl p-4 text-center transition-colors min-h-[160px] flex flex-col justify-between">
+                <label className="cursor-pointer flex flex-col items-center py-2 border-b border-slate-800/80 mb-2">
+                  <Plus className="w-6 h-6 text-amber-400 mb-1" />
+                  <span className="text-xs font-bold text-amber-400">Add More Photos</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, false)}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                </label>
+
+                {images.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2 max-h-36 overflow-y-auto pr-1">
+                    {images.map((imgUrl, idx) => (
+                      <div key={idx} className="relative group rounded-lg bg-slate-900 border border-slate-800 aspect-square flex items-center justify-center">
+                        <img src={getImageUrl(imgUrl)} alt={`Gallery ${idx}`} className="h-full object-contain p-1" />
+                        <button
+                          type="button"
+                          onClick={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute top-1 right-1 bg-red-600/90 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-slate-500 py-4">No gallery images added yet</p>
+                )}
+              </div>
             </div>
           </div>
 
-          {uploading && <p className="text-xs text-amber-600 font-semibold animate-pulse">Uploading image...</p>}
-
-          {/* Image Previews */}
-          {(thumbnail || images.length > 0) && (
-            <div className="pt-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Uploaded Images Preview</label>
-              <div className="flex flex-wrap gap-3">
-                {thumbnail && (
-                  <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-amber-500 shadow-sm">
-                    <img src={getImageUrl(thumbnail)} alt="" className="w-full h-full object-cover" />
-                    <span className="absolute bottom-0 left-0 right-0 bg-amber-500 text-slate-950 text-[9px] font-black text-center uppercase py-0.5">MAIN</span>
-                  </div>
-                )}
-                {images.filter(img => img !== thumbnail).map((img, idx) => (
-                  <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200 group">
-                    <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setImages(images.filter(i => i !== img))}
-                      className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+          {/* Alternative Image URL Input */}
+          <div className="pt-3 border-t border-slate-800/80">
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Or Paste Direct Image URL:</label>
+            <div className="flex gap-2">
+              <Input
+                type="url"
+                placeholder="https://example.com/accessory-photo.jpg"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 h-10 text-xs"
+              />
+              <Button
+                type="button"
+                onClick={handleAddImageUrl}
+                className="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold h-10 px-4 shrink-0 text-xs"
+              >
+                <Link2 className="w-3.5 h-3.5 mr-1" /> Add URL
+              </Button>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Submit Actions */}
-        <div className="flex items-center justify-end gap-4 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate('/admin/accessories')}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold px-8 shadow-md"
-          >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PackageCheck className="w-4 h-4 mr-2" />}
-            {isEdit ? 'Update Accessory' : 'Publish Accessory'}
-          </Button>
+        {/* Section 4: Status & Submit */}
+        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Publish Status:</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as any)}
+              className="h-10 px-3 bg-slate-950 border border-slate-800 rounded-lg text-xs font-bold text-amber-400 outline-none"
+            >
+              <option value="active" className="bg-slate-900 text-amber-400">Active (Live in Store)</option>
+              <option value="inactive" className="bg-slate-900 text-slate-400">Inactive (Draft)</option>
+            </select>
+          </div>
+
+          <div className="flex gap-3 w-full sm:w-auto">
+            <Button
+              type="button"
+              onClick={() => navigate('/admin/accessories')}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 h-11 rounded-xl w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting || uploading}
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider px-8 h-11 rounded-xl shadow-lg shadow-amber-500/20 w-full sm:w-auto"
+            >
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                </span>
+              ) : isEdit ? (
+                'Update Accessory'
+              ) : (
+                'Publish Accessory'
+              )}
+            </Button>
+          </div>
         </div>
       </form>
     </div>

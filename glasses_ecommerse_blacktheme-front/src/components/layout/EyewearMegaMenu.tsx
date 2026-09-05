@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Users, Sun, Eye, Shapes, Tag, Sparkles, ArrowRight, ShieldCheck, PackageCheck } from "lucide-react";
+import { Users, Sun, Eye, Shapes, Tag, Sparkles, ArrowRight, ShieldCheck, PackageCheck, Layers } from "lucide-react";
+import { getImageUrl } from "@/lib/utils";
 
 interface SubSubCategory {
   _id: string;
@@ -32,20 +33,256 @@ interface Brand {
 
 interface EyewearMegaMenuProps {
   categorySlug?: string;
-  categories: MainCategory[];
-  brands: Brand[];
+  categories?: MainCategory[];
+  brands?: Brand[];
   navConfig?: Record<string, any>;
   onItemClick?: () => void;
 }
 
-const EyewearMegaMenu = ({ categorySlug = "", categories, brands, onItemClick }: EyewearMegaMenuProps) => {
-  const normalizedSlug = categorySlug.toLowerCase();
+const DEFAULT_FALLBACK_BRANDS: Brand[] = [
+  { _id: "rayban", name: "Ray-Ban", slug: "ray-ban" },
+  { _id: "oakley", name: "Oakley", slug: "oakley" },
+  { _id: "gucci", name: "Gucci", slug: "gucci" },
+  { _id: "prada", name: "Prada", slug: "prada" },
+  { _id: "carrera", name: "Carrera", slug: "carrera" },
+  { _id: "vogue", name: "Vogue Eyewear", slug: "vogue" },
+];
+
+const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onItemClick }: EyewearMegaMenuProps) => {
+  const normalizedSlug = (categorySlug || "").toLowerCase();
   const isLensCategory = normalizedSlug.includes("contact") || normalizedSlug.includes("lens");
   const isSunglasses = normalizedSlug.includes("sunglasses");
+  const isBrands = normalizedSlug === "brands" || normalizedSlug.includes("brand");
+  const isAccessories = normalizedSlug.includes("accessor") || normalizedSlug.includes("care");
 
-  const currentCategory = categories.find(cat => cat.slug === categorySlug) || categories[0];
+  const safeCategories = Array.isArray(categories) ? categories : [];
+  const safeBrands = (Array.isArray(brands) && brands.length > 0) ? brands : DEFAULT_FALLBACK_BRANDS;
 
-  // 1. CONTACT LENSES MEGA MENU (Includes Contact Lens Care Kit & Solutions)
+  const currentCategory = safeCategories.find(cat => cat && cat.slug === categorySlug) || safeCategories[0];
+
+  // 1. BRANDS MEGA MENU
+  if (isBrands) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className="absolute left-0 right-0 top-full bg-slate-950 shadow-2xl border-t border-white/10 z-50 py-8 px-6 text-white backdrop-blur-2xl"
+      >
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Column 1 & 2: Top Brands Grid */}
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between border-b border-amber-500/20 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">All Top Brands</h3>
+                </div>
+                <Link to="/brands" onClick={onItemClick} className="text-[10px] text-amber-400 hover:underline font-bold">
+                  View All Brands →
+                </Link>
+              </div>
+              <div className="grid grid-cols-3 gap-2.5">
+                {safeBrands.slice(0, 9).map((brand) => (
+                  <Link
+                    key={brand._id || brand.slug}
+                    to={`/shop?brand=${brand._id}`}
+                    onClick={onItemClick}
+                    className="p-3 rounded-xl bg-slate-900/80 hover:bg-amber-500/15 border border-slate-800 hover:border-amber-500/40 text-xs font-extrabold text-slate-200 hover:text-amber-400 transition-all flex flex-col items-center justify-center text-center gap-1 group shadow-sm"
+                  >
+                    {brand.logo ? (
+                      <img src={getImageUrl(brand.logo)} alt={brand.name} className="h-6 object-contain filter grayscale group-hover:grayscale-0 transition-all" />
+                    ) : (
+                      <span className="truncate w-full">{brand.name}</span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Column 3: Brand Collections */}
+            <div className="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+              <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Brand Collections</h3>
+              </div>
+              <ul className="space-y-2 text-xs font-semibold">
+                {[
+                  { name: "Luxury Designer Brands", query: "luxury" },
+                  { name: "Premium Eyewear Brands", query: "premium" },
+                  { name: "Sports & Outdoor Brands", query: "sports" },
+                  { name: "Everyday Budget Value Brands", query: "budget" },
+                  { name: "Official Brand Care Kits", category: "accessories" },
+                ].map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      to={item.category ? `/shop?category=${item.category}` : `/shop?brandType=${item.query}`}
+                      onClick={onItemClick}
+                      className="text-slate-300 hover:text-amber-400 transition-colors block py-1 border-b border-white/5 last:border-0"
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Column 4: Brand Showcase Promo Card */}
+            <div className="bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-950 p-6 rounded-2xl border border-amber-500/30 flex flex-col justify-between relative overflow-hidden group shadow-xl">
+              <div className="space-y-3 relative z-10">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold uppercase tracking-wider border border-amber-500/30">
+                  <Tag className="w-3 h-3" />
+                  <span>100% Authentic</span>
+                </div>
+                <h2 className="text-xl font-black text-white tracking-tight">
+                  Official Brand <span className="text-amber-400">Store</span>
+                </h2>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Browse certified original frames from Ray-Ban, Oakley, Gucci, Vogue & more with manufacturer warranty.
+                </p>
+              </div>
+
+              <div className="pt-4 relative z-10">
+                <Link
+                  to="/brands"
+                  onClick={onItemClick}
+                  className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-lg hover:scale-105 transition-all"
+                >
+                  <span>Explore All Brands</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // 2. ACCESSORIES MEGA MENU
+  if (isAccessories) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className="absolute left-0 right-0 top-full bg-slate-950 shadow-2xl border-t border-white/10 z-50 py-8 px-6 text-white backdrop-blur-2xl"
+      >
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Column 1: Cleaning & Maintenance */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Cleaning & Sprays</h3>
+              </div>
+              <ul className="space-y-2 text-xs font-semibold">
+                {[
+                  { name: "Anti-Fog Cleaning Sprays", search: "anti-fog" },
+                  { name: "Lens Cleaning Solutions", search: "solution" },
+                  { name: "Microfiber Cleaning Cloths", search: "microfiber" },
+                  { name: "Pre-Moistened Lens Wipes", search: "wipes" },
+                ].map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      to={`/shop?category=accessories&search=${encodeURIComponent(item.search)}`}
+                      onClick={onItemClick}
+                      className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Column 2: Cases & Travel Protection */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Cases & Pouches</h3>
+              </div>
+              <ul className="space-y-2 text-xs font-semibold">
+                {[
+                  { name: "Hard Shell Eyewear Cases", search: "hard case" },
+                  { name: "Leather Glasses Cases", search: "leather case" },
+                  { name: "Soft Microfiber Travel Pouches", search: "pouch" },
+                  { name: "Contact Lens Storage Cases", search: "lens case" },
+                ].map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      to={`/shop?category=accessories&search=${encodeURIComponent(item.search)}`}
+                      onClick={onItemClick}
+                      className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Column 3: Repair Kits & Straps */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
+                <PackageCheck className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Kits & Accessories</h3>
+              </div>
+              <ul className="space-y-2 text-xs font-semibold">
+                {[
+                  { name: "Eyewear Screw Repair Kits", search: "repair kit" },
+                  { name: "Eyewear Chains & Neck Cords", search: "chain" },
+                  { name: "Anti-Slip Ear Grips", search: "grip" },
+                  { name: "Complete Eyewear Care Kit", search: "care kit" },
+                ].map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      to={`/shop?category=accessories&search=${encodeURIComponent(item.search)}`}
+                      onClick={onItemClick}
+                      className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Column 4: Accessories Care Kit Promo Card */}
+            <div className="bg-gradient-to-br from-slate-900 via-amber-950/30 to-slate-950 p-6 rounded-2xl border border-amber-500/30 flex flex-col justify-between relative overflow-hidden group shadow-xl">
+              <div className="space-y-3 relative z-10">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold uppercase tracking-wider border border-amber-500/30">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Essential Protection</span>
+                </div>
+                <h2 className="text-xl font-black text-white tracking-tight">
+                  Protect Your <span className="text-amber-400">Glasses</span>
+                </h2>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Keep your lenses smudge-free, scratch-resistant, and clear with premium care kits and accessories.
+                </p>
+              </div>
+
+              <div className="pt-4 relative z-10">
+                <Link
+                  to="/shop?category=accessories"
+                  onClick={onItemClick}
+                  className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-lg hover:scale-105 transition-all"
+                >
+                  <span>Shop All Accessories</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // 3. CONTACT LENSES MEGA MENU
   if (isLensCategory) {
     return (
       <motion.div
@@ -176,7 +413,7 @@ const EyewearMegaMenu = ({ categorySlug = "", categories, brands, onItemClick }:
     );
   }
 
-  // 2. SUNGLASSES MEGA MENU (Includes Sunglasses Care Kit & Accessories)
+  // 4. SUNGLASSES MEGA MENU
   if (isSunglasses) {
     return (
       <motion.div
@@ -296,7 +533,7 @@ const EyewearMegaMenu = ({ categorySlug = "", categories, brands, onItemClick }:
     );
   }
 
-  // 3. EYEGLASSES / DEFAULT MEGA MENU (Includes Eyeglasses Care Kit & Accessories)
+  // 5. EYEGLASSES / DEFAULT MEGA MENU
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -349,7 +586,33 @@ const EyewearMegaMenu = ({ categorySlug = "", categories, brands, onItemClick }:
             </ul>
           </div>
 
-          {/* Column 3: Eyeglasses Care Kit & Accessories */}
+          {/* Column 3: Frame Type / Rim */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
+              <Layers className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Frame Type</h3>
+            </div>
+            <ul className="space-y-2 text-xs font-semibold">
+              {[
+                { name: "Full Rim Frames", query: "full-rim" },
+                { name: "Half Rim / Supra", query: "half-rim" },
+                { name: "Rimless / Minimalist", query: "rimless" },
+                { name: "Geometric & Hexagonal", query: "geometric" },
+              ].map((rim) => (
+                <li key={rim.name}>
+                  <Link
+                    to={`/shop?category=${currentCategory?.slug || "eyeglasses"}&frameType=${rim.query}`}
+                    onClick={onItemClick}
+                    className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5"
+                  >
+                    {rim.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Column 4: Eyeglasses Care Kit & Accessories */}
           <div className="space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
             <div className="flex items-center gap-2 border-b border-amber-500/30 pb-2 mb-3">
               <PackageCheck className="w-4 h-4 text-amber-400" />
@@ -375,26 +638,6 @@ const EyewearMegaMenu = ({ categorySlug = "", categories, brands, onItemClick }:
                 </li>
               ))}
             </ul>
-          </div>
-
-          {/* Column 4: Dynamic Brands List */}
-          <div className="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-            <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
-              <Tag className="w-4 h-4 text-amber-400" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">Featured Brands</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {brands.slice(0, 6).map((brand) => (
-                <Link
-                  key={brand._id}
-                  to={`/shop?brand=${brand._id}`}
-                  onClick={onItemClick}
-                  className="p-2 rounded-lg bg-black/40 hover:bg-amber-500/10 border border-slate-800 hover:border-amber-500/30 text-xs font-bold text-slate-300 hover:text-amber-400 transition-all text-center truncate"
-                >
-                  {brand.name}
-                </Link>
-              ))}
-            </div>
           </div>
         </div>
       </div>
