@@ -812,6 +812,7 @@ const Shop = () => {
       </div>
     </div>
   );
+};
 
   return (
     <div className="min-h-screen bg-background">
