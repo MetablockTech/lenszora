@@ -23,27 +23,27 @@ const OfferBanner = () => {
 
   if (loading || !footerBanner) return null;
 
-  return (
-    <section className="relative w-full overflow-hidden bg-background">
-      <div className="relative w-full h-[120px] sm:h-[220px] md:h-[300px] lg:h-[380px] flex items-center group overflow-hidden">
-        {/* SVG Mask Definition */}
-        <svg width="0" height="0" className="absolute">
-          <defs>
-            <clipPath id="premiumCurve" clipPathUnits="objectBoundingBox">
-              <path d="M0,0 Q0.5,0.1 1,0 V1 Q0.5,0.9 0,1 Z" />
-            </clipPath>
-          </defs>
-        </svg>
+  const imageUrl = footerBanner.image?.startsWith('http') ? footerBanner.image : `${API_URL}${footerBanner.image}`;
 
-        <div className="absolute inset-x-0 inset-y-0 z-0 overflow-hidden shadow-2xl transition-all duration-700" 
-             style={{ clipPath: 'url(#premiumCurve)' }}>
-          <img 
-            src={footerBanner.image.startsWith('http') ? footerBanner.image : `${API_URL}${footerBanner.image}`} 
-            alt="Promotion"
-            className="w-full h-full object-cover"
-          />
-          {/* Multi-layered gradient for premium depth */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
+  return (
+    <section className="relative w-full overflow-hidden bg-background py-3 md:py-6">
+      <div className="container mx-auto px-4 md:px-8">
+        <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 group">
+          {footerBanner.buttonLink ? (
+            <a href={footerBanner.buttonLink} className="block w-full">
+              <img 
+                src={imageUrl} 
+                alt={footerBanner.title || "Offer Banner"}
+                className="w-full h-auto max-h-[460px] object-contain sm:object-cover object-center rounded-2xl transition-transform duration-500 group-hover:scale-[1.01]"
+              />
+            </a>
+          ) : (
+            <img 
+              src={imageUrl} 
+              alt={footerBanner.title || "Offer Banner"}
+              className="w-full h-auto max-h-[460px] object-contain sm:object-cover object-center rounded-2xl"
+            />
+          )}
         </div>
       </div>
     </section>

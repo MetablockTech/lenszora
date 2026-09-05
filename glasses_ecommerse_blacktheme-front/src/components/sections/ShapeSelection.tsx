@@ -6,21 +6,40 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import useEmblaCarousel from 'embla-carousel-react';
 import { Link } from "react-router-dom";
 
-const REAL_SHAPE_IMAGES: Record<string, string> = {
-  "aviator": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
-  "wayfarer": "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
-  "rectangle": "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
+// Optical Eyeglasses Shape Images (Clear / Transparent Lenses)
+const REAL_EYEGLASSES_SHAPE_IMAGES: Record<string, string> = {
+  "aviator": "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80",
+  "wayfarer": "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
+  "rectangle": "https://images.unsplash.com/photo-1589782182703-2aaa69037b5b?w=600&auto=format&fit=crop&q=80",
   "oval": "https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80",
   "round": "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80",
-  "cat-eye": "https://images.unsplash.com/photo-1589782182703-2aaa69037b5b?w=600&auto=format&fit=crop&q=80",
-  "cateye": "https://images.unsplash.com/photo-1589782182703-2aaa69037b5b?w=600&auto=format&fit=crop&q=80",
-  "square": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
-  "geometric": "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80",
+  "cat-eye": "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
+  "cateye": "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
+  "square": "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80",
+  "geometric": "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
   "clubmaster": "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
+  "browline": "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
   "hexagonal": "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
 };
 
-const DEFAULT_SHAPE_IMAGE = "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80";
+// Sunglasses Shape Images (Dark / Tinted / UV Lenses)
+const REAL_SUNGLASSES_SHAPE_IMAGES: Record<string, string> = {
+  "aviator": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
+  "wayfarer": "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
+  "rectangle": "https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80",
+  "oval": "https://images.unsplash.com/photo-1589782182703-2aaa69037b5b?w=600&auto=format&fit=crop&q=80",
+  "round": "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80",
+  "cat-eye": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
+  "cateye": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
+  "square": "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
+  "geometric": "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
+  "clubmaster": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
+  "browline": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
+  "hexagonal": "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
+};
+
+const DEFAULT_EYEGLASSES_IMAGE = "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80";
+const DEFAULT_SUNGLASSES_IMAGE = "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80";
 
 interface ShapeSelectionProps {
   type: string; // eyeglasses or sunglasses
@@ -89,10 +108,17 @@ const ShapeSelection = ({ type, title }: ShapeSelectionProps) => {
         <div className="embla overflow-visible" ref={emblaRef}>
           <div className="embla__container flex gap-5 md:gap-7">
             {shapes.map((shape, index) => {
-              const shapeKey = shape.name.toLowerCase().trim();
-              const displayImage = shape.image
-                ? getImageUrl(shape.image)
-                : (REAL_SHAPE_IMAGES[shapeKey] || DEFAULT_SHAPE_IMAGE);
+              const shapeKey = shape.name.toLowerCase().trim().replace(/\s+/g, '-');
+              const rawShapeKey = shape.name.toLowerCase().trim();
+              const isSunglasses = type === 'sunglasses';
+              const imageMap = isSunglasses ? REAL_SUNGLASSES_SHAPE_IMAGES : REAL_EYEGLASSES_SHAPE_IMAGES;
+              const defaultFallback = isSunglasses ? DEFAULT_SUNGLASSES_IMAGE : DEFAULT_EYEGLASSES_IMAGE;
+
+              // For sunglasses, prioritize dark sunglasses images; for eyeglasses, use shape.image or fallback
+              const mappedImg = imageMap[shapeKey] || imageMap[rawShapeKey];
+              const displayImage = isSunglasses
+                ? (mappedImg || (shape.image ? getImageUrl(shape.image) : defaultFallback))
+                : (shape.image ? getImageUrl(shape.image) : (mappedImg || defaultFallback));
 
               return (
                 <motion.div
@@ -106,13 +132,13 @@ const ShapeSelection = ({ type, title }: ShapeSelectionProps) => {
                     to={`/shop?category=${type}&frameShape=${shapeKey}`}
                     className="w-full flex flex-col items-center"
                   >
-                    <div className="w-full aspect-square rounded-2xl bg-slate-900 border border-slate-800 group-hover:border-amber-400/50 flex items-center justify-center mb-3 transition-all relative overflow-hidden shadow-xl group-hover:scale-105 duration-300">
+                    <div className="w-full aspect-square rounded-2xl bg-slate-900 border border-slate-800 group-hover:border-amber-400/50 flex items-center justify-center mb-3 relative overflow-hidden shadow-xl">
                       <img 
                         src={displayImage} 
                         alt={shape.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-40 group-hover:opacity-70 transition-opacity pointer-events-none" />
                     </div>
                     <span className="text-xs font-bold text-slate-300 group-hover:text-amber-400 transition-colors tracking-widest text-center uppercase">
                       {shape.name}

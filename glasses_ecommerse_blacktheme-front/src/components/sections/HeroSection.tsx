@@ -37,7 +37,7 @@ const HeroSection = () => {
   }, []);
 
   if (isLoading) {
-    return <div className="h-[180px] sm:h-[320px] md:h-[420px] lg:h-[520px] xl:h-[650px] bg-background animate-pulse" />;
+    return <div className="w-full aspect-[16/7] sm:aspect-[21/8] md:h-[420px] lg:h-[520px] xl:h-[650px] bg-background animate-pulse" />;
   }
 
   // Fallback if no sliders are active
@@ -64,12 +64,12 @@ const HeroSection = () => {
       >
         <CarouselContent className="-ml-0">
           {displaySlides.map((slide) => (
-            <CarouselItem key={slide._id} className="pl-0 relative h-[180px] sm:h-[320px] md:h-[420px] lg:h-[520px] xl:h-[650px]">
-              <div className="absolute inset-0 z-0">
+            <CarouselItem key={slide._id} className="pl-0 relative w-full aspect-[16/7] sm:aspect-[21/8] md:h-[420px] lg:h-[520px] xl:h-[650px]">
+              <div className="absolute inset-0 z-0 flex items-center justify-center bg-slate-950/40 sm:bg-transparent">
                 <img
                   src={slide.image.startsWith('http') ? slide.image : `${API_URL}${slide.image}`}
                   alt={slide.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain sm:object-cover object-center"
                 />
               </div>
             </CarouselItem>
@@ -77,8 +77,8 @@ const HeroSection = () => {
         </CarouselContent>
         {displaySlides.length > 1 && (
           <>
-            <CarouselPrevious className="left-4 bg-black/20 hover:bg-black/40 border-none text-white h-10 w-10 sm:h-12 sm:w-12 transition-all opacity-0 group-hover:opacity-100" />
-            <CarouselNext className="right-4 bg-black/20 hover:bg-background/40 border-none text-white h-10 w-10 sm:h-12 sm:w-12 transition-all opacity-0 group-hover:opacity-100" />
+            <CarouselPrevious className="left-2 sm:left-4 bg-black/40 hover:bg-black/70 border-none text-white h-8 w-8 sm:h-12 sm:w-12 transition-all opacity-0 group-hover:opacity-100" />
+            <CarouselNext className="right-2 sm:right-4 bg-black/40 hover:bg-black/70 border-none text-white h-8 w-8 sm:h-12 sm:w-12 transition-all opacity-0 group-hover:opacity-100" />
           </>
         )}
       </Carousel>

@@ -120,102 +120,102 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
                         {products.map((product) => (
                             <div
                                 key={product._id}
-                                className="flex-[0_0_auto] w-52 md:w-60 pl-4"
+                                className="flex-[0_0_auto] w-64 md:w-72 pl-4"
                             >
                                 <Link
                                     to={`/product/${product._id}`}
                                     className="block group/card h-full"
                                 >
-                                    <div className="bg-slate-900/40 rounded-xl overflow-hidden border border-slate-800 hover:border-primary/50 transition-all duration-300 h-full flex flex-col">
-                                        {/* Product Image */}
-                                        <div className="relative aspect-[4/5] overflow-hidden bg-slate-800">
+                                    <div className="bg-slate-900/80 rounded-2xl overflow-hidden border border-slate-800/90 hover:border-amber-400/60 transition-all duration-300 h-full flex flex-col shadow-xl hover:shadow-2xl hover:shadow-amber-500/10">
+                                        {/* Product Image Area — aspect-[16/11] object-contain so glasses are NEVER cropped */}
+                                        <div className="relative aspect-[16/11] overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800/60 p-2 flex items-center justify-center">
                                             <img
                                                 src={getProductImage(product)}
                                                 alt={product.title}
-                                                className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-700"
+                                                className="w-full h-full object-contain p-1.5 sm:p-2.5 group-hover/card:scale-105 transition-transform duration-500"
                                             />
                                             {(() => {
                                                 const calc = calculateProductDiscount(product);
                                                 return calc.hasDiscount ? (
-                                                    <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
-                                                        Save {calc.discountLabel}
+                                                    <div className="absolute top-2.5 left-2.5 bg-gradient-to-r from-red-600 to-amber-600 text-white px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-wider shadow-md">
+                                                        {calc.discountLabel} OFF
                                                     </div>
                                                 ) : null;
                                             })()}
                                             {product.eyewearDetails?.polarized && (
-                                                <div className="absolute top-2 right-2 bg-primary/90 text-black px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
-                                                    Polarized
+                                                <div className="absolute top-2.5 right-2.5 bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full text-[10px] uppercase font-black tracking-wider shadow-md">
+                                                    ⚡ Polarized
                                                 </div>
                                             )}
                                         </div>
 
                                         {/* Product Info */}
-                                        <div className="p-3 flex-grow flex flex-col">
-                                            <h3 className="text-sm font-medium text-white mb-1 line-clamp-1 group-hover/card:text-primary transition-colors">
+                                        <div className="p-4 flex-grow flex flex-col space-y-2.5">
+                                            <h3 className="text-sm font-bold text-white line-clamp-1 group-hover/card:text-amber-400 transition-colors">
                                                 {product.title}
                                             </h3>
 
                                             {/* Specs Pills */}
-                                            <div className="flex flex-wrap gap-x-1.5 gap-y-1 mb-3">
+                                            <div className="flex flex-wrap gap-1.5">
                                                 {product.brand && (
-                                                    <span className="text-[9px] font-bold text-primary border border-primary/30 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                                    <span className="text-[9px] font-extrabold text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-md uppercase tracking-tighter">
                                                         {typeof product.brand === 'string' ? product.brand : product.brand.name}
                                                     </span>
                                                 )}
 
                                                 {product.category && (
-                                                    <span className="text-[9px] text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded uppercase font-medium">
+                                                    <span className="text-[9px] text-slate-300 bg-slate-800/60 border border-slate-700/80 px-2 py-0.5 rounded-md uppercase font-semibold">
                                                         {typeof product.category === 'string' ? product.category : product.category.name}
                                                     </span>
                                                 )}
 
                                                 {product.eyewearDetails?.gender && (
-                                                    <span className="text-[9px] text-slate-400 border border-slate-700/50 px-1.5 py-0.5 rounded">
+                                                    <span className="text-[9px] text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md uppercase">
                                                         {product.eyewearDetails.gender}
                                                     </span>
                                                 )}
 
                                                 {product.eyewearDetails?.frameMaterial && (
-                                                    <span className="text-[9px] text-slate-400 border border-slate-700/50 px-1.5 py-0.5 rounded">
+                                                    <span className="text-[9px] text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md uppercase">
                                                         {product.eyewearDetails.frameMaterial}
                                                     </span>
                                                 )}
 
                                                 {product.eyewearDetails?.frameShape && (
-                                                    <span className="text-[9px] text-slate-400 border border-slate-700/50 px-1.5 py-0.5 rounded">
+                                                    <span className="text-[9px] text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md uppercase">
                                                         {product.eyewearDetails.frameShape}
                                                     </span>
                                                 )}
 
                                                 {(product.eyewearDetails?.frameColor || product.eyewearDetails?.glassColor) && (
-                                                    <span className="text-[9px] text-slate-400 border border-slate-700/50 px-1.5 py-0.5 rounded">
+                                                    <span className="text-[9px] text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md uppercase">
                                                         {product.eyewearDetails.glassColor || product.eyewearDetails.frameColor}
                                                     </span>
                                                 )}
                                             </div>
 
-                                            <div className="mt-auto flex items-center justify-between">
+                                            <div className="mt-auto pt-2 flex items-center justify-between border-t border-slate-800/60">
                                                 <div className="flex flex-col">
                                                     {(() => {
                                                         const calc = calculateProductDiscount(product);
                                                         return calc.hasDiscount ? (
                                                             <>
-                                                                <span className="text-base font-bold text-primary">
+                                                                <span className="text-base font-extrabold text-amber-400">
                                                                     ₹{calc.sellingPrice.toLocaleString()}
                                                                 </span>
-                                                                <span className="text-xs text-slate-500 line-through">
+                                                                <span className="text-xs text-slate-500 line-through font-medium">
                                                                     ₹{calc.mrpPrice.toLocaleString()}
                                                                 </span>
                                                             </>
                                                         ) : (
-                                                            <span className="text-base font-bold text-white">
+                                                            <span className="text-base font-extrabold text-white">
                                                                 ₹{calc.sellingPrice.toLocaleString()}
                                                             </span>
                                                         );
                                                     })()}
                                                 </div>
-                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover/card:bg-primary transition-colors">
-                                                    <ArrowRight className="w-4 h-4 text-white group-hover/card:text-black" />
+                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover/card:bg-amber-400 group-hover/card:text-slate-950 transition-all shadow-md">
+                                                    <ArrowRight className="w-4 h-4 text-white group-hover/card:text-slate-950" />
                                                 </div>
                                             </div>
                                         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info, Sparkles, Check, Glasses, Eye } from "lucide-react";
+import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info, Sparkles, Check, Glasses, Eye, Truck, ShieldCheck, CheckCircle2, PackageCheck, MessageSquare, Gift, Tag, HelpCircle, BadgePercent, Ruler, Headphones, RefreshCw } from "lucide-react";
 import { cn, getImageUrl, calculateProductDiscount } from "@/lib/utils";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
@@ -456,32 +456,34 @@ const ProductPage = () => {
         </div>
 
         {/* Main product grid — thumbnails | image | detail */}
-        <div className="flex flex-col lg:grid lg:grid-cols-[90px_1fr_400px] bg-[#111] min-h-[calc(100vh-140px)]">
+        <div className="flex flex-col lg:grid lg:grid-cols-[90px_1fr_420px] bg-[#0b0b0d] border-b border-white/10">
 
           {/* Thumbnails */}
-          <div className="flex flex-row lg:flex-col gap-2.5 p-4 lg:pl-3.5 overflow-x-auto border-b lg:border-b-0 lg:border-r border-white/10 bg-[#111] order-2 lg:order-1 no-scrollbar">
+          <div className="flex flex-row lg:flex-col gap-3 p-4 lg:py-6 lg:px-3 overflow-x-auto border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0d0d0f] order-2 lg:order-1 no-scrollbar shrink-0 items-center justify-start">
             {(displayImages || []).map((img: string, i: number) => (
               <div
                 key={i}
                 onClick={() => setSelectedImageIndex(i)}
-                style={{ minWidth: 72, width: 72, height: 72, border: `1.5px solid ${selectedImageIndex === i ? '#DAAB34' : 'rgba(255,255,255,0.15)'}`, borderRadius: 8, overflow: 'hidden', cursor: 'pointer', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color .15s', flexShrink: 0 }}>
-                <img src={getImageUrl(img)} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '3px' }} />
+                style={{ minWidth: 72, width: 72, height: 72, border: `2px solid ${selectedImageIndex === i ? '#DAAB34' : 'rgba(255,255,255,0.12)'}`, borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: '#161619', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s', flexShrink: 0 }}
+                className="hover:border-amber-400/60 shadow-md"
+              >
+                <img src={getImageUrl(img)} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
               </div>
             ))}
             {(displayImages || []).length === 0 && (
-              <div style={{ width: 72, height: 72, border: '1.5px solid #DAAB34', borderRadius: 8, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 72, height: 72, border: '2px solid #DAAB34', borderRadius: 10, background: '#161619', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg viewBox="0 0 76 38" fill="none" width="56" height="28"><rect x="2" y="8" width="30" height="22" rx="11" stroke="#DAAB34" strokeWidth="3" /><rect x="44" y="8" width="30" height="22" rx="11" stroke="#DAAB34" strokeWidth="3" /><line x1="32" y1="19" x2="44" y2="19" stroke="#DAAB34" strokeWidth="2.5" /></svg>
               </div>
             )}
             {hasDiscount && (
-              <div style={{ background: '#ef4444', color: '#fff', fontSize: '.72rem', fontWeight: 700, borderRadius: 6, padding: '3px 7px', textAlign: 'center', marginTop: 4 }}>
+              <div style={{ background: '#ef4444', color: '#fff', fontSize: '.7rem', fontWeight: 800, borderRadius: 6, padding: '4px 8px', textAlign: 'center', marginTop: 4, letterSpacing: '.3px' }}>
                 {discountLabel || `${discount}% OFF`}
               </div>
             )}
           </div>
 
           {/* Main image */}
-          <div className="flex items-start justify-center p-4 lg:p-6 bg-[#0d0d0d] border-b lg:border-b-0 lg:border-r border-white/10 relative order-1 lg:order-2">
+          <div className="flex items-center justify-center p-6 lg:p-10 bg-slate-950/80 border-b lg:border-b-0 lg:border-r border-white/10 relative order-1 lg:order-2 min-h-[380px] lg:min-h-[480px]">
             <ProductGallery
               images={displayImages || []}
               productName={product.title}
@@ -570,19 +572,37 @@ const ProductPage = () => {
             {/* Price */}
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '1.55rem', fontWeight: 800, color: '#DAAB34' }}>₹{displayPrice.toLocaleString()}</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#DAAB34' }}>₹{displayPrice.toLocaleString()}</span>
                 {hasDiscount && (
                   <>
-                    <span style={{ fontSize: '.95rem', color: '#6b7280', textDecoration: 'line-through' }}>₹{originalPrice.toLocaleString()}</span>
+                    <span style={{ fontSize: '1.05rem', color: '#6b7280', textDecoration: 'line-through' }}>₹{originalPrice.toLocaleString()}</span>
                     <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.14)', padding: '3px 9px', borderRadius: 20 }}>{discountLabel || `${discount}% OFF`}</span>
                   </>
                 )}
               </div>
               {hasDiscount && originalPrice > displayPrice && (
                 <div style={{ fontSize: '.78rem', color: '#22c55e', fontWeight: 600, marginTop: 4 }}>
-                  🎉 You save ₹{(originalPrice - displayPrice).toLocaleString()}!
+                  🎉 You save ₹{(originalPrice - displayPrice).toLocaleString()}! + Free Luxury Hard Case Included
                 </div>
               )}
+            </div>
+
+            {/* Special Offers & Bank EMI Card */}
+            <div className="bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/25 rounded-xl p-3.5 space-y-2">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                <Tag className="w-3.5 h-3.5" />
+                <span>Active Offers & Savings</span>
+              </div>
+              <div className="space-y-1.5 text-xs text-slate-300">
+                <div className="flex items-start gap-2">
+                  <span className="bg-amber-500/20 text-amber-400 font-bold px-1.5 py-0.5 rounded text-[10px]">COUPON</span>
+                  <span>Use code <strong className="text-white font-mono">LENS10</strong> to get flat 10% OFF at checkout</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.5 rounded text-[10px]">NO-COST EMI</span>
+                  <span>Pay as low as <strong className="text-white">₹{Math.round(displayPrice / 3).toLocaleString()}/month</strong> with 3-month EMI</span>
+                </div>
+              </div>
             </div>
 
             <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
@@ -774,6 +794,113 @@ const ProductPage = () => {
         <div className="bg-background py-8 lg:py-12">
           <div className="w-full px-4 lg:px-8 xl:px-12 space-y-10 max-w-[1600px] mx-auto">
             
+            {/* Included In The Box Showcase */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 lg:p-8 backdrop-blur shadow-2xl">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
+                  <PackageCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white tracking-wide">Included In Your Package</h3>
+                  <p className="text-xs text-slate-400">Every eyewear order comes with our signature luxury care kit at no extra charge</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex flex-col items-center text-center group hover:border-amber-400/50 transition-all">
+                  <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-110 transition-transform">
+                    <Glasses className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-200">Premium Frame</h4>
+                  <p className="text-[11px] text-slate-400 mt-1">Handcrafted with precision alignment</p>
+                </div>
+
+                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex flex-col items-center text-center group hover:border-amber-400/50 transition-all">
+                  <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-110 transition-transform">
+                    <Shield className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-200">Magnetic Hard Case</h4>
+                  <p className="text-[11px] text-slate-400 mt-1">Sleek protective leatherette case</p>
+                </div>
+
+                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex flex-col items-center text-center group hover:border-amber-400/50 transition-all">
+                  <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-200">Microfiber Cloth</h4>
+                  <p className="text-[11px] text-slate-400 mt-1">Ultra-soft streak-free cleaning cloth</p>
+                </div>
+
+                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex flex-col items-center text-center group hover:border-amber-400/50 transition-all">
+                  <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-110 transition-transform">
+                    <Gift className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-200">Lens Spray Solution</h4>
+                  <p className="text-[11px] text-slate-400 mt-1">Complimentary anti-fog cleaner</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Why Choose Lensezora Guarantee Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-xl flex items-start gap-4">
+                <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-lg shrink-0">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">German Robotic Precision</h4>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">Each lens is edged using robotic CNC machinery for 99.9% prescription accuracy.</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-xl flex items-start gap-4">
+                <div className="p-3 bg-amber-500/10 text-amber-400 rounded-lg shrink-0">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">Optometrist Inspection</h4>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">Certified eye specialists perform multi-point quality checks prior to shipping.</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-xl flex items-start gap-4">
+                <div className="p-3 bg-sky-500/10 text-sky-400 rounded-lg shrink-0">
+                  <RefreshCw className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">Zero-Risk Fitting Policy</h4>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">If your frame fit or vision power feels uncomfortable, we exchange it free of charge.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Need Help CTA Banner */}
+            <div className="bg-gradient-to-r from-amber-500/20 via-slate-900 to-slate-950 border border-amber-500/40 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="p-3.5 bg-amber-400 text-black rounded-full font-bold">
+                  <Headphones className="w-7 h-7" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-white">Confused About Eyewear Power or Frame Size?</h4>
+                  <p className="text-xs text-slate-300 mt-1">Our certified optical advisors are available to assist you in picking the right lens & frame.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <Link
+                  to="/contact"
+                  className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-lg"
+                >
+                  Chat with Optometrist
+                </Link>
+                <a
+                  href="tel:+919876543210"
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-lg transition-colors border border-slate-700"
+                >
+                  Call Support
+                </a>
+              </div>
+            </div>
+
             {/* Specs + Reviews — matching layout of product grid above */}
             <div className="flex flex-col items-stretch lg:grid lg:grid-cols-[1fr_400px] gap-6 lg:items-start w-full">
               <ProductSpecs specifications={specifications} warranty={productWarranty} />
@@ -781,9 +908,9 @@ const ProductPage = () => {
             </div>
 
             {/* Product Story — full width */}
-            <div className="premium-card p-8 rounded-2xl bg-secondary/10">
-              <h3 className="text-lg font-bold mb-6 border-b border-white/5 pb-4">Product Story</h3>
-              <div className="prose prose-invert max-w-none text-muted-foreground leading-relaxed text-sm font-medium" dangerouslySetInnerHTML={{ __html: product.description || '<p>No detailed description available for this product.</p>' }} />
+            <div className="premium-card p-8 rounded-2xl bg-slate-900/60 border border-slate-800">
+              <h3 className="text-lg font-bold mb-6 border-b border-white/10 pb-4 text-white">Product Story & Craftsmanship</h3>
+              <div className="prose prose-invert max-w-none text-slate-300 leading-relaxed text-sm font-medium" dangerouslySetInnerHTML={{ __html: product.description || '<p>No detailed description available for this product.</p>' }} />
             </div>
 
             {(vendorProducts && vendorProducts.length > 0) && (

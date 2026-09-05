@@ -20,24 +20,29 @@ const ProductGallery = ({ images, productName, hideThumbnails, currentImage, onI
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       {/* Main Image */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="relative aspect-square max-w-[500px] mx-auto overflow-hidden bg-gradient-to-br from-secondary/30 to-muted/30 border border-border/50 group rounded-2xl shadow-xl"
+        className="relative w-full aspect-[4/3] sm:aspect-[16/11] max-w-[650px] mx-auto overflow-hidden bg-gradient-to-b from-slate-900/90 via-slate-900 to-slate-950 border border-slate-800/80 group rounded-2xl shadow-2xl flex items-center justify-center"
       >
         <img
           src={getImageUrl(images[selectedImage] || images[0])}
           alt={`${productName} - View ${selectedImage + 1}`}
-          className="w-full h-full object-contain p-3 transition-all duration-500"
+          className="w-full h-full object-contain p-2 sm:p-4 scale-105 group-hover:scale-110 transition-transform duration-500"
         />
 
         {/* Gold corner accents */}
-        <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-primary/30" />
-        <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-primary/30" />
-        <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-primary/30" />
-        <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-primary/30" />
+        <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-amber-400/40" />
+        <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-amber-400/40" />
+        <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-amber-400/40" />
+        <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-amber-400/40" />
+
+        {/* Studio Badge */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/60 backdrop-blur-md border border-amber-400/30 rounded-full text-[10px] font-bold text-amber-400 uppercase tracking-widest pointer-events-none shadow-md">
+          HD Studio View
+        </div>
       </motion.div>
 
       {/* Thumbnails — hidden when handled externally */}

@@ -133,34 +133,32 @@ const BrandHorizontalSlider = () => {
             {slides.map((slide) => (
               <div
                 key={slide._id}
-                className="embla__slide flex-[0_0_100%] min-w-0 relative h-[300px] sm:h-[380px] md:h-[480px] lg:h-[520px] group/slide"
+                className="embla__slide flex-[0_0_100%] min-w-0 relative aspect-[16/8] sm:h-[380px] md:h-[480px] lg:h-[520px] group/slide"
               >
                 {/* Full Width Edge-to-Edge Background Banner Image */}
                 <img
                   src={getImageUrl(slide.image)}
                   alt={slide.brandName}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/slide:scale-105"
+                  className="absolute inset-0 w-full h-full object-contain sm:object-cover object-center bg-black/80 sm:bg-transparent transition-transform duration-700 group-hover/slide:scale-105"
                 />
 
                 {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent flex items-center px-8 sm:px-16 md:px-24">
+                <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/50 to-transparent flex items-center px-6 sm:px-14 md:px-20">
                   <div className="max-w-xl space-y-3 sm:space-y-4">
-                    {/* Brand Logo or Name */}
-                    {slide.logo ? (
-                      <img
-                        src={getImageUrl(slide.logo)}
-                        alt={slide.brandName}
-                        className="h-10 sm:h-14 md:h-16 object-contain mb-2 drop-shadow-xl"
-                      />
-                    ) : (
-                      <h2 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase text-white tracking-wider font-playfair drop-shadow-md">
+                    
+                    {/* Brand Header */}
+                    <div>
+                      <span className="text-[10px] sm:text-xs font-bold text-amber-400 uppercase tracking-[3px] block mb-1">
+                        Official Brand Showcase
+                      </span>
+                      <h2 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase text-white tracking-wider font-playfair drop-shadow-lg leading-tight">
                         {slide.brandName}
                       </h2>
-                    )}
+                    </div>
 
                     {/* Tagline */}
                     {slide.tagline && (
-                      <p className="text-xs sm:text-sm md:text-base font-bold uppercase tracking-widest text-amber-400 drop-shadow">
+                      <p className="text-xs sm:text-sm md:text-base font-bold uppercase tracking-widest text-slate-300 drop-shadow">
                         {slide.tagline}
                       </p>
                     )}
@@ -169,9 +167,9 @@ const BrandHorizontalSlider = () => {
                     <div className="pt-2 sm:pt-4">
                       <button
                         onClick={() => navigate(slide.shopLink)}
-                        className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs sm:text-sm md:text-base uppercase tracking-wider px-7 sm:px-9 py-3.5 rounded-full shadow-2xl hover:shadow-amber-500/30 transition-all transform hover:scale-105 flex items-center gap-2.5"
+                        className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm md:text-base uppercase tracking-wider px-7 sm:px-9 py-3.5 rounded-full shadow-2xl hover:shadow-amber-500/30 transition-all transform hover:scale-105 flex items-center gap-2.5"
                       >
-                        <span>Shop Now</span>
+                        <span>Shop {slide.brandName} Now</span>
                         <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
                       </button>
                     </div>

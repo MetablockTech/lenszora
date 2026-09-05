@@ -55,53 +55,98 @@ const Shop = () => {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
 
+  // Parse URL searchParams synchronously on initial mount to avoid state flash
+  const urlSearch = searchParams.get('search') || "";
+  const urlCategory = searchParams.get('category') || "";
+  const urlSubcategory = searchParams.get('subcategory') || "";
+  const urlType = searchParams.get('type') || "";
+  const urlBrand = searchParams.get('brand') || "";
+  const urlGender = searchParams.get('gender') || "";
+  const urlFrameType = searchParams.get('frameType') || "";
+  const urlFrameShape = searchParams.get('frameShape') || "";
+  const urlFrameMaterial = searchParams.get('frameMaterial') || "";
+  const urlWeightGroup = searchParams.get('weightGroup') || "";
+  const urlFaceShape = searchParams.get('faceShape') || "";
+  const urlSort = searchParams.get('sortBy') || "newest";
+  const urlVendor = searchParams.get('vendorId') || "";
+
+  const [searchQuery, setSearchQuery] = useState(urlSearch);
   const [loading, setLoading] = useState(true);
   const [productList, setProductList] = useState<Product[]>([]);
   const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [brandList, setBrandList] = useState<Brand[]>([]);
   const [eyewearAttributesList, setEyewearAttributesList] = useState<any[]>([]);
 
-  const [selectedMainCategory, setSelectedMainCategory] = useState("");
-  const [selectedSubCategory, setSelectedSubCategory] = useState("");
-  const [selectedSubSubCategory, setSelectedSubSubCategory] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("");
-  const [selectedGender, setSelectedGender] = useState("");
-  const [selectedFrameType, setSelectedFrameType] = useState("");
-  const [selectedFrameShape, setSelectedFrameShape] = useState("");
-  const [selectedFrameMaterial, setSelectedFrameMaterial] = useState("");
-  const [selectedWeightGroup, setSelectedWeightGroup] = useState("");
-  const [selectedFaceShape, setSelectedFaceShape] = useState("");
-  const [selectedVendor, setSelectedVendor] = useState("");
+  const [selectedMainCategory, setSelectedMainCategory] = useState(urlCategory);
+  const [selectedSubCategory, setSelectedSubCategory] = useState(urlSubcategory);
+  const [selectedSubSubCategory, setSelectedSubSubCategory] = useState(urlType);
+  const [selectedBrand, setSelectedBrand] = useState(urlBrand);
+  const [selectedGender, setSelectedGender] = useState(
+    urlGender ? urlGender.charAt(0).toUpperCase() + urlGender.slice(1).toLowerCase() : ""
+  );
+  const [selectedFrameType, setSelectedFrameType] = useState(
+    urlFrameType ? urlFrameType.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ""
+  );
+  const [selectedFrameShape, setSelectedFrameShape] = useState(
+    urlFrameShape ? urlFrameShape.charAt(0).toUpperCase() + urlFrameShape.slice(1).toLowerCase() : ""
+  );
+  const [selectedFrameMaterial, setSelectedFrameMaterial] = useState(
+    urlFrameMaterial ? urlFrameMaterial.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ""
+  );
+  const [selectedWeightGroup, setSelectedWeightGroup] = useState(
+    urlWeightGroup ? urlWeightGroup.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ""
+  );
+  const [selectedFaceShape, setSelectedFaceShape] = useState(
+    urlFaceShape ? urlFaceShape.charAt(0).toUpperCase() + urlFaceShape.slice(1).toLowerCase() : ""
+  );
+  const [selectedVendor, setSelectedVendor] = useState(urlVendor);
   const [activeStore, setActiveStore] = useState<any>(null);
   const [priceRange, setPriceRange] = useState<number[]>([0, 100000]);
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy, setSortBy] = useState(urlSort);
 
   async function fetchFilteredProducts() {
     try {
       setLoading(true);
 
-      // Determine category to filter by
-      let categoryToFilter = selectedSubSubCategory || selectedSubCategory || selectedMainCategory || undefined;
+      // Determine filters (prefer state, fallback to URL searchParams)
+      const urlCategory = searchParams.get('category');
+      const urlBrand = searchParams.get('brand');
+      const urlSearch = searchParams.get('search');
+      const urlGender = searchParams.get('gender');
+      const urlFrameType = searchParams.get('frameType');
+      const urlFrameShape = searchParams.get('frameShape');
+      const urlFrameMaterial = searchParams.get('frameMaterial');
+      const urlWeightGroup = searchParams.get('weightGroup');
+      const urlFaceShape = searchParams.get('faceShape');
+
+      let categoryToFilter = selectedSubSubCategory || selectedSubCategory || selectedMainCategory || urlCategory || undefined;
+      let brandToFilter = selectedBrand || urlBrand || undefined;
+      let searchToFilter = searchQuery || urlSearch || undefined;
+      let genderToFilter = selectedGender || urlGender || undefined;
+      let frameTypeToFilter = selectedFrameType || urlFrameType || undefined;
+      let frameShapeToFilter = selectedFrameShape || urlFrameShape || undefined;
+      let frameMaterialToFilter = selectedFrameMaterial || urlFrameMaterial || undefined;
+      let weightGroupToFilter = selectedWeightGroup || urlWeightGroup || undefined;
+      let faceShapeToFilter = selectedFaceShape || urlFaceShape || undefined;
 
       const productsData = await products.list({
         category: categoryToFilter,
-        brand: selectedBrand || undefined,
+        brand: brandToFilter,
         minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
         maxPrice: priceRange[1] < 100000 ? priceRange[1] : undefined,
-        gender: selectedGender || undefined,
-        frameType: selectedFrameType || undefined,
-        frameShape: selectedFrameShape || undefined,
-        frameMaterial: selectedFrameMaterial || undefined,
-        weightGroup: selectedWeightGroup || undefined,
-        faceShape: selectedFaceShape || undefined,
-        vendorId: selectedVendor || undefined,
-        search: searchQuery || undefined,
+        gender: genderToFilter,
+        frameType: frameTypeToFilter,
+        frameShape: frameShapeToFilter,
+        frameMaterial: frameMaterialToFilter,
+        weightGroup: weightGroupToFilter,
+        faceShape: faceShapeToFilter,
+        vendorId: selectedVendor || searchParams.get('vendorId') || undefined,
+        search: searchToFilter,
         sort: sortBy === 'price-asc' ? 'price:asc' : sortBy === 'price-desc' ? 'price:desc' : 'createdAt:desc'
       });
 
-      setProductList(productsData);
+      setProductList(productsData || []);
     } catch (error) {
       console.error("Failed to fetch products:", error);
     } finally {
@@ -147,13 +192,10 @@ const Shop = () => {
     fetchInitialData();
   }, []);
 
-  // Fetch products whenever filters change
+  // Fetch products whenever filters or URL params change
   useEffect(() => {
-    if (categoryList.length > 0) {
-      fetchFilteredProducts();
-    }
+    fetchFilteredProducts();
   }, [
-    categoryList,
     selectedMainCategory,
     selectedSubCategory,
     selectedSubSubCategory,
@@ -167,7 +209,8 @@ const Shop = () => {
     priceRange,
     sortBy,
     searchQuery,
-    selectedVendor
+    selectedVendor,
+    searchParams
   ]);
 
   // Apply URL query parameters after initial data loads
@@ -188,13 +231,38 @@ const Shop = () => {
       const vendorParam = searchParams.get('vendorId');
 
       if (brandParam) {
-        const brand = brandList.find(b => b.slug === brandParam || b._id === brandParam);
-        if (brand) setSelectedBrand(brand._id);
+        const normParam = brandParam.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const brand = brandList.find(b =>
+          b._id === brandParam ||
+          (b.slug && (b.slug.toLowerCase() === brandParam.toLowerCase() || b.slug.toLowerCase().replace(/[^a-z0-9]/g, '') === normParam)) ||
+          (b.name && (b.name.toLowerCase() === brandParam.toLowerCase() || b.name.toLowerCase().replace(/[^a-z0-9]/g, '') === normParam))
+        );
+        if (brand) {
+          setSelectedBrand(brand._id);
+        } else {
+          setSelectedBrand(brandParam);
+        }
       }
 
       if (categoryParam) {
-        const cat = categoryList.find(c => c.slug === categoryParam || c._id === categoryParam);
-        if (cat) setSelectedMainCategory(cat._id);
+        const normCatParam = categoryParam.toLowerCase();
+        let cat = categoryList.find(c =>
+          c.slug?.toLowerCase() === normCatParam ||
+          c._id === categoryParam ||
+          c.name?.toLowerCase() === normCatParam
+        );
+
+        if (!cat && (normCatParam.includes("accessor") || normCatParam.includes("accessory"))) {
+          cat = categoryList.find(c => c.slug?.toLowerCase().includes("accessor") || c.name?.toLowerCase().includes("accessor"));
+        }
+
+        if (cat) {
+          setSelectedMainCategory(cat._id);
+        } else if (normCatParam.includes("accessor") || normCatParam.includes("accessory")) {
+          if (!searchParams.get('search')) {
+            setSearchQuery("accessory");
+          }
+        }
       }
 
       if (subcategoryParam) {
@@ -302,8 +370,13 @@ const Shop = () => {
 
     // Add category params
     if (selectedMainCategory) {
-      const cat = categoryList.find(c => c._id === selectedMainCategory);
-      if (cat) params.set('category', cat.slug);
+      if (selectedMainCategory === "accessories") {
+        params.set('category', 'accessories');
+      } else {
+        const cat = categoryList.find(c => c._id === selectedMainCategory);
+        if (cat) params.set('category', cat.slug);
+        else params.set('category', selectedMainCategory);
+      }
     }
     if (selectedSubCategory) {
       const cat = categoryList.find(c => c._id === selectedSubCategory);
@@ -317,7 +390,11 @@ const Shop = () => {
     // Add brand param
     if (selectedBrand) {
       const brand = brandList.find(b => b._id === selectedBrand);
-      if (brand) params.set('brand', brand.slug);
+      if (brand) {
+        params.set('brand', brand.slug || brand.name.toLowerCase().replace(/[^a-z0-9]/g, '-'));
+      } else {
+        params.set('brand', selectedBrand);
+      }
     }
 
     // Add eyewear attribute params (lowercase for URL)
@@ -349,7 +426,12 @@ const Shop = () => {
     }
   }, [selectedMainCategory, selectedSubCategory, selectedSubSubCategory, selectedBrand, selectedGender, selectedFrameType, selectedFrameShape, selectedFrameMaterial, selectedWeightGroup, selectedFaceShape, sortBy, searchQuery, selectedVendor]);
 
-  const mainCategories = categoryList.filter((c) => !c.parentId);
+  const rawMainCategories = categoryList.filter((c) => !c.parentId);
+  const hasAccessoryInCat = rawMainCategories.some(c => c.slug?.toLowerCase().includes("accessor") || c.name?.toLowerCase().includes("accessor"));
+  const allMainCategories = hasAccessoryInCat
+    ? rawMainCategories
+    : [...rawMainCategories, { _id: "accessories", name: "Accessories", slug: "accessories" }];
+
   const subCategories = categoryList.filter(
     (c) =>
       c.parentId === selectedMainCategory ||
@@ -364,6 +446,60 @@ const Shop = () => {
   // Reusable Filter Content Component
   const FilterSidebarContent = () => (
     <div className="space-y-4">
+      {/* Category Filter */}
+      <div className="border border-primary/20 rounded-lg p-4">
+        <h3 className="font-semibold text-foreground mb-3">Categories</h3>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="mainCategory"
+              value=""
+              checked={!selectedMainCategory}
+              onChange={() => {
+                setSelectedMainCategory("");
+                setSelectedSubCategory("");
+                setSelectedSubSubCategory("");
+              }}
+              className="w-4 h-4 accent-amber-400"
+            />
+            <span className={cn("text-sm transition-colors", !selectedMainCategory ? "text-amber-400 font-bold" : "text-muted-foreground hover:text-foreground")}>
+              All Categories
+            </span>
+          </label>
+          {allMainCategories.map((cat) => {
+            const normSel = (selectedMainCategory || '').toLowerCase();
+            const normSlug = (cat.slug || '').toLowerCase();
+            const normName = (cat.name || '').toLowerCase();
+            const isCatSelected =
+              selectedMainCategory === cat._id ||
+              (normSel !== '' && (normSel === normSlug || normSel === normName)) ||
+              (normSlug.includes('accessor') && (normSel.includes('accessor') || (searchParams.get('category')?.toLowerCase().includes('accessor') ?? false)));
+            return (
+              <label key={cat._id} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="mainCategory"
+                  value={cat._id}
+                  checked={isCatSelected}
+                  onChange={() => {
+                    setSelectedMainCategory(cat._id);
+                    setSelectedSubCategory("");
+                    setSelectedSubSubCategory("");
+                  }}
+                  className="w-4 h-4 accent-amber-400"
+                />
+                <span className={cn(
+                  "text-sm transition-colors",
+                  isCatSelected ? "text-amber-400 font-bold" : "text-muted-foreground hover:text-foreground"
+                )}>
+                  {cat.name}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
       {/* Frame Type Filter (Visual Grid) */}
       <div className="border border-primary/10 rounded overflow-hidden">
         <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[2px] bg-secondary/30 p-2 border-b border-primary/10">Frame Type</h3>
@@ -679,11 +815,34 @@ const Shop = () => {
             animate={{ opacity: 1, y: 0 }}
             className="mb-6"
           >
-            <h1 className="text-xl font-playfair font-bold text-foreground mb-1 uppercase tracking-tight">
-              Shop Collection
+            <h1 className="text-xl md:text-2xl font-playfair font-bold text-foreground mb-1 uppercase tracking-tight flex items-center gap-2">
+              {(() => {
+                const catParam = searchParams.get('category')?.toLowerCase() || '';
+                const searchParam = searchParams.get('search')?.toLowerCase() || '';
+                if (catParam.includes('accessor') || selectedMainCategory === 'accessories') {
+                  if (searchParam) {
+                    return `Accessories: ${searchParam.toUpperCase()}`;
+                  }
+                  return "Eyewear Accessories & Care Collection";
+                }
+                if (searchParam) {
+                  return `Search Results: "${searchParam}"`;
+                }
+                const activeCat = categoryList.find(c => c._id === selectedMainCategory);
+                if (activeCat) {
+                  return `${activeCat.name} Collection`;
+                }
+                return "Shop Collection";
+              })()}
             </h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium opacity-70">
-              Premium eyewear from top brands
+            <p className="text-[11px] text-amber-400 font-bold uppercase tracking-widest opacity-90">
+              {(() => {
+                const catParam = searchParams.get('category')?.toLowerCase() || '';
+                if (catParam.includes('accessor') || selectedMainCategory === 'accessories') {
+                  return "Premium cleaning sprays, microfiber cloths, hard cases & care kits";
+                }
+                return "Premium eyewear from top brands";
+              })()}
             </p>
           </motion.div>
 
@@ -710,6 +869,94 @@ const Shop = () => {
               </button>
             </motion.div>
           )}
+
+          {/* Accessories Active Category Banner */}
+          {(searchParams.get('category')?.toLowerCase().includes('accessor') || selectedMainCategory === 'accessories') && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-6 p-4 bg-gradient-to-r from-amber-500/25 via-slate-900 to-slate-950 border border-amber-500/40 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-md shadow-xl"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(218,171,52,0.4)] shrink-0">
+                  <ShieldCheck className="text-black w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white font-playfair">
+                    {searchQuery ? `Accessories Category: ${searchQuery.toUpperCase()}` : "Eyewear Accessories & Lens Care"}
+                  </h2>
+                  <p className="text-xs text-amber-400 font-bold uppercase tracking-wider mt-0.5">
+                    Official Eyewear Cleaners, Microfiber Cloths, Hard Cases & Care Kits
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      const params = new URLSearchParams(window.location.search);
+                      params.delete("search");
+                      navigate(params.toString() ? `/shop?${params.toString()}` : "/shop", { replace: true });
+                    }}
+                    className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 rounded-full text-xs font-bold uppercase tracking-wider text-amber-300 transition-all"
+                  >
+                    Clear Filter &quot;{searchQuery}&quot;
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setSelectedMainCategory("");
+                    setSearchQuery("");
+                    navigate("/shop", { replace: true });
+                  }}
+                  className="px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-xs font-bold uppercase tracking-wider transition-all text-white hover:text-amber-400 shrink-0"
+                >
+                  Clear Category
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {(() => {
+            const activeBrand = brandList.find(b =>
+              b._id === selectedBrand ||
+              b.slug === selectedBrand ||
+              (b.name && b.name.toLowerCase().replace(/[^a-z0-9]/g, '') === selectedBrand.toLowerCase().replace(/[^a-z0-9]/g, ''))
+            );
+            if (!activeBrand) return null;
+            return (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 p-4 bg-gradient-to-r from-amber-500/20 via-slate-900 to-slate-950 border border-amber-500/35 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-md shadow-xl"
+              >
+                <div className="flex items-center gap-4">
+                  {activeBrand.logo ? (
+                    <div className="w-12 h-12 bg-slate-900 border border-white/15 rounded-xl p-1.5 flex items-center justify-center overflow-hidden shrink-0 shadow-md">
+                      <img src={getImageUrl(activeBrand.logo)} alt={activeBrand.name} className="w-full h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(218,171,52,0.3)] shrink-0">
+                      <Tag className="text-black w-6 h-6" />
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-xl font-bold text-white font-playfair">{activeBrand.name} Collection</h2>
+                    <p className="text-xs text-amber-400 font-bold uppercase tracking-wider mt-0.5">
+                      {activeBrand.tagline || 'Official Brand Showcase'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedBrand("")}
+                  className="px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-xs font-bold uppercase tracking-wider transition-all text-white hover:text-amber-400 shrink-0"
+                >
+                  Clear Brand Filter
+                </button>
+              </motion.div>
+            );
+          })()}
 
           <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8">
             {/* Mobile Filter Button */}

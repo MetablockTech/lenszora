@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { brands, sliders } from "@/lib/api";
+import { products, sliders } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
-import { ChevronRight, ChevronLeft, Play } from "lucide-react";
+import { ChevronRight, ChevronLeft, Play, Sparkles } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 
@@ -10,46 +10,44 @@ interface TrendingItem {
   _id: string;
   title: string;
   image: string;
-  logo?: string;
   tagline?: string;
   link: string;
+  price?: number;
+  badge?: string;
 }
 
-const samplePosterImages = [
-  "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1577803645773-f96470509666?w=800&auto=format&fit=crop&q=80",
-];
-
-const fallbackTrendingCards: TrendingItem[] = [
+const defaultTrendingCampaigns: TrendingItem[] = [
   {
-    _id: "demo-t1",
-    title: "Pop Mart x LensZora",
+    _id: "trend-c1",
+    title: "Blue-Cut Anti-Glare",
+    image: "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=800&auto=format&fit=crop&q=80",
+    tagline: "PROTECT YOUR EYES FROM DIGITAL SCREEN GLARE",
+    badge: "BESTSELLER",
+    link: "/shop?type=eyeglasses",
+  },
+  {
+    _id: "trend-c2",
+    title: "Polarized UV400 Sun",
     image: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&auto=format&fit=crop&q=80",
-    tagline: "SWEET BEAN LIMITED EDITION",
+    tagline: "MAXIMUM GLARE REDUCTION FOR OUTDOORS",
+    badge: "POPULAR",
+    link: "/shop?type=sunglasses",
+  },
+  {
+    _id: "trend-c3",
+    title: "Featherlight Acetate",
+    image: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=800&auto=format&fit=crop&q=80",
+    tagline: "ALL-DAY COMFORT & PREMIUM FIT",
+    badge: "NEW ARRIVAL",
     link: "/shop",
   },
   {
-    _id: "demo-t2",
-    title: "Moody Eyewear",
-    image: "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=800&auto=format&fit=crop&q=80",
-    tagline: "CHIC & ELEGANT FRAMES",
-    link: "/shop",
-  },
-  {
-    _id: "demo-t3",
-    title: "Batman x LensZora",
+    _id: "trend-c4",
+    title: "Retro Round Classics",
     image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&auto=format&fit=crop&q=80",
-    tagline: "BOLD & BLACK, BATMAN STYLE!",
-    link: "/shop",
-  },
-  {
-    _id: "demo-t4",
-    title: "Nuun Premium",
-    image: "https://images.unsplash.com/photo-1577803645773-f96470509666?w=800&auto=format&fit=crop&q=80",
-    tagline: "MINIMALIST JAPANESE DESIGN",
-    link: "/shop",
+    tagline: "VINTAGE AESTHETIC FOR MODERN LOOKS",
+    badge: "TRENDING",
+    link: "/shop?frameShape=round",
   },
 ];
 
@@ -81,50 +79,57 @@ const TrendingBanners = () => {
   async function fetchTrendingData() {
     try {
       setLoading(true);
-      const [brandList, sliderList] = await Promise.all([
-        brands.list().catch(() => []),
+      const [sliderList, productList] = await Promise.all([
         sliders.list().catch(() => []),
+        products.list({ isBestSeller: true, limit: 6 }).catch(() => []),
       ]);
 
       const trendingCards: TrendingItem[] = [];
 
-      // 1. Add Brands from database
-      if (brandList && brandList.length > 0) {
-        brandList.forEach((b: any, index: number) => {
-          trendingCards.push({
-            _id: b._id,
-            title: b.name,
-            image: b.banner || samplePosterImages[index % samplePosterImages.length],
-            logo: b.logo,
-            tagline: b.tagline || (index % 2 === 0 ? "BOLD & BLACK STYLE!" : "EXCLUSIVE EYEWEAR COLLECTION"),
-            link: `/shop?brand=${b._id}`,
-          });
-        });
-      }
-
-      // 2. Add Trending Banner Sliders if created in Admin
+      // 1. Add Admin Trending Sliders
       if (sliderList && sliderList.length > 0) {
         sliderList.forEach((s: any) => {
-          if (s.bannerType === "Trending Banner" && s.isActive) {
+          if ((s.bannerType === "Trending Banner" || s.bannerType === "Main Banner") && s.isActive) {
             trendingCards.push({
               _id: s._id,
               title: s.title || "Trending Collection",
               image: s.image,
+              tagline: s.subtitle || "EXCLUSIVE EYEWEAR COLLECTION",
+              badge: "FEATURED",
               link: s.buttonLink || "/shop",
             });
           }
         });
       }
 
-      // 3. Fallback if no brands in DB yet
+      // 2. Add Bestseller / Featured Products as Trending Cards
+      const rawProducts = Array.isArray(productList) ? productList : (productList?.products || []);
+      if (rawProducts && rawProducts.length > 0) {
+        rawProducts.forEach((p: any) => {
+          const img = Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : (p.thumbnail || p.image);
+          if (img) {
+            trendingCards.push({
+              _id: p._id,
+              title: p.title,
+              image: img,
+              price: p.price,
+              tagline: p.eyewearDetails?.frameShape ? `${p.eyewearDetails.frameShape.toUpperCase()} FRAME` : "BESTSELLER EYEWEAR",
+              badge: "TRENDING NOW",
+              link: `/product/${p._id}`,
+            });
+          }
+        });
+      }
+
+      // 3. Fallback campaigns if no custom sliders/products exist
       if (trendingCards.length === 0) {
-        setItems(fallbackTrendingCards);
+        setItems(defaultTrendingCampaigns);
       } else {
         setItems(trendingCards);
       }
     } catch (error) {
       console.error("Failed to fetch trending cards:", error);
-      setItems(fallbackTrendingCards);
+      setItems(defaultTrendingCampaigns);
     } finally {
       setLoading(false);
     }
@@ -195,26 +200,28 @@ const TrendingBanners = () => {
                   {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent opacity-90 group-hover:opacity-95 transition-opacity" />
 
+                  {/* Top Badge */}
+                  {item.badge && (
+                    <div className="absolute top-4 left-4 px-3 py-1 bg-amber-400 text-black font-extrabold text-[10px] uppercase tracking-widest rounded-full shadow-lg">
+                      {item.badge}
+                    </div>
+                  )}
+
                   {/* Content Footer */}
                   <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end text-white space-y-2">
-                    {/* Brand Logo or Name */}
-                    {item.logo ? (
-                      <div className="h-10 flex items-center mb-1">
-                        <img
-                          src={getImageUrl(item.logo)}
-                          alt={item.title}
-                          className="max-h-full max-w-[140px] object-contain drop-shadow-md"
-                        />
+                    <h3 className="text-xl font-black tracking-wider uppercase text-white drop-shadow-md line-clamp-1">
+                      {item.title}
+                    </h3>
+
+                    {item.price && (
+                      <div className="text-amber-400 font-extrabold text-sm">
+                        ₹{item.price.toLocaleString()}
                       </div>
-                    ) : (
-                      <h3 className="text-2xl font-black tracking-wider uppercase text-white drop-shadow-md">
-                        {item.title}
-                      </h3>
                     )}
 
                     {/* Tagline */}
                     {item.tagline && (
-                      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-300 drop-shadow">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-300 drop-shadow line-clamp-2">
                         {item.tagline}
                       </p>
                     )}

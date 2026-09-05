@@ -30,16 +30,19 @@ router.get('/', async (req, res) => {
     } = req.query
 
     const filter: any = {}
+    const andConditions: any[] = []
 
     if (vendorId) filter.vendorId = vendorId
 
     if (search) {
       const searchStr = String(search).trim();
-      filter.$or = [
-        { title: { $regex: searchStr, $options: 'i' } },
-        { description: { $regex: searchStr, $options: 'i' } },
-        { searchTags: { $regex: searchStr, $options: 'i' } }
-      ]
+      andConditions.push({
+        $or: [
+          { title: { $regex: searchStr, $options: 'i' } },
+          { description: { $regex: searchStr, $options: 'i' } },
+          { searchTags: { $regex: searchStr, $options: 'i' } }
+        ]
+      })
     }
     
     // Default: Hide bulk products from retail shop
@@ -60,11 +63,22 @@ router.get('/', async (req, res) => {
     if (category) {
       const { Category } = require('../models/Category')
       let categoryId: any
+      const categoryStr = String(category).trim().toLowerCase()
 
       if (typeof category === 'string' && category.match(/^[0-9a-fA-F]{24}$/)) {
         categoryId = category
       } else {
-        const cat = await Category.findOne({ slug: category })
+        let cat = await Category.findOne({ slug: category })
+        if (!cat) {
+          cat = await Category.findOne({
+            $or: [
+              { slug: { $regex: new RegExp(`^${category}$`, 'i') } },
+              { name: { $regex: new RegExp(`^${category}$`, 'i') } },
+              { slug: { $regex: /accessori/i } },
+              { name: { $regex: /accessori/i } }
+            ]
+          })
+        }
         if (cat) categoryId = cat._id
       }
 
@@ -84,17 +98,43 @@ router.get('/', async (req, res) => {
 
         const categoryIds = await getAllDescendantIds(categoryId)
         filter.category = { $in: categoryIds }
+      } else if (categoryStr.includes('accessor')) {
+        andConditions.push({
+          $or: [
+            { title: { $regex: /accessory|accessories|cleaner|solution|microfiber|case|spray|chain|cloth|pouch|care kit/i } },
+            { searchTags: { $regex: /accessory|accessories|cleaner|solution|microfiber|case|spray|chain|cloth|pouch|care kit/i } },
+            { description: { $regex: /accessory|accessories|cleaner|solution|microfiber|case|spray|chain|cloth|pouch|care kit/i } }
+          ]
+        })
       }
     }
 
-    // Brand filter (support ID or slug)
+    // Brand filter (support ID, slug, or name with robust normalized matching)
     if (brand) {
-      if (typeof brand === 'string' && brand.match(/^[0-9a-fA-F]{24}$/)) {
-        filter.brand = brand
+      const brandStr = String(brand).trim()
+      if (brandStr.match(/^[0-9a-fA-F]{24}$/)) {
+        filter.brand = brandStr
       } else {
         const { Brand } = require('../models/Brand')
-        const b = await Brand.findOne({ slug: brand })
-        if (b) filter.brand = b._id
+        const normBrand = brandStr.toLowerCase().replace(/[^a-z0-9]/g, '')
+        const allBrands = await Brand.find({}).lean()
+        const b = allBrands.find((br: any) => {
+          const s = (br.slug || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+          const n = (br.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+          return s === normBrand || n === normBrand || br._id.toString() === brandStr
+        })
+
+        if (b) {
+          filter.brand = b._id
+        } else {
+          // Fallback if brand object isn't in DB: search by regex in title or searchTags
+          andConditions.push({
+            $or: [
+              { title: { $regex: brandStr, $options: 'i' } },
+              { searchTags: { $regex: brandStr, $options: 'i' } }
+            ]
+          })
+        }
       }
     }
 
@@ -105,13 +145,40 @@ router.get('/', async (req, res) => {
       if (maxPrice) filter.price.$lte = Number(maxPrice)
     }
 
-    // Eyewear details filters
-    if (gender) filter['eyewearDetails.gender'] = gender
-    if (frameType) filter['eyewearDetails.frameType'] = frameType
-    if (frameShape) filter['eyewearDetails.frameShape'] = frameShape
-    if (frameMaterial) filter['eyewearDetails.frameMaterial'] = frameMaterial
-    if (weightGroup) filter['eyewearDetails.weightGroup'] = weightGroup
-    if (faceShape) filter['eyewearDetails.faceShape'] = { $in: [faceShape] }
+    // Eyewear details filters (case-insensitive regex matching)
+    if (gender) {
+      const gStr = String(gender).trim()
+      filter['eyewearDetails.gender'] = { $regex: new RegExp(`^${gStr}$`, 'i') }
+    }
+
+    if (frameType) {
+      const ftStr = String(frameType).trim().replace(/[-_]/g, ' ')
+      filter['eyewearDetails.frameType'] = { $regex: new RegExp(ftStr.replace(/\s+/g, '[-\\s]?'), 'i') }
+    }
+
+    if (frameShape) {
+      const fsStr = String(frameShape).trim().replace(/[-_]/g, ' ')
+      filter['eyewearDetails.frameShape'] = { $regex: new RegExp(fsStr.replace(/\s+/g, '[-\\s]?'), 'i') }
+    }
+
+    if (frameMaterial) {
+      const fmStr = String(frameMaterial).trim().replace(/[-_]/g, ' ')
+      filter['eyewearDetails.frameMaterial'] = { $regex: new RegExp(fmStr.replace(/\s+/g, '[-\\s]?'), 'i') }
+    }
+
+    if (weightGroup) {
+      const wgStr = String(weightGroup).trim().replace(/[-_]/g, ' ')
+      filter['eyewearDetails.weightGroup'] = { $regex: new RegExp(wgStr.replace(/\s+/g, '[-\\s]?'), 'i') }
+    }
+
+    if (faceShape) {
+      const faceStr = String(faceShape).trim()
+      filter['eyewearDetails.faceShape'] = { $regex: new RegExp(faceStr, 'i') }
+    }
+
+    if (andConditions.length > 0) {
+      filter.$and = andConditions
+    }
 
     let query = Product.find(filter)
 
