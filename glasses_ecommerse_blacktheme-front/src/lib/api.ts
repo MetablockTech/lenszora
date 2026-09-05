@@ -231,6 +231,9 @@ export const categories = {
     })
     if (!res.ok) throw new Error(await res.text())
     return res.json()
+  },
+  async uploadImage(file: File, folder: string = 'categories', subfolder?: string, token?: string) {
+    return products.uploadImage(file, folder, subfolder, undefined, token)
   }
 }
 
@@ -239,6 +242,9 @@ export const brands = {
     const res = await fetch(`${API_URL}/api/brands`)
     if (!res.ok) throw new Error('Failed to fetch brands')
     return res.json()
+  },
+  async uploadImage(file: File, folder: string = 'brands', subfolder?: string, token?: string) {
+    return products.uploadImage(file, folder, subfolder, undefined, token)
   },
   async create(payload: any, token?: string) {
     const res = await fetch(`${API_URL}/api/brands`, {
