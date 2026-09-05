@@ -321,15 +321,16 @@ const ProductPage = () => {
     const title = (prod.title || '').toLowerCase();
     const tags = Array.isArray(prod.searchTags) ? prod.searchTags.join(' ').toLowerCase() : '';
 
-    return catName.includes('accessori') || catName.includes('accessory') || catName.includes('solution')
-      || catName.includes('cleaner') || catName.includes('cloth') || catName.includes('spray') || catName.includes('case')
-      || title.includes('lens cleaner') || title.includes('cleaning solution') || title.includes('microfiber') || title.includes('eyewear case') || title.includes('contact lens solution')
-      || tags.includes('accessory') || tags.includes('solution')
-      || prod?.lensSettings?.allowLensSelection === false;
+    const isAccessoryKeyword = catName.includes('accessori') || catName.includes('accessory') || catName.includes('solution')
+      || catName.includes('cleaner') || catName.includes('cloth') || catName.includes('spray')
+      || title.includes('lens cleaner') || title.includes('cleaning solution') || title.includes('microfiber') || title.includes('contact lens solution')
+      || tags.includes('accessory') || tags.includes('solution');
+
+    return isAccessoryKeyword && !title.includes('glass') && !title.includes('frame') && !catName.includes('eyeglass');
   };
 
-  // Enable lens selection for eyewear products, but disable for Accessories & Solutions
-  const allowLensSelection = !checkIsAccessory(product) && product?.lensSettings?.disableLensSelection !== true;
+  // Enable lens selection & power selection modal for ALL eyewear/glasses products
+  const allowLensSelection = !checkIsAccessory(product);
 
   const handleBuyNow = () => {
     if (displayStock <= 0) {

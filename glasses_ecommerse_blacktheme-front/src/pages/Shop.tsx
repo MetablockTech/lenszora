@@ -109,26 +109,16 @@ const Shop = () => {
     try {
       setLoading(true);
 
-      // Determine filters (prefer state, fallback to URL searchParams)
-      const urlCategory = searchParams.get('category');
-      const urlBrand = searchParams.get('brand');
-      const urlSearch = searchParams.get('search');
-      const urlGender = searchParams.get('gender');
-      const urlFrameType = searchParams.get('frameType');
-      const urlFrameShape = searchParams.get('frameShape');
-      const urlFrameMaterial = searchParams.get('frameMaterial');
-      const urlWeightGroup = searchParams.get('weightGroup');
-      const urlFaceShape = searchParams.get('faceShape');
-
-      let categoryToFilter = selectedSubSubCategory || selectedSubCategory || selectedMainCategory || urlCategory || undefined;
-      let brandToFilter = selectedBrand || urlBrand || undefined;
-      let searchToFilter = searchQuery || urlSearch || undefined;
-      let genderToFilter = selectedGender || urlGender || undefined;
-      let frameTypeToFilter = selectedFrameType || urlFrameType || undefined;
-      let frameShapeToFilter = selectedFrameShape || urlFrameShape || undefined;
-      let frameMaterialToFilter = selectedFrameMaterial || urlFrameMaterial || undefined;
-      let weightGroupToFilter = selectedWeightGroup || urlWeightGroup || undefined;
-      let faceShapeToFilter = selectedFaceShape || urlFaceShape || undefined;
+      // Determine filters using state (state is initialized and synced with searchParams)
+      let categoryToFilter = selectedSubSubCategory || selectedSubCategory || selectedMainCategory || undefined;
+      let brandToFilter = selectedBrand || undefined;
+      let searchToFilter = searchQuery || undefined;
+      let genderToFilter = selectedGender || undefined;
+      let frameTypeToFilter = selectedFrameType || undefined;
+      let frameShapeToFilter = selectedFrameShape || undefined;
+      let frameMaterialToFilter = selectedFrameMaterial || undefined;
+      let weightGroupToFilter = selectedWeightGroup || undefined;
+      let faceShapeToFilter = selectedFaceShape || undefined;
 
       const productsData = await products.list({
         category: categoryToFilter,
@@ -141,7 +131,7 @@ const Shop = () => {
         frameMaterial: frameMaterialToFilter,
         weightGroup: weightGroupToFilter,
         faceShape: faceShapeToFilter,
-        vendorId: selectedVendor || searchParams.get('vendorId') || undefined,
+        vendorId: selectedVendor || undefined,
         search: searchToFilter,
         sort: sortBy === 'price-asc' ? 'price:asc' : sortBy === 'price-desc' ? 'price:desc' : 'createdAt:desc'
       });
@@ -263,16 +253,22 @@ const Shop = () => {
         } else {
           setSelectedMainCategory(categoryParam);
         }
+      } else {
+        setSelectedMainCategory("");
       }
 
       if (subcategoryParam) {
         const cat = categoryList.find(c => c.slug === subcategoryParam || c._id === subcategoryParam);
         if (cat) setSelectedSubCategory(cat._id);
+      } else {
+        setSelectedSubCategory("");
       }
 
       if (typeParam) {
         const cat = categoryList.find(c => c.slug === typeParam || c._id === typeParam);
         if (cat) setSelectedSubSubCategory(cat._id);
+      } else {
+        setSelectedSubSubCategory("");
       }
 
       if (genderParam) {

@@ -5,9 +5,69 @@ import { Types } from 'mongoose'
 
 const router = express.Router()
 
+// Helper function to auto-repair category hierarchy and naming errors in DB
+async function ensureCleanCategoryStructure() {
+  try {
+    // 1. Ensure Accessories main category (slug: 'accessories') has name 'Accessories'
+    const accCat = await Category.findOne({ slug: 'accessories' })
+    if (accCat && (accCat.name.includes('EYEGLASSES') || accCat.name !== 'Accessories')) {
+      accCat.name = 'Accessories'
+      accCat.level = 'main'
+      accCat.parentId = null
+      await accCat.save()
+    }
+
+    // 2. Ensure Eyeglasses main category exists with slug 'eyeglasses'
+    let eyeglassCat = await Category.findOne({ slug: 'eyeglasses', level: 'main' })
+    if (!eyeglassCat) {
+      eyeglassCat = await Category.findOne({ slug: 'eyeglasses' })
+      if (eyeglassCat) {
+        eyeglassCat.name = 'Eyeglasses'
+        eyeglassCat.level = 'main'
+        eyeglassCat.parentId = null
+        await eyeglassCat.save()
+      } else {
+        eyeglassCat = new Category({
+          name: 'Eyeglasses',
+          slug: 'eyeglasses',
+          level: 'main',
+          parentId: null,
+          allowLensSelection: true,
+          showFrameDetails: true
+        })
+        await eyeglassCat.save()
+      }
+    }
+
+    // 3. Ensure Men, Women, Kids subcategories for Eyeglasses point to Eyeglasses main category
+    if (eyeglassCat) {
+      await Category.updateMany(
+        { slug: { $in: ['men-eyeglasses', 'women-eyeglasses', 'kids-eyeglasses'] } },
+        { $set: { parentId: eyeglassCat._id, level: 'sub' } }
+      )
+    }
+
+    // 4. Ensure Eyewear Cases, Cleaning Kits, Chains & Straps point to Accessories main category
+    if (accCat) {
+      await Category.updateMany(
+        { slug: { $in: ['eyewear-cases', 'cleaning-kits', 'chains-straps'] } },
+        { $set: { parentId: accCat._id, level: 'sub' } }
+      )
+    }
+
+    // 5. Remove orphan test categories
+    await Category.deleteMany({
+      slug: { $in: ['sunglasses-', 'eyeglass'] }
+    })
+  } catch (err) {
+    console.error('Error ensuring category structure:', err)
+  }
+}
+
 // Get all categories with hierarchy
 router.get('/', async (req, res) => {
   try {
+    await ensureCleanCategoryStructure()
     const cats = await Category.find().populate('parentId').lean()
     res.json(cats)
   } catch (err: any) {
@@ -18,6 +78,7 @@ router.get('/', async (req, res) => {
 // Get hierarchical category structure (nested)
 router.get('/hierarchy', async (req, res) => {
   try {
+    await ensureCleanCategoryStructure()
     const allCategories = await Category.find().lean()
 
     // Build hierarchical structure
