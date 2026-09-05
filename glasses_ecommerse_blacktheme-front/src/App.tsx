@@ -70,6 +70,8 @@ import VendorOrders from "./pages/vendor/VendorOrders";
 import VendorPurchases from "./pages/vendor/VendorPurchases";
 import VendorProfile from "./pages/vendor/VendorProfile";
 import VendorPayouts from "./pages/vendor/VendorPayouts";
+import AccessoriesAdminPage from "./pages/admin/Accessories";
+import AccessoryFormPage from "./pages/admin/AccessoryForm";
 
 const queryClient = new QueryClient();
 
@@ -140,6 +142,9 @@ const AppContent = () => {
         <Route path="products" element={<ProductsPage />} />
         <Route path="products/new" element={<ProductForm />} />
         <Route path="products/:id" element={<ProductForm />} />
+        <Route path="accessories" element={<AccessoriesAdminPage />} />
+        <Route path="accessories/new" element={<AccessoryFormPage />} />
+        <Route path="accessories/:id" element={<AccessoryFormPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="brands" element={<BrandsAdminPage />} />
         <Route path="orders" element={<OrdersPage />} />

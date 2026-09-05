@@ -59,31 +59,37 @@ router.get('/', async (req, res) => {
     if (isBestSeller === 'true') filter.isBestSeller = true
     if (isFeatured === 'true') filter.isFeatured = true
 
-    // Category filter (support ID or slug) - includes all descendant categories
+    // Category filter (support Mongo ID, slug, or name with normalized matching) - includes all descendant categories
     if (category) {
       const { Category } = require('../models/Category')
       let categoryId: any
       const categoryStr = String(category).trim().toLowerCase()
+      const normCatStr = categoryStr.replace(/[^a-z0-9]/g, '')
 
       if (typeof category === 'string' && category.match(/^[0-9a-fA-F]{24}$/)) {
         categoryId = category
       } else {
-        let cat = await Category.findOne({ slug: category })
+        let cat = await Category.findOne({
+          $or: [
+            { slug: category },
+            { slug: { $regex: new RegExp(`^${category}$`, 'i') } },
+            { name: { $regex: new RegExp(`^${category}$`, 'i') } }
+          ]
+        })
+
         if (!cat) {
-          cat = await Category.findOne({
-            $or: [
-              { slug: { $regex: new RegExp(`^${category}$`, 'i') } },
-              { name: { $regex: new RegExp(`^${category}$`, 'i') } },
-              { slug: { $regex: /accessori/i } },
-              { name: { $regex: /accessori/i } }
-            ]
+          const allCats = await Category.find({}).lean()
+          cat = allCats.find((c: any) => {
+            const s = (c.slug || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+            const n = (c.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+            return s === normCatStr || n === normCatStr || s.includes(normCatStr) || n.includes(normCatStr)
           })
         }
         if (cat) categoryId = cat._id
       }
 
       if (categoryId) {
-        // Recursively get all descendant category IDs
+        // Recursively get all descendant category IDs (e.g. subcategories under Accessories)
         const getAllDescendantIds = async (catId: any): Promise<any[]> => {
           const children = await Category.find({ parentId: catId })
           if (children.length === 0) return [catId]
@@ -98,7 +104,7 @@ router.get('/', async (req, res) => {
 
         const categoryIds = await getAllDescendantIds(categoryId)
         filter.category = { $in: categoryIds }
-      } else if (categoryStr.includes('accessor')) {
+      } else if (categoryStr.includes('accessor') || categoryStr.includes('care') || categoryStr.includes('clean')) {
         andConditions.push({
           $or: [
             { title: { $regex: /accessory|accessories|cleaner|solution|microfiber|case|spray|chain|cloth|pouch|care kit/i } },

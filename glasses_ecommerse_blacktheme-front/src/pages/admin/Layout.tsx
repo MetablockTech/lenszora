@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Package, Tag, ShoppingCart, Users, Settings, LogOut, Percent, Link2, LayoutDashboard, Info, Menu, MapPin, ChevronDown, Clock, CheckCircle2, XCircle, Layers, Image as ImageIcon, Calendar, MessageSquare, Gift } from 'lucide-react'
+import { Package, Tag, ShoppingCart, Users, Settings, LogOut, Percent, Link2, LayoutDashboard, Info, Menu, MapPin, ChevronDown, Clock, CheckCircle2, XCircle, Layers, Image as ImageIcon, Calendar, MessageSquare, Gift, Sparkles } from 'lucide-react'
 import { useSettings } from '@/context/SettingsContext'
 import { clearToken, getToken, getUser, products } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
@@ -119,6 +119,19 @@ const AdminLayout: React.FC = () => {
                       <a>
                         <Package className="w-5 h-5 shrink-0" />
                         <span className="group-data-[collapsible=icon]:hidden">Products</span>
+                      </a>
+                    </SidebarMenuButton>
+                  )}
+                </NavLink>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <NavLink to="/admin/accessories">
+                  {({ isActive }) => (
+                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
+                      <a>
+                        <Sparkles className="w-5 h-5 shrink-0 text-amber-400" />
+                        <span className="group-data-[collapsible=icon]:hidden font-medium">Accessories</span>
                       </a>
                     </SidebarMenuButton>
                   )}
