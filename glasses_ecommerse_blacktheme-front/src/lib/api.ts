@@ -63,11 +63,13 @@ export const products = {
     vendorId?: string;
     isBulk?: string;
     search?: string;
+    sale?: boolean | string;
   }) {
     const query = new URLSearchParams()
     if (params?.status) query.append('status', params.status)
     if (params?.isBestSeller) query.append('isBestSeller', 'true')
     if (params?.isFeatured) query.append('isFeatured', 'true')
+    if (params?.sale) query.append('sale', 'true')
     if (params?.isBulk) query.append('isBulk', params.isBulk)
     if (params?.sort) query.append('sort', params.sort)
     if (params?.limit) query.append('limit', params.limit.toString())

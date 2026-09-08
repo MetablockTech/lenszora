@@ -19,6 +19,7 @@ const ProductsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedBrand, setSelectedBrand] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('')
+  const [filterSale, setFilterSale] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
@@ -32,7 +33,7 @@ const ProductsPage: React.FC = () => {
   useEffect(() => {
     loadAll()
     setCurrentPage(1)
-  }, [selectedVendor, selectedCategory, selectedBrand, selectedStatus, searchQuery])
+  }, [selectedVendor, selectedCategory, selectedBrand, selectedStatus, filterSale, searchQuery])
 
   useEffect(() => {
     const vendorId = searchParams.get('vendorId')
@@ -61,7 +62,8 @@ const ProductsPage: React.FC = () => {
         category: selectedCategory || undefined,
         brand: selectedBrand || undefined,
         status: selectedStatus || undefined,
-        vendorId: selectedVendor || undefined
+        vendorId: selectedVendor || undefined,
+        sale: filterSale ? 'true' : undefined
       })
 
       let filtered = p
@@ -83,6 +85,7 @@ const ProductsPage: React.FC = () => {
     setSelectedCategory('')
     setSelectedBrand('')
     setSelectedStatus('')
+    setFilterSale(false)
     setSearchQuery('')
     setSearchParams({})
   }
@@ -92,6 +95,15 @@ const ProductsPage: React.FC = () => {
     if (typeof vendorId === 'object' && vendorId.businessName) return vendorId.businessName
     const v = vendorList.find(v => v._id === vendorId || v._id === vendorId?._id)
     return v?.businessName || 'In-House (Admin)'
+  }
+
+  async function handleToggleSale(id: string, currentStatus: boolean) {
+    try {
+      await products.update(id, { isSale: !currentStatus }, token)
+      setList(prev => prev.map(p => p._id === id ? { ...p, isSale: !currentStatus } : p))
+    } catch (err: any) {
+      alert(err.message || 'Failed to update sale status')
+    }
   }
 
   async function handleDelete(id: string) {
@@ -202,10 +214,24 @@ const ProductsPage: React.FC = () => {
             </select>
           </div>
 
+          {/* Quick Sale Filter Button */}
+          <button
+            onClick={() => setFilterSale(!filterSale)}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 self-end ${
+              filterSale
+                ? 'bg-red-600 text-white shadow-md shadow-red-200'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+            }`}
+            title="Toggle Sale Products Filter"
+          >
+            <span>🔥</span>
+            <span>{filterSale ? 'Showing Sale Only' : 'Sale Only'}</span>
+          </button>
+
           {/* Clear Filters */}
           <button
             onClick={handleClearFilters}
-            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all self-end"
             title="Clear Filters"
           >
             <RotateCcw className="w-5 h-5" />
@@ -232,11 +258,24 @@ const ProductsPage: React.FC = () => {
                     className="w-24 h-24 object-cover rounded-lg bg-slate-100"
                   />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-semibold text-slate-900">{p.title}</h3>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
                         {p.status}
                       </span>
+                      {/* 1-Click Sale Toggle */}
+                      <button
+                        onClick={() => handleToggleSale(p._id, !!p.isSale)}
+                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 transition-all ${
+                          p.isSale
+                            ? 'bg-red-500 text-white shadow-sm hover:bg-red-600'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                        }`}
+                        title={p.isSale ? 'Click to remove from SALE' : 'Click to add to SALE'}
+                      >
+                        <span>🔥</span>
+                        <span>{p.isSale ? 'ON SALE' : '+ Add to Sale'}</span>
+                      </button>
                     </div>
                     <p className="text-sm text-slate-500 line-clamp-2">{p.description || 'No description'}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-slate-600">

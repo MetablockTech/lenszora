@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { categories, API_URL } from "@/lib/api";
-import { ChevronRight, Grid } from "lucide-react";
+import { ChevronRight, Grid, Zap } from "lucide-react";
 
 interface Category {
   _id: string;
@@ -12,16 +12,82 @@ interface Category {
   parentId?: any;
 }
 
+const GENDER_CARDS = [
+  {
+    id: 'men',
+    label: 'MEN',
+    sublabel: "Men's Eyewear",
+    href: '/shop?gender=men',
+    badge: null as string | null,
+    bgSlugKey: 'eyeglass',
+    subItems: [
+      { label: 'Eyeglasses', href: '/shop?gender=men&category=eyeglasses' },
+      { label: 'Sunglasses', href: '/shop?gender=men&category=sunglasses' },
+      { label: 'Contact Lenses', href: '/shop?gender=men&category=contact-lenses' },
+    ],
+    gradient: 'from-slate-900/90 to-black/80',
+    btnColor: '#DAAB34', btnText: '#000',
+    btnShadow: 'rgba(218,171,52,0.35)',
+  },
+  {
+    id: 'women',
+    label: 'WOMEN',
+    sublabel: "Women's Eyewear",
+    href: '/shop?gender=women',
+    badge: null as string | null,
+    bgSlugKey: 'sunglass',
+    subItems: [
+      { label: 'Eyeglasses', href: '/shop?gender=women&category=eyeglasses' },
+      { label: 'Sunglasses', href: '/shop?gender=women&category=sunglasses' },
+      { label: 'Contact Lenses', href: '/shop?gender=women&category=contact-lenses' },
+    ],
+    gradient: 'from-slate-900/90 to-black/80',
+    btnColor: '#DAAB34', btnText: '#000',
+    btnShadow: 'rgba(218,171,52,0.35)',
+  },
+  {
+    id: 'kids',
+    label: 'KIDS',
+    sublabel: "Children's Eyewear",
+    href: '/shop?gender=kids',
+    badge: null as string | null,
+    bgSlugKey: 'contact',
+    subItems: [
+      { label: 'Eyeglasses', href: '/shop?gender=kids&category=eyeglasses' },
+      { label: 'Sunglasses', href: '/shop?gender=kids&category=sunglasses' },
+      { label: 'Contact Lenses', href: '/shop?gender=kids&category=contact-lenses' },
+    ],
+    gradient: 'from-slate-900/90 to-black/80',
+    btnColor: '#DAAB34', btnText: '#000',
+    btnShadow: 'rgba(218,171,52,0.35)',
+  },
+  {
+    id: 'sale',
+    label: 'SALE',
+    sublabel: 'Hot Deals & Offers',
+    href: '/shop?sale=true',
+    badge: 'UP TO 50% OFF',
+    bgSlugKey: 'accessor',
+    subItems: [
+      { label: 'Eyeglasses Sale', href: '/shop?sale=true&category=eyeglasses' },
+      { label: 'Sunglasses Sale', href: '/shop?sale=true&category=sunglasses' },
+      { label: 'Accessories Sale', href: '/shop?sale=true&category=accessories' },
+    ],
+    gradient: 'from-red-900/60 to-black/80',
+    btnColor: '#ef4444', btnText: '#fff',
+    btnShadow: 'rgba(239,68,68,0.4)',
+  },
+];
+
 const TopCategories = () => {
-  const [mainCategories, setMainCategories] = useState<Category[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const data = await categories.list();
-        const main = data.filter((cat: Category) => cat.level === 'main' || !cat.level).slice(0, 8);
-        setMainCategories(main);
+        setAllCategories(data || []);
       } catch (error) {
         console.error("Failed to fetch categories:", error);
       } finally {
@@ -30,6 +96,15 @@ const TopCategories = () => {
     };
     fetchCategories();
   }, []);
+
+  const getImage = (slugKey: string): string | null => {
+    const dbCat = allCategories.find(c =>
+      c.slug?.toLowerCase().includes(slugKey) ||
+      c.name?.toLowerCase().includes(slugKey)
+    );
+    if (!dbCat?.image) return null;
+    return dbCat.image.startsWith('http') ? dbCat.image : `${API_URL}${dbCat.image}`;
+  };
 
   if (loading) return null;
 
@@ -43,10 +118,10 @@ const TopCategories = () => {
               <Grid className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2 font-playfair">
-                Top Categories
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-playfair">
+                Shop By Collection
               </h2>
-              <p className="text-xs text-slate-400 font-medium">Browse by specialized eyewear category</p>
+              <p className="text-xs text-slate-400 font-medium">Men · Women · Kids · Sale — find your perfect eyewear</p>
             </div>
           </div>
           <Link
@@ -58,36 +133,88 @@ const TopCategories = () => {
           </Link>
         </div>
 
-        {/* Categories Row */}
-        <div className="flex overflow-x-auto lg:overflow-visible justify-start pb-4 gap-6 scrollbar-hide relative">
-          {mainCategories.map((category) => (
-            <div 
-              key={category._id}
-              className="relative group flex flex-col items-center flex-shrink-0"
-            >
-              <Link 
-                to={`/shop?category=${category.slug}`}
-                className="flex flex-col items-center"
+        {/* 4 Gender Cards Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+          {GENDER_CARDS.map((card) => {
+            const bgImage = getImage(card.bgSlugKey);
+            const isSale = card.id === 'sale';
+
+            return (
+              <div
+                key={card.id}
+                className="group relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800/80 hover:border-amber-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/10 flex flex-col"
+                style={{ minHeight: '280px' }}
               >
-                {/* Category Container - Cover Image */}
-                <div className="w-32 h-32 md:w-44 md:h-44 rounded-3xl bg-slate-900 border border-slate-800/80 group-hover:border-amber-500/50 flex items-center justify-center mb-3 transition-all duration-300 group-hover:bg-slate-800/90 shadow-lg group-hover:shadow-amber-500/10 overflow-hidden group-hover:scale-105 relative">
-                  {category.image ? (
-                    <img 
-                      src={category.image.startsWith('http') ? category.image : `${API_URL}${category.image}`} 
-                      alt={category.name} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                {/* Background image */}
+                <div className="absolute inset-0">
+                  {bgImage ? (
+                    <img
+                      src={bgImage}
+                      alt={card.label}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                   ) : (
-                    <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider p-4 text-center">No Icon</div>
+                    <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900" />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className={`absolute inset-0 bg-gradient-to-t ${card.gradient}`} />
                 </div>
-                <span className="text-xs sm:text-sm font-bold tracking-wide text-slate-300 group-hover:text-amber-400 transition-colors text-center max-w-[130px]">
-                  {category.name}
-                </span>
-              </Link>
-            </div>
-          ))}
+
+                {/* Sale badge */}
+                {card.badge && (
+                  <div className="absolute top-3 right-3 z-10">
+                    <span className="flex items-center gap-1 bg-red-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
+                      <Zap className="w-3 h-3 fill-white" />
+                      {card.badge}
+                    </span>
+                  </div>
+                )}
+
+                {/* Content */}
+                <div className="relative z-10 flex flex-col justify-end h-full p-5 lg:p-6">
+                  <div className="mb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-0.5" style={{ color: card.btnColor }}>
+                      {card.sublabel}
+                    </p>
+                    <h3
+                      className="text-3xl lg:text-4xl font-black tracking-tight text-white font-playfair leading-none"
+                      style={{ textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}
+                    >
+                      {card.label}
+                    </h3>
+                  </div>
+
+                  {/* Sub-links */}
+                  <div className="flex flex-col gap-1 mb-4">
+                    {card.subItems.map((sub) => (
+                      <a
+                        key={sub.href}
+                        href={sub.href}
+                        className="text-[11px] font-semibold text-white/60 hover:text-white transition-colors flex items-center gap-1.5 group/link"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="w-1 h-1 rounded-full bg-white/30 group-hover/link:bg-amber-400 transition-colors shrink-0" />
+                        {sub.label}
+                      </a>
+                    ))}
+                  </div>
+
+                  {/* CTA Button */}
+                  <a
+                    href={card.href}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all duration-200 self-start hover:brightness-110"
+                    style={{
+                      background: card.btnColor,
+                      color: card.btnText,
+                      boxShadow: `0 4px 12px ${card.btnShadow}`,
+                    }}
+                  >
+                    {isSale ? '🔥 Shop Sale' : `Shop ${card.label}`}
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -95,3 +222,4 @@ const TopCategories = () => {
 };
 
 export default TopCategories;
+

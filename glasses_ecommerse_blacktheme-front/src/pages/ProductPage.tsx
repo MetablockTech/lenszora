@@ -732,7 +732,14 @@ const ProductPage = () => {
                 <Zap style={{ width: 17, height: 17, fill: '#000' }} /> BUY NOW
               </button>
               <button
-                onClick={() => handleAddToCart()}
+                onClick={() => {
+                  if (allowLensSelection && !selectedLens) {
+                    setIsBuyNowFlow(false);
+                    setShowLensModal(true);
+                  } else {
+                    handleAddToCart();
+                  }
+                }}
                 disabled={displayStock <= 0}
                 style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '14px 0', fontFamily: "'DM Sans',sans-serif", fontSize: '.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: displayStock <= 0 ? 0.4 : 1 }}
               >
@@ -926,7 +933,11 @@ const ProductPage = () => {
           setShowLensModal(false);
           if (isBuyNowFlow) {
             setIsBuyNowFlow(false);
-            navigate('/checkout');
+            // Use setTimeout to let LensSelectionModal's window.history.go(-depth) settle
+            // before navigating, otherwise history reversal cancels checkout navigation
+            setTimeout(() => {
+              navigate('/checkout');
+            }, 150);
           }
         }}
         productTitle={product.title}

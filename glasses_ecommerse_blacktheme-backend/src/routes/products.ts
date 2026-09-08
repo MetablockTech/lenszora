@@ -26,11 +26,21 @@ router.get('/', async (req, res) => {
       status, isBestSeller, isFeatured, sort, limit,
       category, brand, minPrice, maxPrice,
       gender, frameType, frameShape, frameMaterial, weightGroup, faceShape,
-      vendorId, isBulk, search
+      vendorId, isBulk, search, sale
     } = req.query
 
     const filter: any = {}
     const andConditions: any[] = []
+
+    // Sale filter (products on sale or with active discount)
+    if (sale === 'true') {
+      andConditions.push({
+        $or: [
+          { discountAmount: { $gt: 0 } },
+          { isSale: true }
+        ]
+      })
+    }
 
     if (vendorId) filter.vendorId = vendorId
 
@@ -307,7 +317,7 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
     productType, sku, unit, searchTags, minOrderQuantity,
     discountAmount, discountType, shippingCost, shippingCostMultiply,
     status, colors, attributes, variants, hasVariants, returnPolicy,
-    vendorId, eyewearDetails, lensSettings, isBulk
+    vendorId, eyewearDetails, lensSettings, isBulk, isSale
   } = req.body
 
   if (!title || price == null || !sku || !unit) {
@@ -359,7 +369,8 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
       returnPolicy: returnPolicy || undefined,
       eyewearDetails: eyewearDetails || undefined,
       lensSettings: lensSettings || undefined,
-      isBulk: isBulk === true || isBulk === 'true'
+      isBulk: isBulk === true || isBulk === 'true',
+      isSale: isSale === true || isSale === 'true'
     })
     await product.save()
     res.json(product)

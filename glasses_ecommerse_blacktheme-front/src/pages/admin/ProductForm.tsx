@@ -32,6 +32,7 @@ const productSchema = z.object({
     shippingCostMultiply: z.boolean().default(false),
     status: z.enum(['active', 'inactive']).default('active'),
     isFeatured: z.boolean().default(false),
+    isSale: z.boolean().default(false),
     isBulk: z.boolean().default(false),
     colors: z.array(z.string()).default([]),
     attributes: z.array(z.object({
@@ -169,6 +170,7 @@ const ProductForm = () => {
             shippingCostMultiply: false,
             status: 'active',
             isFeatured: false,
+            isSale: false,
             isBulk: false,
             colors: [],
             attributes: [],
@@ -855,7 +857,7 @@ const ProductForm = () => {
                             )}
                         </div>
 
-                        <div className="flex gap-8 p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                        <div className="flex flex-wrap gap-8 p-4 bg-slate-800/30 rounded-lg border border-slate-700">
 
                             <FormField
                                 control={form.control}
@@ -870,12 +872,32 @@ const ProductForm = () => {
                                         </FormControl>
                                         <div className="space-y-1 leading-none">
                                             <FormLabel className="text-slate-200 cursor-pointer">Featured Product</FormLabel>
+                                            <p className="text-[11px] text-slate-400">Show on homepage featured section</p>
                                         </div>
                                     </FormItem>
                                 )}
                             />
 
-
+                            <FormField
+                                control={form.control}
+                                name="isSale"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                        <div className="space-y-1 leading-none">
+                                            <FormLabel className="text-red-400 font-bold cursor-pointer flex items-center gap-1">
+                                                🔥 Mark as On Sale / Hot Deal
+                                            </FormLabel>
+                                            <p className="text-[11px] text-slate-400">Show in the SALE section on Homepage & Header</p>
+                                        </div>
+                                    </FormItem>
+                                )}
+                            />
 
                         </div>
 

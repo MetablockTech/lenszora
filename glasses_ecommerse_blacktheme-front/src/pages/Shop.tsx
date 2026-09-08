@@ -18,6 +18,9 @@ interface Product {
   title: string;
   price: number;
   salePrice?: number;
+  discountAmount?: number;
+  discountType?: string;
+  isSale?: boolean;
   description: string;
   images: string[];
   category: any;
@@ -70,8 +73,10 @@ const Shop = () => {
   const urlFaceShape = searchParams.get('faceShape') || "";
   const urlSort = searchParams.get('sortBy') || "newest";
   const urlVendor = searchParams.get('vendorId') || "";
+  const urlSale = searchParams.get('sale') === 'true';
 
   const [searchQuery, setSearchQuery] = useState(urlSearch);
+  const [onlySale, setOnlySale] = useState(urlSale);
   const [loading, setLoading] = useState(true);
   const [productList, setProductList] = useState<Product[]>([]);
   const [categoryList, setCategoryList] = useState<Category[]>([]);
@@ -133,6 +138,7 @@ const Shop = () => {
         faceShape: faceShapeToFilter,
         vendorId: selectedVendor || undefined,
         search: searchToFilter,
+        sale: onlySale ? 'true' : undefined,
         sort: sortBy === 'price-asc' ? 'price:asc' : sortBy === 'price-desc' ? 'price:desc' : 'createdAt:desc'
       });
 
@@ -200,6 +206,7 @@ const Shop = () => {
     sortBy,
     searchQuery,
     selectedVendor,
+    onlySale,
     searchParams
   ]);
 
@@ -310,6 +317,8 @@ const Shop = () => {
       if (sortParam) setSortBy(sortParam);
       if (searchParam) setSearchQuery(searchParam);
       if (vendorParam) setSelectedVendor(vendorParam);
+      const saleParam = searchParams.get('sale');
+      setOnlySale(saleParam === 'true');
     }
   }, [categoryList, brandList, searchParams]);
 
@@ -410,6 +419,9 @@ const Shop = () => {
     // Add vendor param
     if (selectedVendor) params.set('vendorId', selectedVendor);
 
+    // Add sale param
+    if (onlySale) params.set('sale', 'true');
+
     // Update URL without page reload
     const newUrl = params.toString() ? `/shop?${params.toString()}` : '/shop';
     navigate(newUrl, { replace: true });
@@ -420,7 +432,7 @@ const Shop = () => {
     if (categoryList.length > 0 && brandList.length > 0) {
       updateURLParams();
     }
-  }, [selectedMainCategory, selectedSubCategory, selectedSubSubCategory, selectedBrand, selectedGender, selectedFrameType, selectedFrameShape, selectedFrameMaterial, selectedWeightGroup, selectedFaceShape, sortBy, searchQuery, selectedVendor]);
+  }, [selectedMainCategory, selectedSubCategory, selectedSubSubCategory, selectedBrand, selectedGender, selectedFrameType, selectedFrameShape, selectedFrameMaterial, selectedWeightGroup, selectedFaceShape, sortBy, searchQuery, selectedVendor, onlySale]);
 
   const rawMainCategories = categoryList.filter((c) => !c.parentId);
   const hasAccessoryInCat = rawMainCategories.some(c => c.slug?.toLowerCase().includes("accessor") || c.name?.toLowerCase().includes("accessor"));
@@ -447,6 +459,25 @@ const Shop = () => {
 
     return (
       <div className="space-y-4">
+        {/* Sale / Hot Deals Toggle */}
+        <div className="border border-red-500/30 bg-gradient-to-r from-red-950/40 to-slate-900/40 rounded-xl p-3.5 shadow-lg shadow-red-950/20 hover:border-red-500/50 transition-colors">
+          <label className="flex items-center justify-between cursor-pointer select-none">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">🔥</span>
+              <div>
+                <p className="text-xs font-black text-white uppercase tracking-wider">Sale & Deals Only</p>
+                <p className="text-[10px] text-red-400 font-medium">Show items with active discounts</p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={onlySale}
+              onChange={(e) => setOnlySale(e.target.checked)}
+              className="w-4 h-4 accent-red-500 rounded cursor-pointer"
+            />
+          </label>
+        </div>
+
         {/* Category Filter */}
         <div className="border border-primary/20 rounded-lg p-4">
           <h3 className="font-semibold text-foreground mb-3">Categories</h3>
@@ -824,6 +855,9 @@ const Shop = () => {
           >
             <h1 className="text-xl md:text-2xl font-playfair font-bold text-foreground mb-1 uppercase tracking-tight flex items-center gap-2">
               {(() => {
+                if (onlySale) {
+                  return "🔥 Special Sale & Hot Deals";
+                }
                 const catParam = searchParams.get('category')?.toLowerCase() || '';
                 const searchParam = searchParams.get('search')?.toLowerCase() || '';
                 if (catParam.includes('accessor') || selectedMainCategory === 'accessories') {
@@ -844,6 +878,9 @@ const Shop = () => {
             </h1>
             <p className="text-[11px] text-amber-400 font-bold uppercase tracking-widest opacity-90">
               {(() => {
+                if (onlySale) {
+                  return "Exclusive discounts & promotional pricing on top eyewear styles";
+                }
                 const catParam = searchParams.get('category')?.toLowerCase() || '';
                 if (catParam.includes('accessor') || selectedMainCategory === 'accessories') {
                   return "Premium cleaning sprays, microfiber cloths, hard cases & care kits";
@@ -1053,6 +1090,25 @@ const Shop = () => {
                         >
                           {/* Product Image Area */}
                           <div className="relative aspect-[16/10] overflow-hidden bg-transparent mb-3 px-4">
+                            {/* Sale / Discount Badge */}
+                            {(() => {
+                              const calc = calculateProductDiscount(product);
+                              if (calc.hasDiscount) {
+                                return (
+                                  <div className="absolute top-1 left-1 z-20 bg-red-600/90 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                                    <span>🔥</span> {calc.discountLabel}
+                                  </div>
+                                );
+                              } else if ((product as any).isSale) {
+                                return (
+                                  <div className="absolute top-1 left-1 z-20 bg-red-600/90 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                                    <span>🔥</span> SALE
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+
                             {/* Wishlist Button */}
                             <button
                               onClick={(e) => {

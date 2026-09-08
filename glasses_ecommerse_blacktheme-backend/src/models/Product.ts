@@ -45,6 +45,7 @@ export interface IProduct extends Document {
   }
   isBestSeller: boolean
   isFeatured: boolean
+  isSale?: boolean
   isBulk: boolean // Targeted exclusively for vendors
   totalOrders: number
   wishlistCount: number
@@ -174,6 +175,7 @@ const ProductSchema = new Schema<IProduct>({
   },
   isBestSeller: { type: Boolean, default: false },
   isFeatured: { type: Boolean, default: false },
+  isSale: { type: Boolean, default: false },
   isBulk: { type: Boolean, default: false },
   totalOrders: { type: Number, default: 0 },
   wishlistCount: { type: Number, default: 0 },
