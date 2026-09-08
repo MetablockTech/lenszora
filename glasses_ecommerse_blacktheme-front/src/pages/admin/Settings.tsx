@@ -41,6 +41,67 @@ const SettingsPage: React.FC = () => {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
+function stripHtmlToCleanText(html: string): string {
+  if (!html) return '';
+  if (!/<[a-z][\s\S]*>/i.test(html)) return html;
+
+  let text = html;
+  text = text.replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, '\n\n$1\n');
+  text = text.replace(/<p[^>]*>(.*?)<\/p>/gi, '\n$1\n');
+  text = text.replace(/<li[^>]*>(.*?)<\/li>/gi, '\n• $1');
+  text = text.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '$1');
+  text = text.replace(/<a[^>]*>(.*?)<\/a>/gi, '$1');
+  text = text.replace(/<[^>]+>/g, '');
+  text = text.replace(/&nbsp;/g, ' ');
+  text = text.replace(/\n\s*\n\s*\n/g, '\n\n');
+  return text.trim();
+}
+
+const DEFAULT_PRIVACY_POLICY = `Last Updated: September 2026
+
+1. Information We Collect
+At LensZora, we prioritize your privacy and are committed to protecting your personal information. When you use our platform, we collect:
+• Personal Information: Full name, email address, phone number, and delivery addresses.
+• Optical & Eye Power Details: Prescription values (SPH, CYL, AXIS, ADD, PD) and uploaded prescription documents/photos.
+• Payment Details: Encrypted payment metadata (transactions processed securely via PCI-DSS compliant payment gateways).
+• Usage & Device Data: IP address, browser type, and interactions with our store.
+
+2. How We Use Your Data
+Your data enables us to provide a seamless optical shopping experience, including:
+• Custom crafting and quality testing your prescription optical lenses.
+• Processing payments and fulfilling orders accurately.
+• Providing real-time order updates via SMS, WhatsApp, and Email.
+• Continuous optimization of user interface and store recommendations.
+
+3. Prescription Data Security
+All uploaded eye test prescriptions and manual power entries are strictly accessible only by authorized optical technicians and stored with AES-256 encryption.
+
+4. Third-Party Services
+We share necessary order details only with verified logistics partners (couriers) and certified payment processors. We NEVER sell or rent your personal information to third-party advertisers.
+
+5. Contact Us Regarding Privacy
+If you have any questions or data requests, contact our privacy team at support@lenszora.com.`;
+
+const DEFAULT_TERMS = `Last Updated: September 2026
+
+1. Acceptance of Terms
+By accessing and placing an order on LensZora, you agree to comply with these Terms & Conditions. Please read them carefully before making a purchase.
+
+2. Optical Prescription Accuracy
+Customers ordering prescription lenses are responsible for providing valid and accurate eye test values. LensZora will manufacture lenses precisely according to the numerical values or prescription images submitted by the customer.
+
+3. Pricing & Payments
+All product prices on LensZora are displayed inclusive of applicable taxes unless specified otherwise. We reserve the right to modify prices or cancel orders in case of typographical pricing errors.
+
+4. Shipping & Delivery
+Orders are dispatched after optical fitting and quality verification. Delivery timelines may vary based on pin code accessibility and prescription customization requirements.
+
+5. Returns & Warranty
+Frame damage and lens manufacturing defects are covered under LensZora warranty policies. Returns must meet our return criteria as detailed in the Return Policy.
+
+6. Customer Support
+For any queries, contact our support desk at support@lenszora.com.`;
+
   useEffect(() => {
     loadSettings()
   }, [])
@@ -71,9 +132,13 @@ const SettingsPage: React.FC = () => {
       setContactInfo(contact.value || { address: '', phone: '', email: '' })
       setSocialLinks(social.value || [])
       setManualPaymentSettings(payment.value || { enabled: false, razorpayEnabled: true, upiId: '', qrCode: '', bankDetails: '', instructions: '' })
+      
+      const cleanPrivacy = stripHtmlToCleanText(privacy.value || '')
+      const cleanTerms = stripHtmlToCleanText(terms.value || '')
+
       setLegalSettings({
-        privacyPolicy: privacy.value || '',
-        termsAndConditions: terms.value || ''
+        privacyPolicy: (cleanPrivacy && cleanPrivacy.length > 0) ? cleanPrivacy : DEFAULT_PRIVACY_POLICY,
+        termsAndConditions: (cleanTerms && cleanTerms.length > 0) ? cleanTerms : DEFAULT_TERMS
       })
     } catch (error) {
       console.error('Failed to load settings:', error)
@@ -637,41 +702,94 @@ const SettingsPage: React.FC = () => {
 
         <TabsContent value="legal">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-xl font-bold">Legal & Policy Pages</CardTitle>
-              <CardDescription>
-                Customize the Privacy Policy and Terms & Conditions content displayed on the website. Leave blank to display default formatted content.
-              </CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl font-bold">Legal & Policy Pages</CardTitle>
+                <CardDescription className="mt-1">
+                  Edit and customize the Privacy Policy and Terms & Conditions content displayed on your store.
+                </CardDescription>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors flex items-center gap-1"
+                >
+                  Preview Privacy Page ↗
+                </a>
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors flex items-center gap-1"
+                >
+                  Preview Terms Page ↗
+                </a>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="privacyPolicy" className="font-semibold text-slate-800 text-sm">Privacy Policy Content</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="privacyPolicy" className="font-bold text-slate-900 text-sm">
+                    Privacy Policy Content (HTML / Text)
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLegalSettings(prev => ({ ...prev, privacyPolicy: DEFAULT_PRIVACY_POLICY }))
+                      toast.info('Privacy Policy form reset to default template')
+                    }}
+                    className="text-xs text-slate-600 hover:text-slate-900 h-7 px-2"
+                  >
+                    Reset Default Template
+                  </Button>
+                </div>
                 <textarea
                   id="privacyPolicy"
-                  rows={10}
+                  rows={12}
                   value={legalSettings.privacyPolicy}
                   onChange={(e) => setLegalSettings({ ...legalSettings, privacyPolicy: e.target.value })}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono text-slate-800"
+                  className="flex w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 font-mono text-slate-800 leading-relaxed shadow-sm"
                   placeholder="Enter HTML or plain text content for Privacy Policy page..."
                 />
-                <p className="text-xs text-muted-foreground">HTML tags (&lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;) are supported for rich formatting.</p>
+                <p className="text-xs text-slate-500">HTML tags (&lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;) are supported for rich formatting.</p>
               </div>
 
-              <div className="space-y-2 pt-4 border-t border-slate-200">
-                <Label htmlFor="termsAndConditions" className="font-semibold text-slate-800 text-sm">Terms & Conditions Content</Label>
+              <div className="space-y-2 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="termsAndConditions" className="font-bold text-slate-900 text-sm">
+                    Terms & Conditions Content (HTML / Text)
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLegalSettings(prev => ({ ...prev, termsAndConditions: DEFAULT_TERMS }))
+                      toast.info('Terms & Conditions form reset to default template')
+                    }}
+                    className="text-xs text-slate-600 hover:text-slate-900 h-7 px-2"
+                  >
+                    Reset Default Template
+                  </Button>
+                </div>
                 <textarea
                   id="termsAndConditions"
-                  rows={10}
+                  rows={12}
                   value={legalSettings.termsAndConditions}
                   onChange={(e) => setLegalSettings({ ...legalSettings, termsAndConditions: e.target.value })}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono text-slate-800"
+                  className="flex w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 font-mono text-slate-800 leading-relaxed shadow-sm"
                   placeholder="Enter HTML or plain text content for Terms & Conditions page..."
                 />
-                <p className="text-xs text-muted-foreground">HTML tags (&lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;) are supported for rich formatting.</p>
+                <p className="text-xs text-slate-500">HTML tags (&lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;) are supported for rich formatting.</p>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveLegal} disabled={saving} className="bg-[#DAAB34] hover:bg-[#c99a2b] text-black font-bold">
+            <CardFooter className="flex justify-between border-t border-slate-100 pt-4">
+              <span className="text-xs text-slate-500">Changes will reflect instantly on live website upon saving.</span>
+              <Button onClick={handleSaveLegal} disabled={saving} className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold shadow-md">
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <Save className="mr-2 h-4 w-4" /> Save Legal Policies
               </Button>
