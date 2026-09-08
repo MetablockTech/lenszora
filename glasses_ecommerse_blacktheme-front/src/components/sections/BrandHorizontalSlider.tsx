@@ -48,12 +48,29 @@ const sampleHorizontalImages = [
 const BrandHorizontalSlider = () => {
   const [slides, setSlides] = useState<HorizontalSlide[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     { loop: true, align: "center" },
     [Autoplay({ delay: 4500, stopOnInteraction: false })]
   );
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi, onSelect]);
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -121,11 +138,11 @@ const BrandHorizontalSlider = () => {
   }
 
   if (loading) {
-    return <div className="w-full h-[400px] bg-slate-900 animate-pulse my-6"></div>;
+    return <div className="w-full h-[320px] sm:h-[400px] bg-slate-900 animate-pulse my-4 sm:my-6"></div>;
   }
 
   return (
-    <section className="w-full bg-black border-y border-white/10 relative overflow-hidden py-0 my-6">
+    <section className="w-full bg-black border-y border-white/10 relative overflow-hidden py-0 my-4 sm:my-8">
       <div className="w-full relative group">
         {/* Full-width Embla Carousel Viewport */}
         <div className="embla overflow-hidden w-full" ref={emblaRef}>
@@ -133,44 +150,45 @@ const BrandHorizontalSlider = () => {
             {slides.map((slide) => (
               <div
                 key={slide._id}
-                className="embla__slide flex-[0_0_100%] min-w-0 relative aspect-[16/8] sm:h-[380px] md:h-[480px] lg:h-[520px] group/slide"
+                className="embla__slide flex-[0_0_100%] min-w-0 relative h-[340px] sm:h-[400px] md:h-[480px] lg:h-[540px] group/slide"
               >
                 {/* Full Width Edge-to-Edge Background Banner Image */}
                 <img
                   src={getImageUrl(slide.image)}
                   alt={slide.brandName}
-                  className="absolute inset-0 w-full h-full object-contain sm:object-cover object-center bg-black/80 sm:bg-transparent transition-transform duration-700 group-hover/slide:scale-105"
+                  className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover/slide:scale-105"
+                  loading="lazy"
                 />
 
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/50 to-transparent flex items-center px-6 sm:px-14 md:px-20">
-                  <div className="max-w-xl space-y-3 sm:space-y-4">
+                {/* Gradient Overlay: mobile bottom-gradient for clear text + desktop left-to-right gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20 sm:bg-gradient-to-r sm:from-black/95 sm:via-black/60 sm:to-transparent flex items-end sm:items-center px-5 sm:px-14 md:px-20 pb-10 sm:pb-0">
+                  <div className="max-w-xl space-y-2.5 sm:space-y-4">
                     
                     {/* Brand Header */}
                     <div>
-                      <span className="text-[10px] sm:text-xs font-bold text-amber-400 uppercase tracking-[3px] block mb-1">
-                        Official Brand Showcase
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1 sm:mb-2">
+                        ★ Official Brand Showcase
                       </span>
-                      <h2 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase text-white tracking-wider font-playfair drop-shadow-lg leading-tight">
+                      <h2 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black uppercase text-white tracking-wide font-playfair drop-shadow-lg leading-tight">
                         {slide.brandName}
                       </h2>
                     </div>
 
                     {/* Tagline */}
                     {slide.tagline && (
-                      <p className="text-xs sm:text-sm md:text-base font-bold uppercase tracking-widest text-slate-300 drop-shadow">
+                      <p className="text-[11px] sm:text-sm md:text-base font-semibold uppercase tracking-wider text-slate-300 drop-shadow line-clamp-2 max-w-sm sm:max-w-lg">
                         {slide.tagline}
                       </p>
                     )}
 
                     {/* Shop Now CTA Button */}
-                    <div className="pt-2 sm:pt-4">
+                    <div className="pt-1.5 sm:pt-4">
                       <button
                         onClick={() => navigate(slide.shopLink)}
-                        className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm md:text-base uppercase tracking-wider px-7 sm:px-9 py-3.5 rounded-full shadow-2xl hover:shadow-amber-500/30 transition-all transform hover:scale-105 flex items-center gap-2.5"
+                        className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm md:text-base uppercase tracking-wider px-5 sm:px-8 py-2.5 sm:py-3.5 rounded-full shadow-2xl hover:shadow-amber-500/30 transition-all transform active:scale-95 flex items-center gap-2"
                       >
-                        <span>Shop {slide.brandName} Now</span>
-                        <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
+                        <span>Shop {slide.brandName}</span>
+                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   </div>
@@ -180,23 +198,39 @@ const BrandHorizontalSlider = () => {
           </div>
         </div>
 
-        {/* Navigation Arrows on Screen Edges */}
+        {/* Navigation Arrows on Screen Edges (Hidden on mobile to avoid blocking content, visible on tablet/desktop) */}
         {slides.length > 1 && (
           <>
             <button
               onClick={scrollPrev}
-              className="absolute left-6 top-1/2 -translate-y-1/2 p-3.5 rounded-full bg-black/60 hover:bg-amber-500 text-white hover:text-black border border-white/20 transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md shadow-2xl z-10"
+              className="hidden sm:flex absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-amber-500 text-white hover:text-black border border-white/20 transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md shadow-2xl z-10 items-center justify-center"
               aria-label="Previous horizontal slide"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
             <button
               onClick={scrollNext}
-              className="absolute right-6 top-1/2 -translate-y-1/2 p-3.5 rounded-full bg-black/60 hover:bg-amber-500 text-white hover:text-black border border-white/20 transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md shadow-2xl z-10"
+              className="hidden sm:flex absolute right-4 lg:right-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-amber-500 text-white hover:text-black border border-white/20 transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md shadow-2xl z-10 items-center justify-center"
               aria-label="Next horizontal slide"
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
+
+            {/* Mobile Pagination Indicator Dots */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+              {slides.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => emblaApi?.scrollTo(idx)}
+                  className={`transition-all duration-300 rounded-full ${
+                    selectedIndex === idx
+                      ? "w-6 h-1.5 bg-amber-400"
+                      : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"
+                  }`}
+                  aria-label={`Slide ${idx + 1}`}
+                />
+              ))}
+            </div>
           </>
         )}
       </div>

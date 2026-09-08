@@ -45,6 +45,7 @@ import NavigationManagerPage from "./pages/admin/NavigationManager";
 import ReferralManagerPage from "./pages/admin/ReferralManager";
 import GalleryPage from "./pages/admin/Gallery";
 import AdminSliders from "./pages/admin/AdminSliders";
+import HomepageCategoriesPage from "./pages/admin/HomepageCategories";
 import AdminStores from "./pages/admin/Stores";
 import AppointmentsPage from "./pages/admin/Appointments";
 import StoreLocator from "./pages/StoreLocator";
@@ -152,6 +153,7 @@ const AppContent = () => {
         <Route path="brands" element={<BrandsAdminPage />} />
         <Route path="orders" element={<OrdersPage />} />
         <Route path="sliders" element={<AdminSliders />} />
+        <Route path="homepage-categories" element={<HomepageCategoriesPage />} />
 
         <Route path="social-links" element={<SocialLinksPage />} />
         <Route path="contact-info" element={<ContactInfoPage />} />

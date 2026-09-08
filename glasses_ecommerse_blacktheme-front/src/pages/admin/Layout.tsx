@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Package, Tag, ShoppingCart, Users, Settings, LogOut, Percent, Link2, LayoutDashboard, Info, Menu, MapPin, ChevronDown, Clock, CheckCircle2, XCircle, Layers, Image as ImageIcon, Calendar, MessageSquare, Gift, Sparkles, Eye, UserCheck, Heart } from 'lucide-react'
+import { Package, Tag, ShoppingCart, Users, Settings, LogOut, Percent, Link2, LayoutDashboard, Info, Menu, MapPin, ChevronDown, Clock, CheckCircle2, XCircle, Layers, Image as ImageIcon, Calendar, MessageSquare, Gift, Sparkles, Eye, UserCheck, Heart, LayoutGrid } from 'lucide-react'
 import { useSettings } from '@/context/SettingsContext'
 import { clearToken, getToken, getUser, products } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
@@ -180,8 +180,21 @@ const AdminLayout: React.FC = () => {
                   {({ isActive }) => (
                     <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
                       <a>
-                        <Layers className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Sliders</span>
+                        <Layers className="w-5 h-5 shrink-0 text-amber-400" />
+                        <span className="group-data-[collapsible=icon]:hidden">Banners & Popups</span>
+                      </a>
+                    </SidebarMenuButton>
+                  )}
+                </NavLink>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <NavLink to="/admin/homepage-categories">
+                  {({ isActive }) => (
+                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
+                      <a>
+                        <LayoutGrid className="w-5 h-5 shrink-0 text-amber-400" />
+                        <span className="group-data-[collapsible=icon]:hidden font-medium">Homepage Categories</span>
                       </a>
                     </SidebarMenuButton>
                   )}

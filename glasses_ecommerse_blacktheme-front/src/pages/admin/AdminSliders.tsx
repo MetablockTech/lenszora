@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Edit2, Save, X, ImageIcon, UploadCloud } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, ImageIcon, UploadCloud, Sparkles } from "lucide-react";
 import { sliders, products, getToken, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,8 @@ interface Slider {
   resourceId?: string;
   buttonText?: string;
   buttonLink?: string;
+  targetPage?: string;
+  delaySeconds?: number;
   order: number;
   isActive: boolean;
 }
@@ -64,6 +66,10 @@ const AdminSliders = () => {
     image: "", 
     title: "",
     subtitle: "",
+    buttonText: "SHOP NOW",
+    buttonLink: "/shop",
+    targetPage: "/",
+    delaySeconds: 1,
     isActive: true,
     order: 0
   };
@@ -163,7 +169,26 @@ const AdminSliders = () => {
   };
 
   const handleAddNew = () => {
-    setEditingSlide({ ...defaultSlide, order: slides.length });
+    setEditingSlide(defaultSlide);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleAddNewPopup = () => {
+    setEditingSlide({
+      bannerType: "Popup Banner",
+      resourceType: "Custom",
+      image: "",
+      title: "",
+      subtitle: "",
+      buttonText: "SHOP NOW",
+      buttonLink: "/shop",
+      targetPage: "/",
+      delaySeconds: 1,
+      isActive: true,
+      order: 0
+    });
     setSelectedFile(null);
     setPreviewUrl(null);
     setIsDialogOpen(true);
@@ -217,6 +242,9 @@ const AdminSliders = () => {
                 </SelectContent>
               </Select>
               
+              <Button onClick={handleAddNewPopup} className="bg-amber-600 hover:bg-amber-700 text-white font-medium whitespace-nowrap shadow-sm shadow-amber-900/40">
+                <Sparkles className="mr-2 h-4 w-4" /> + Create Ad Popup
+              </Button>
               <Button onClick={handleAddNew} className="bg-blue-600 hover:bg-blue-700 text-white font-medium whitespace-nowrap">
                 <Plus className="mr-2 h-4 w-4" /> Add Banner
               </Button>
@@ -230,8 +258,9 @@ const AdminSliders = () => {
                   <TableHead className="text-slate-400 font-semibold h-12">SL</TableHead>
                   <TableHead className="text-slate-400 font-semibold h-12">Image</TableHead>
                   <TableHead className="text-slate-400 font-semibold h-12">Banner Type</TableHead>
-                  <TableHead className="text-slate-400 font-semibold h-12">Resource Type</TableHead>
-                  <TableHead className="text-slate-400 font-semibold h-12">Published</TableHead>
+                  <TableHead className="text-slate-400 font-semibold h-12">Occurs On / Target</TableHead>
+                  <TableHead className="text-slate-400 font-semibold h-12">Redirect Link</TableHead>
+                  <TableHead className="text-slate-400 font-semibold h-12">Status</TableHead>
                   <TableHead className="text-slate-400 font-semibold h-12 text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -261,10 +290,21 @@ const AdminSliders = () => {
                       </TableCell>
                       <TableCell className="text-slate-300 py-4 font-medium">
                         <Badge variant="outline" className={slide.bannerType === 'Popup Banner' ? 'border-amber-500/50 text-amber-400 bg-amber-500/10' : 'border-white/20 text-slate-300'}>
-                          {slide.bannerType}
+                          {slide.bannerType === 'Popup Banner' ? '🔥 Ad Popup' : slide.bannerType}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-300 py-4">{slide.resourceType}</TableCell>
+                      <TableCell className="text-slate-300 py-4">
+                        {slide.bannerType === 'Popup Banner' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-semibold">
+                            🎯 {slide.targetPage === '/' ? 'Home Page (/)' : slide.targetPage === '*' ? 'All Pages (*)' : slide.targetPage || 'Home Page (/)'}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">{slide.resourceType || 'Custom'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-slate-300 py-4 text-xs font-mono max-w-[150px] truncate" title={slide.buttonLink}>
+                        {slide.buttonLink || '/shop'}
+                      </TableCell>
                       <TableCell className="py-4">
                         <Switch 
                           checked={slide.isActive} 
@@ -367,15 +407,89 @@ const AdminSliders = () => {
                   </Select>
                 </div>
 
+                {/* Advertisement Popup Target Page & Settings */}
+                {editingSlide.bannerType === 'Popup Banner' && (
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                      <Sparkles className="w-4 h-4" />
+                      <span>Ad Popup Trigger & Target Page</span>
+                    </div>
+
+                    {/* Target Page Selection */}
+                    <div className="space-y-2">
+                      <Label className="text-white text-xs font-bold uppercase tracking-wider">
+                        Occurs On Page <span className="text-red-500">*</span>
+                      </Label>
+                      
+                      {/* Quick Select Buttons */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { label: '🏠 Home Page (/)', value: '/' },
+                          { label: '🛍️ Shop (/shop)', value: '/shop' },
+                          { label: '👓 Products (/product)', value: '/product' },
+                          { label: '🛒 Checkout (/checkout)', value: '/checkout' },
+                          { label: '🌐 All Pages (*)', value: '*' },
+                        ].map(item => (
+                          <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => setEditingSlide(prev => ({ ...prev, targetPage: item.value }))}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                              editingSlide.targetPage === item.value
+                                ? 'bg-amber-500 text-black shadow-sm font-bold'
+                                : 'bg-black/60 text-slate-300 hover:bg-black border border-white/10 hover:border-amber-500/40'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <Input 
+                        placeholder="e.g. / or /shop or /brands or *" 
+                        className="bg-black border-white/20 h-9 text-xs font-mono"
+                        value={editingSlide.targetPage || "/"}
+                        onChange={(e) => setEditingSlide(prev => ({ ...prev, targetPage: e.target.value }))}
+                      />
+                      <p className="text-[11px] text-slate-400">
+                        Popup will trigger when customer lands on this page route. (e.g. <code>/</code> for Home, <code>/shop</code> for Shop, or <code>*</code> for all pages).
+                      </p>
+                    </div>
+
+                    {/* Popup Delay in Seconds */}
+                    <div className="space-y-1.5">
+                      <Label className="text-white text-xs font-semibold">
+                        Popup Delay (Seconds before opening)
+                      </Label>
+                      <Input 
+                        type="number"
+                        min="0"
+                        max="30"
+                        step="0.5"
+                        className="bg-black border-white/20 h-9 text-xs"
+                        value={editingSlide.delaySeconds ?? 1}
+                        onChange={(e) => setEditingSlide(prev => ({ ...prev, delaySeconds: parseFloat(e.target.value) || 0 }))}
+                      />
+                      <p className="text-[11px] text-slate-400">
+                        How many seconds to wait after page loads before the popup appears (default: 1 sec).
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-4 duration-300">
-                  <Label className="text-slate-300 text-sm font-semibold">Banner Redirect URL / Link</Label>
+                  <Label className="text-slate-300 text-sm font-semibold">
+                    {editingSlide.bannerType === 'Popup Banner' ? 'Popup Click Redirect URL / Page Link' : 'Banner Redirect URL / Link'}
+                  </Label>
                   <Input 
-                    placeholder="e.g. /shop?category=sunglasses or /store-locator" 
+                    placeholder="e.g. /shop?category=sunglasses, /sale, or /store-locator" 
                     className="bg-black border-white/20 h-10"
                     value={editingSlide.buttonLink || ""}
                     onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonLink: e.target.value }))}
                   />
-                  <p className="text-[11px] text-slate-400">Clicking this banner will redirect customers to this URL (e.g. /shop, /store-locator)</p>
+                  <p className="text-[11px] text-slate-400">
+                    When customer clicks on the popup banner or button, they will be redirected to this link.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
