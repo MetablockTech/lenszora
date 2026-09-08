@@ -15,10 +15,13 @@ import {
   Phone,
   Mail,
   ArrowLeft,
-  Star
+  Star,
+  Printer,
+  FileText
 } from 'lucide-react'
 import ReviewForm from '@/components/product/ReviewForm'
 import ReturnRequestModal from '@/components/product/ReturnRequestModal'
+import OrderReceiptModal from '@/components/modals/OrderReceiptModal'
 import { getImageUrl } from '@/lib/utils'
 
 interface Order {
@@ -73,6 +76,7 @@ const OrderDetail = () => {
   const [authChecked, setAuthChecked] = useState(false)
   const [reviewingProduct, setReviewingProduct] = useState<{ id: string, title: string } | null>(null)
   const [returningItem, setReturningItem] = useState<{ productId: string, title: string, variantSku?: string } | null>(null)
+  const [showReceiptModal, setShowReceiptModal] = useState(false)
 
   useEffect(() => {
     if (!token) {
@@ -208,6 +212,14 @@ const OrderDetail = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setShowReceiptModal(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-colors shadow-md"
+                >
+                  <Printer className="h-4 w-4" />
+                  Tax Invoice / Receipt
+                </button>
+
                 <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg">
                   {getStatusIcon(order.orderStatus)}
                   <span className="font-semibold">
@@ -567,12 +579,26 @@ const OrderDetail = () => {
                       ₹{(order.items.reduce((sum, i) => sum + ((i.price + (i.lens?.price || 0)) * i.quantity), 0)).toLocaleString()}
                     </span>
                   </div>
+
+                  <button
+                    onClick={() => setShowReceiptModal(true)}
+                    className="w-full mt-4 flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 text-yellow-500 font-bold rounded-lg border border-yellow-500/20 hover:border-yellow-500/50 transition-all text-sm"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Download / Print Tax Receipt
+                  </button>
                 </div>
               </motion.div>
             </div>
           </div>
         </div>
       </main>
+
+      <OrderReceiptModal
+        isOpen={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        order={order as any}
+      />
 
       <Footer />
     </div>

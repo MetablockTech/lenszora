@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Package, Tag, ShoppingCart, Users, Settings, LogOut, Percent, Link2, LayoutDashboard, Info, Menu, MapPin, ChevronDown, Clock, CheckCircle2, XCircle, Layers, Image as ImageIcon, Calendar, MessageSquare, Gift, Sparkles } from 'lucide-react'
+import { Package, Tag, ShoppingCart, Users, Settings, LogOut, Percent, Link2, LayoutDashboard, Info, Menu, MapPin, ChevronDown, Clock, CheckCircle2, XCircle, Layers, Image as ImageIcon, Calendar, MessageSquare, Gift, Sparkles, Eye, UserCheck, Heart } from 'lucide-react'
 import { useSettings } from '@/context/SettingsContext'
 import { clearToken, getToken, getUser, products } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
@@ -229,6 +229,19 @@ const AdminLayout: React.FC = () => {
               </SidebarMenuItem>
 
               <SidebarMenuItem>
+                <NavLink to="/admin/lens-manager">
+                  {({ isActive }) => (
+                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
+                      <a>
+                        <Eye className="w-5 h-5 shrink-0 text-cyan-400" />
+                        <span className="group-data-[collapsible=icon]:hidden font-medium">Lens Manager</span>
+                      </a>
+                    </SidebarMenuButton>
+                  )}
+                </NavLink>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
                 <NavLink to="/admin/brands">
                   {({ isActive }) => (
                     <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
@@ -367,6 +380,19 @@ const AdminLayout: React.FC = () => {
                       <a>
                         <Users className="w-5 h-5 shrink-0" />
                         <span className="group-data-[collapsible=icon]:hidden">Users</span>
+                      </a>
+                    </SidebarMenuButton>
+                  )}
+                </NavLink>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <NavLink to="/admin/customer-leads">
+                  {({ isActive }) => (
+                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
+                      <a>
+                        <UserCheck className="w-5 h-5 shrink-0 text-yellow-500" />
+                        <span className="group-data-[collapsible=icon]:hidden font-semibold text-yellow-500">Cart & Wishlists</span>
                       </a>
                     </SidebarMenuButton>
                   )}

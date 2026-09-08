@@ -660,32 +660,7 @@ const ProductPage = () => {
 
             <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
 
-            {/* Delivery check */}
-            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 14 }}>
-              <div style={{ fontSize: '.85rem', fontWeight: 600, marginBottom: 8, color: '#e5e7eb' }}>🚚 Check Delivery</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  type="text"
-                  placeholder="Enter pincode"
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  style={{ flex: 1, border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 7, padding: '8px 11px', fontFamily: "'DM Sans',sans-serif", fontSize: '.82rem', outline: 'none', background: 'transparent', color: '#e5e7eb' }}
-                  onFocus={e => e.target.style.borderColor = '#DAAB34'}
-                  onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.15)'}
-                />
-                <button
-                  onClick={handlePincodeCheck}
-                  style={{ background: '#DAAB34', color: '#000', border: 'none', borderRadius: 7, padding: '8px 14px', fontSize: '.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
-                >
-                  {checkingPincode ? '...' : 'Check'}
-                </button>
-              </div>
-              {pincodeStatus && (
-                <div style={{ marginTop: 6, fontSize: '.75rem', fontWeight: 600, color: pincodeStatus.serviceable ? '#22c55e' : '#ef4444' }}>
-                  {pincodeStatus.serviceable ? '✅ ' : '❌ '}{pincodeStatus.message}
-                </div>
-              )}
-            </div>
+
 
             {/* Qty */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

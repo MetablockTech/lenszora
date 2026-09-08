@@ -606,6 +606,32 @@ export const users = {
       throw new Error(errMsg)
     }
     return res.json()
+  },
+  async syncCart(cart: any[], token?: string) {
+    if (!token) return
+    const res = await fetch(`${API_URL}/api/users/cart/sync`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ cart })
+    })
+    if (!res.ok) throw new Error('Failed to sync cart')
+    return res.json()
+  },
+  async getCart(token?: string) {
+    if (!token) return []
+    const res = await fetch(`${API_URL}/api/users/cart`, {
+      headers: getHeaders(token)
+    })
+    if (!res.ok) throw new Error('Failed to fetch user cart')
+    return res.json()
+  },
+  async getActiveLeads(token?: string) {
+    if (!token) return []
+    const res = await fetch(`${API_URL}/api/users/leads/active`, {
+      headers: getHeaders(token)
+    })
+    if (!res.ok) throw new Error('Failed to fetch active leads')
+    return res.json()
   }
 }
 

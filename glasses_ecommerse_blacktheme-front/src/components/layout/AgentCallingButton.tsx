@@ -13,7 +13,7 @@ const AgentCallingButton = () => {
       animate={{ scale: 1, opacity: 1 }}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
-      className="fixed bottom-[104px] right-6 z-50 w-16 h-16 bg-[#DAAB34] rounded-full flex items-center justify-center shadow-2xl hover:bg-[#c29528] transition-colors duration-300 group cursor-pointer"
+      className="fixed bottom-36 md:bottom-[104px] right-4 md:right-6 z-40 w-12 h-12 md:w-16 md:h-16 bg-[#DAAB34] rounded-full flex items-center justify-center shadow-2xl hover:bg-[#c29528] transition-colors duration-300 group cursor-pointer"
       aria-label="Call Agent"
     >
       {/* Pulse Animation */}

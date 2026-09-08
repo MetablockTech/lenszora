@@ -202,11 +202,26 @@ const Addresses = () => {
         setDeliveryInfo(null);
     };
 
-    const getAddressTypeIcon = (type: string) => {
+    const getAddressTypeBadge = (type: string) => {
         switch (type) {
-            case 'home': return <Home className="h-4 w-4" />;
-            case 'work': return <Briefcase className="h-4 w-4" />;
-            default: return <MapPin className="h-4 w-4" />;
+            case 'home':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                        <Home className="h-3.5 w-3.5" /> HOME
+                    </span>
+                );
+            case 'work':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20 uppercase tracking-wider">
+                        <Briefcase className="h-3.5 w-3.5" /> WORK / OFFICE
+                    </span>
+                );
+            default:
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-wider">
+                        <MapPin className="h-3.5 w-3.5" /> OTHER
+                    </span>
+                );
         }
     };
 
@@ -220,7 +235,7 @@ const Addresses = () => {
                             My Addresses
                         </h1>
                         <p className="text-muted-foreground">
-                            Manage your delivery addresses
+                            Manage your saved delivery addresses (Home, Work, Office)
                         </p>
                     </div>
 
@@ -239,7 +254,7 @@ const Addresses = () => {
                                         setEditingAddress(null);
                                         setShowAddModal(true);
                                     }}
-                                    className="border-2 border-dashed border-border/50 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors min-h-[200px]"
+                                    className="border-2 border-dashed border-border/50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors min-h-[200px]"
                                 >
                                     <Plus className="h-12 w-12 text-muted-foreground mb-2" />
                                     <span className="text-muted-foreground font-medium">Add New Address</span>
@@ -250,32 +265,30 @@ const Addresses = () => {
                                     <motion.div
                                         key={address._id}
                                         whileHover={{ scale: 1.02 }}
-                                        className="border border-border/30 rounded-lg p-6 bg-card relative"
+                                        className="border border-border/30 rounded-xl p-6 bg-card relative shadow-md flex flex-col justify-between"
                                     >
-                                        {address.isDefault && (
-                                            <div className="absolute top-3 right-3">
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                                                    <Star className="h-3 w-3 fill-current" />
-                                                    Default
-                                                </span>
+                                        <div>
+                                            <div className="flex items-center justify-between gap-2 mb-3">
+                                                {getAddressTypeBadge(address.addressType)}
+                                                {address.isDefault && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-xs font-bold uppercase tracking-wider">
+                                                        <Star className="h-3 w-3 fill-current text-amber-400" />
+                                                        Default
+                                                    </span>
+                                                )}
                                             </div>
-                                        )}
 
-                                        <div className="flex items-center gap-2 mb-3">
-                                            {getAddressTypeIcon(address.addressType)}
-                                            <span className="font-medium capitalize">{address.addressType}</span>
-                                        </div>
-
-                                        <div className="space-y-1 mb-4">
-                                            <p className="font-semibold">{address.name}</p>
-                                            <p className="text-sm text-muted-foreground">{address.phone}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {address.addressLine1}
-                                                {address.addressLine2 && `, ${address.addressLine2}`}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {address.city}, {address.state} - {address.pincode}
-                                            </p>
+                                            <div className="space-y-1 mb-4">
+                                                <p className="font-semibold text-foreground text-base">{address.name}</p>
+                                                <p className="text-xs text-amber-400 font-mono">{address.phone}</p>
+                                                <p className="text-sm text-muted-foreground mt-2">
+                                                    {address.addressLine1}
+                                                    {address.addressLine2 && `, ${address.addressLine2}`}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground font-medium">
+                                                    {address.city}, {address.state} - <span className="font-mono text-foreground font-bold">{address.pincode}</span>
+                                                </p>
+                                            </div>
                                         </div>
 
                                         <div className="flex gap-2 pt-3 border-t border-border/30">

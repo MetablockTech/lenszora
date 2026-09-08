@@ -29,6 +29,53 @@ router.patch('/:id/role', requireAuth, requireAdmin, async (req, res) => {
     }
 })
 
+// Sync user's active cart
+router.post('/cart/sync', requireAuth, async (req, res) => {
+    try {
+        const userId = (req as any).user.id
+        const { cart } = req.body
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { cart: Array.isArray(cart) ? cart : [] },
+            { new: true }
+        ).select('-password')
+        res.json({ message: 'Cart synced successfully', cart: user?.cart || [] })
+    } catch (error: any) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// Get user's active cart
+router.get('/cart', requireAuth, async (req, res) => {
+    try {
+        const userId = (req as any).user.id
+        const user = await User.findById(userId).select('cart')
+        res.json(user?.cart || [])
+    } catch (error: any) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// Get users with active carts or wishlists (Admin only - Lead Generation)
+router.get('/leads/active', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const users = await User.find({
+            $or: [
+                { 'cart.0': { $exists: true } },
+                { 'wishlist.0': { $exists: true } }
+            ]
+        })
+        .select('-password')
+        .populate('wishlist', 'title price image category brand stock inStock')
+        .sort({ updatedAt: -1 })
+        .lean()
+
+        res.json(users)
+    } catch (error: any) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
 // Delete user (Admin only)
 router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
     try {

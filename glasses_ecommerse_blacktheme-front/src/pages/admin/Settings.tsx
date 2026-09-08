@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import { Loader2, Save, Lock, Globe, Mail, Share2, CreditCard, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Save, Lock, Globe, Mail, Share2, CreditCard, Eye, EyeOff, FileText } from 'lucide-react'
 import { settings, adminAuth, getToken } from '@/lib/api'
 import { useSettings } from '@/context/SettingsContext'
 import { getImageUrl } from '@/lib/utils'
@@ -19,7 +19,8 @@ const SettingsPage: React.FC = () => {
     websiteName: 'LensZora',
     logoUrl: '',
     maintenanceMode: false,
-    autoApproveVendorProducts: false
+    autoApproveVendorProducts: false,
+    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.lenszora.app'
   })
   const [contactInfo, setContactInfo] = useState({
     address: '',
@@ -27,6 +28,10 @@ const SettingsPage: React.FC = () => {
     email: ''
   })
   const [socialLinks, setSocialLinks] = useState<any[]>([])
+  const [legalSettings, setLegalSettings] = useState({
+    privacyPolicy: '',
+    termsAndConditions: ''
+  })
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
     newPassword: '',
@@ -43,11 +48,13 @@ const SettingsPage: React.FC = () => {
   async function loadSettings() {
     setLoading(true)
     try {
-      const [general, contact, social, payment] = await Promise.all([
+      const [general, contact, social, payment, privacy, terms] = await Promise.all([
         settings.list('general'),
         settings.get('contact_info').catch(() => ({ value: {} })),
         settings.get('social_links').catch(() => ({ value: [] })),
-        settings.get('manual_payment_settings').catch(() => ({ value: { enabled: false, razorpayEnabled: true, upiId: '', qrCode: '', bankDetails: '', instructions: '' } }))
+        settings.get('manual_payment_settings').catch(() => ({ value: { enabled: false, razorpayEnabled: true, upiId: '', qrCode: '', bankDetails: '', instructions: '' } })),
+        settings.get('privacy_policy').catch(() => ({ value: '' })),
+        settings.get('terms_and_conditions').catch(() => ({ value: '' }))
       ])
 
       const genMap: any = {}
@@ -57,12 +64,17 @@ const SettingsPage: React.FC = () => {
         websiteName: genMap.websiteName || 'LensZora',
         logoUrl: genMap.logoUrl || '',
         maintenanceMode: genMap.maintenanceMode === true || genMap.maintenanceMode === 'true',
-        autoApproveVendorProducts: genMap.autoApproveVendorProducts === true || genMap.autoApproveVendorProducts === 'true'
+        autoApproveVendorProducts: genMap.autoApproveVendorProducts === true || genMap.autoApproveVendorProducts === 'true',
+        playStoreUrl: genMap.playStoreUrl || 'https://play.google.com/store/apps/details?id=com.lenszora.app'
       })
 
       setContactInfo(contact.value || { address: '', phone: '', email: '' })
       setSocialLinks(social.value || [])
       setManualPaymentSettings(payment.value || { enabled: false, razorpayEnabled: true, upiId: '', qrCode: '', bankDetails: '', instructions: '' })
+      setLegalSettings({
+        privacyPolicy: privacy.value || '',
+        termsAndConditions: terms.value || ''
+      })
     } catch (error) {
       console.error('Failed to load settings:', error)
       toast.error('Failed to load settings')
@@ -79,7 +91,8 @@ const SettingsPage: React.FC = () => {
         settings.update('websiteName', { value: generalSettings.websiteName, category: 'general' }, token),
         settings.update('logoUrl', { value: generalSettings.logoUrl, category: 'general' }, token),
         settings.update('maintenanceMode', { value: generalSettings.maintenanceMode, category: 'general', type: 'boolean' }, token),
-        settings.update('autoApproveVendorProducts', { value: generalSettings.autoApproveVendorProducts, category: 'general', type: 'boolean' }, token)
+        settings.update('autoApproveVendorProducts', { value: generalSettings.autoApproveVendorProducts, category: 'general', type: 'boolean' }, token),
+        settings.update('playStoreUrl', { value: generalSettings.playStoreUrl, category: 'general' }, token)
       ])
       await refreshSettings()
       toast.success('General settings updated')
@@ -167,17 +180,27 @@ const SettingsPage: React.FC = () => {
 
       await settings.update('manual_payment_settings', { value: payloadToSave, category: 'payment' }, token)
       
-      // Update local state and clear file
-      setManualPaymentSettings(payloadToSave)
-      setQrCodeFile(null)
-      setQrCodePreview('')
-
       await refreshSettings()
       toast.success('Payment settings updated')
-      console.log('[DEBUG] Payment settings saved successfully')
     } catch (error) {
-      console.error('[DEBUG] Failed to save payment settings:', error)
       toast.error('Failed to update payment settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleSaveLegal() {
+    setSaving(true)
+    const token = getToken()
+    try {
+      await Promise.all([
+        settings.update('privacy_policy', { value: legalSettings.privacyPolicy, category: 'legal' }, token),
+        settings.update('terms_and_conditions', { value: legalSettings.termsAndConditions, category: 'legal' }, token),
+      ])
+      await refreshSettings()
+      toast.success('Legal & Policy pages updated')
+    } catch (error) {
+      toast.error('Failed to update Legal & Policy pages')
     } finally {
       setSaving(false)
     }
@@ -214,6 +237,9 @@ const SettingsPage: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="payment" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" /> Payment
+          </TabsTrigger>
+          <TabsTrigger value="legal" className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-blue-600" /> Legal & Policies
           </TabsTrigger>
         </TabsList>
 
@@ -273,6 +299,16 @@ const SettingsPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
+              </div>
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="playStoreUrl">Google Play Store App URL</Label>
+                <Input
+                  id="playStoreUrl"
+                  value={generalSettings.playStoreUrl}
+                  onChange={(e) => setGeneralSettings({ ...generalSettings, playStoreUrl: e.target.value })}
+                  placeholder="https://play.google.com/store/apps/details?id=com.lenszora.app"
+                />
+                <p className="text-xs text-muted-foreground">App download buttons across website topbar, footer & mobile drawer will navigate users to this Play Store URL.</p>
               </div>
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
@@ -598,8 +634,52 @@ const SettingsPage: React.FC = () => {
             </CardFooter>
           </Card>
         </TabsContent>
+
+        <TabsContent value="legal">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Legal & Policy Pages</CardTitle>
+              <CardDescription>
+                Customize the Privacy Policy and Terms & Conditions content displayed on the website. Leave blank to display default formatted content.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="privacyPolicy" className="font-semibold text-slate-800 text-sm">Privacy Policy Content</Label>
+                <textarea
+                  id="privacyPolicy"
+                  rows={10}
+                  value={legalSettings.privacyPolicy}
+                  onChange={(e) => setLegalSettings({ ...legalSettings, privacyPolicy: e.target.value })}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono text-slate-800"
+                  placeholder="Enter HTML or plain text content for Privacy Policy page..."
+                />
+                <p className="text-xs text-muted-foreground">HTML tags (&lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;) are supported for rich formatting.</p>
+              </div>
+
+              <div className="space-y-2 pt-4 border-t border-slate-200">
+                <Label htmlFor="termsAndConditions" className="font-semibold text-slate-800 text-sm">Terms & Conditions Content</Label>
+                <textarea
+                  id="termsAndConditions"
+                  rows={10}
+                  value={legalSettings.termsAndConditions}
+                  onChange={(e) => setLegalSettings({ ...legalSettings, termsAndConditions: e.target.value })}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono text-slate-800"
+                  placeholder="Enter HTML or plain text content for Terms & Conditions page..."
+                />
+                <p className="text-xs text-muted-foreground">HTML tags (&lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;) are supported for rich formatting.</p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleSaveLegal} disabled={saving} className="bg-[#DAAB34] hover:bg-[#c99a2b] text-black font-bold">
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Save className="mr-2 h-4 w-4" /> Save Legal Policies
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
       </Tabs>
-    </div >
+    </div>
   )
 }
 

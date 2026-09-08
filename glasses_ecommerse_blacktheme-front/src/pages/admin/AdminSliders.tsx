@@ -51,6 +51,7 @@ const AdminSliders = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>("all");
   
   // Local state to hold the physical file before saving to server
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -178,6 +179,14 @@ const AdminSliders = () => {
     setPreviewUrl(objectUrl);
   };
 
+  const filteredSlides = slides.filter(s => {
+    if (filterType === 'main') return s.bannerType === 'Main Banner';
+    if (filterType === 'footer') return s.bannerType === 'Footer Banner';
+    if (filterType === 'trending') return s.bannerType === 'Trending Banner';
+    if (filterType === 'popup') return s.bannerType === 'Popup Banner';
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-8">
@@ -191,18 +200,20 @@ const AdminSliders = () => {
           <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold text-white">Banner table</h2>
-              <Badge variant="secondary" className="bg-white/10 text-white rounded-full px-3">{slides.length}</Badge>
+              <Badge variant="secondary" className="bg-white/10 text-white rounded-full px-3">{filteredSlides.length}</Badge>
             </div>
             
             <div className="flex items-center gap-4 w-full sm:w-auto">
-              <Select defaultValue="all">
-                <SelectTrigger className="w-[180px] bg-black border-white/10">
-                  <SelectValue placeholder="All" />
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-[200px] bg-black border-white/10">
+                  <SelectValue placeholder="All Banners" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="all">All Banners</SelectItem>
                   <SelectItem value="main">Main Banner</SelectItem>
                   <SelectItem value="footer">Footer Banner</SelectItem>
+                  <SelectItem value="trending">Trending Banner</SelectItem>
+                  <SelectItem value="popup">Popup Banner (Advertisement)</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -225,14 +236,14 @@ const AdminSliders = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {slides.length === 0 && !isLoading ? (
+                {filteredSlides.length === 0 && !isLoading ? (
                   <TableRow className="border-white/5">
                     <TableCell colSpan={6} className="h-32 text-center text-slate-500">
                       No banners found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  slides.map((slide, index) => (
+                  filteredSlides.map((slide, index) => (
                     <TableRow key={slide._id} className="border-white/5 hover:bg-white/5 transition-colors">
                       <TableCell className="font-medium text-slate-300 py-4">{index + 1}</TableCell>
                       <TableCell className="py-4">
@@ -248,7 +259,11 @@ const AdminSliders = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-300 py-4 font-medium">{slide.bannerType}</TableCell>
+                      <TableCell className="text-slate-300 py-4 font-medium">
+                        <Badge variant="outline" className={slide.bannerType === 'Popup Banner' ? 'border-amber-500/50 text-amber-400 bg-amber-500/10' : 'border-white/20 text-slate-300'}>
+                          {slide.bannerType}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-slate-300 py-4">{slide.resourceType}</TableCell>
                       <TableCell className="py-4">
                         <Switch 
@@ -316,9 +331,9 @@ const AdminSliders = () => {
           
           <form onSubmit={handleSubmit} className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column - Dropdowns */}
-              <div className="space-y-6">
-                <div className="space-y-3">
+              {/* Left Column - Dropdowns & Texts */}
+              <div className="space-y-5">
+                <div className="space-y-2">
                   <Label className="text-slate-300 text-sm font-semibold">Banner type <span className="text-red-500">*</span></Label>
                   <Select 
                     value={editingSlide.bannerType} 
@@ -332,40 +347,66 @@ const AdminSliders = () => {
                       <SelectItem value="Footer Banner">Footer Banner</SelectItem>
                       <SelectItem value="Trending Banner">Trending Banner</SelectItem>
                       <SelectItem value="Brand Banner">Brand Banner</SelectItem>
+                      <SelectItem value="Popup Banner">Popup Banner (Advertisement Popup)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {editingSlide.bannerType !== "Footer Banner" && (
-                  <>
-                    <div className="space-y-3">
-                      <Label className="text-slate-300 text-sm font-semibold">Resource type <span className="text-red-500">*</span></Label>
-                      <Select 
-                        value={editingSlide.resourceType} 
-                        onValueChange={(val) => setEditingSlide(prev => ({ ...prev, resourceType: val }))}
-                      >
-                        <SelectTrigger className="w-full bg-black border-white/20 h-10">
-                          <SelectValue placeholder="Select Resource Type" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-900 border-white/20">
-                          <SelectItem value="Custom">Custom</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300 text-sm font-semibold">Resource type <span className="text-red-500">*</span></Label>
+                  <Select 
+                    value={editingSlide.resourceType || "Custom"} 
+                    onValueChange={(val) => setEditingSlide(prev => ({ ...prev, resourceType: val }))}
+                  >
+                    <SelectTrigger className="w-full bg-black border-white/20 h-10">
+                      <SelectValue placeholder="Select Resource Type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-white/20">
+                      <SelectItem value="Custom">Custom Link</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                    {editingSlide.resourceType === "Custom" && (
-                      <div className="space-y-3 animate-in fade-in slide-in-from-top-4 duration-300">
-                        <Label className="text-slate-300 text-sm font-semibold">Banner URL <span className="text-red-500">*</span></Label>
-                        <Input 
-                          placeholder="Enter url" 
-                          className="bg-black border-white/20 h-10"
-                          value={editingSlide.buttonLink || ""}
-                          onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonLink: e.target.value }))}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-4 duration-300">
+                  <Label className="text-slate-300 text-sm font-semibold">Banner Redirect URL / Link</Label>
+                  <Input 
+                    placeholder="e.g. /shop?category=sunglasses or /store-locator" 
+                    className="bg-black border-white/20 h-10"
+                    value={editingSlide.buttonLink || ""}
+                    onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonLink: e.target.value }))}
+                  />
+                  <p className="text-[11px] text-slate-400">Clicking this banner will redirect customers to this URL (e.g. /shop, /store-locator)</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-300 text-sm font-semibold">Title / Headline (Optional)</Label>
+                  <Input 
+                    placeholder="e.g. FLAT 20% OFF ON ALL GLASSES" 
+                    className="bg-black border-white/20 h-10"
+                    value={editingSlide.title || ""}
+                    onChange={(e) => setEditingSlide(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-300 text-sm font-semibold">Subtitle / Offer Description (Optional)</Label>
+                  <Input 
+                    placeholder="e.g. Use code LENSEZORA20 at checkout for instant discount" 
+                    className="bg-black border-white/20 h-10"
+                    value={editingSlide.subtitle || ""}
+                    onChange={(e) => setEditingSlide(prev => ({ ...prev, subtitle: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-300 text-sm font-semibold">Button Label (Optional)</Label>
+                  <Input 
+                    placeholder="e.g. SHOP NOW or CLAIM OFFER" 
+                    className="bg-black border-white/20 h-10"
+                    value={editingSlide.buttonText || ""}
+                    onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonText: e.target.value }))}
+                  />
+                </div>
               </div>
 
               {/* Right Column - Image Upload */}

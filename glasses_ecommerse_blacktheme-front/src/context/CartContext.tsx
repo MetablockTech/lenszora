@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { getToken, users } from '@/lib/api'
 
 export interface CartItem {
     productId: string;
@@ -41,27 +42,46 @@ interface CartContextType {
     updateItem: (index: number, item: CartItem) => void;
     clearCart: () => void;
 }
-
+ 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const [cart, setCart] = useState<CartItem[]>([])
 
-    // Load cart from localStorage
+    // Load cart from localStorage or backend
     useEffect(() => {
         const saved = localStorage.getItem('cart')
         if (saved) {
             try {
-                setCart(JSON.parse(saved))
+                const parsed = JSON.parse(saved)
+                setCart(parsed)
+                return
             } catch {
                 setCart([])
             }
         }
+        
+        // If no local cart, try fetching from backend if logged in
+        const token = getToken()
+        if (token) {
+            users.getCart(token).then((serverCart) => {
+                if (serverCart && serverCart.length > 0) {
+                    setCart(serverCart)
+                }
+            }).catch(() => {})
+        }
     }, [])
 
-    // Save cart to localStorage
+    // Save cart to localStorage & sync to server
     useEffect(() => {
         localStorage.setItem('cart', JSON.stringify(cart))
+        
+        const token = getToken()
+        if (token) {
+            users.syncCart(cart, token).catch((err) => {
+                console.error('Failed to sync cart to server:', err)
+            })
+        }
     }, [cart])
 
     function addToCart(item: CartItem) {

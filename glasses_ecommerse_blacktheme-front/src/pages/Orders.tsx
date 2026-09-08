@@ -5,8 +5,9 @@ import { getToken } from '@/lib/api'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Package, Clock, CheckCircle, AlertCircle, Eye, Star } from 'lucide-react'
+import { Package, Clock, CheckCircle, AlertCircle, Eye, Star, FileText } from 'lucide-react'
 import { getImageUrl } from '@/lib/utils'
+import OrderReceiptModal from '@/components/modals/OrderReceiptModal'
 
 interface Order {
   _id: string;
@@ -34,6 +35,7 @@ const Orders = () => {
   const [loading, setLoading] = useState(true)
   const [authChecked, setAuthChecked] = useState(false)
   const [userId, setUserId] = useState('')
+  const [receiptOrder, setReceiptOrder] = useState<any | null>(null)
 
   useEffect(() => {
     // Get user ID and check auth
@@ -246,6 +248,14 @@ const Orders = () => {
                             <Eye className="h-4 w-4" />
                             View
                           </button>
+                          <button
+                            onClick={() => setReceiptOrder(order)}
+                            className="text-blue-400 hover:text-blue-300 font-medium text-sm flex items-center gap-1 transition-colors"
+                            title="View / Print Tax Receipt"
+                          >
+                            <FileText className="h-4 w-4" />
+                            Receipt
+                          </button>
                           {order.orderStatus === 'delivered' && (
                             <button
                               onClick={() => navigate(`/orders/${order._id}`)}
@@ -265,6 +275,12 @@ const Orders = () => {
           )}
         </div>
       </main>
+
+      <OrderReceiptModal
+        isOpen={!!receiptOrder}
+        onClose={() => setReceiptOrder(null)}
+        order={receiptOrder}
+      />
 
       <Footer />
     </div>

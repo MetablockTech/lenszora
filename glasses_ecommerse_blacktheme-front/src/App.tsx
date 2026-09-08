@@ -51,11 +51,14 @@ import StoreLocator from "./pages/StoreLocator";
 import VendorStores from "./pages/vendor/Stores";
 import VendorAppointmentsPage from "./pages/vendor/Appointments";
 import AdminLensManagerPage from "./pages/admin/LensManager";
+import CustomerLeads from "./pages/admin/CustomerLeads";
 import FAQPage from "./pages/FAQ";
 import Support from "./pages/Support";
 
 import { Loader2 } from "lucide-react";
 import ScrollToTop from "./components/layout/ScrollToTop";
+import MobileBottomNav from "./components/layout/MobileBottomNav";
+import PromoPopupModal from "./components/modals/PromoPopupModal";
 import VendorLayout from "./pages/vendor/VendorLayout";
 import VendorDashboard from "./pages/vendor/VendorDashboard";
 import VendorProductsPage from "./pages/vendor/Products";
@@ -174,10 +177,13 @@ const AppContent = () => {
         <Route path="stores" element={<AdminStores />} />
         <Route path="lens-manager" element={<AdminLensManagerPage />} />
         <Route path="appointments" element={<AppointmentsPage />} />
+        <Route path="customer-leads" element={<CustomerLeads />} />
 
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <MobileBottomNav />
+      {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/vendor') && <PromoPopupModal />}
     </>
   );
 };

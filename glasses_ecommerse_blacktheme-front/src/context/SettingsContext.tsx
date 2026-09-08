@@ -6,6 +6,7 @@ interface Settings {
     websiteName: string;
     logoUrl: string;
     maintenanceMode: boolean;
+    playStoreUrl?: string;
     contactInfo: {
         address: string;
         phone: string;
@@ -24,6 +25,7 @@ const defaultSettings: Settings = {
     websiteName: 'LensZora',
     logoUrl: '',
     maintenanceMode: false,
+    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.lenszora.app',
     contactInfo: {
         address: '',
         phone: '',
@@ -72,6 +74,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 websiteName: genMap.websiteName || 'LensZora',
                 logoUrl: genMap.logoUrl || '',
                 maintenanceMode: genMap.maintenanceMode === true || genMap.maintenanceMode === 'true',
+                playStoreUrl: genMap.playStoreUrl || 'https://play.google.com/store/apps/details?id=com.lenszora.app',
                 contactInfo: contact.value || defaultSettings.contactInfo,
                 socialLinks: social.value || [],
             };

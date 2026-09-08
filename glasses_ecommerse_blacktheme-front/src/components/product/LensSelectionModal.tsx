@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, Zap, Shield, Eye, Waves, Sun, Droplets, Award, Sparkles, Check, Layers, Upload, MessageCircle, FileText, PhoneCall, Image as ImageIcon } from "lucide-react";
 import { lens, API_URL, returnRequests, getToken } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
@@ -33,10 +33,50 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
     const [activePackageDetails, setActivePackageDetails] = useState<any>(null);
 
+    // Navigation & History Depth refs for seamless 1-step back support
+    const modalHistoryDepthRef = useRef<number>(0);
+    const isPoppingHistoryRef = useRef<boolean>(false);
+    const isClosingModalRef = useRef<boolean>(false);
+
+    const pushModalHistory = (targetStep: number, isFormOpen: boolean = false) => {
+        if (isPoppingHistoryRef.current || isClosingModalRef.current) return;
+        const currentState = window.history.state || {};
+        window.history.pushState({ ...currentState, isLensModal: true, modalStep: targetStep, modalForm: isFormOpen }, '', window.location.href);
+        modalHistoryDepthRef.current += 1;
+    };
+
+    const handleCloseCleanly = () => {
+        isClosingModalRef.current = true;
+        const depth = modalHistoryDepthRef.current;
+        onClose();
+        if (depth > 0) {
+            modalHistoryDepthRef.current = 0;
+            window.history.go(-depth);
+        }
+        setTimeout(() => {
+            isClosingModalRef.current = false;
+        }, 100);
+    };
+
+    const handleSelectCleanly = (data: any) => {
+        isClosingModalRef.current = true;
+        const depth = modalHistoryDepthRef.current;
+        onSelect(data);
+        onClose();
+        if (depth > 0) {
+            modalHistoryDepthRef.current = 0;
+            window.history.go(-depth);
+        }
+        setTimeout(() => {
+            isClosingModalRef.current = false;
+        }, 100);
+    };
+
     useEffect(() => {
         if (isOpen && (product || vendorId)) {
             fetchLensData();
             
+            let initialStep: 1 | 2 | 3 = 1;
             if (initialData) {
                 // Pre-fill from existing data
                 setSelectedType(initialData.type || null);
@@ -59,12 +99,12 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                 
                 // Determine step
                 if (initialData.package || initialData.type?.allowPackages === false) {
-                    setStep(initialData.prescription ? 3 : 2);
+                    initialStep = initialData.prescription ? 3 : 2;
                 } else {
-                    setStep(1);
+                    initialStep = 1;
                 }
             } else {
-                setStep(1);
+                initialStep = 1;
                 setSelectedType(null);
                 setSelectedPackage(null);
                 setPowerOption(null);
@@ -73,8 +113,54 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                 setPrescriptionFileName(null);
                 setShowPrescriptionForm(false);
             }
+
+            setStep(initialStep);
+
+            // Push initial modal state if depth is 0
+            if (modalHistoryDepthRef.current === 0) {
+                pushModalHistory(initialStep, false);
+            }
         }
     }, [isOpen, vendorId, product, initialData]);
+
+    // Handle browser back button (popstate)
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handlePopState = (event: PopStateEvent) => {
+            if (isClosingModalRef.current) return;
+
+            isPoppingHistoryRef.current = true;
+
+            if (modalHistoryDepthRef.current > 0) {
+                modalHistoryDepthRef.current -= 1;
+            }
+
+            const state = event.state;
+            if (state && state.isLensModal) {
+                if (state.modalForm !== undefined) {
+                    setShowPrescriptionForm(state.modalForm);
+                } else {
+                    setShowPrescriptionForm(false);
+                }
+                if (state.modalStep) {
+                    setStep(state.modalStep);
+                }
+            } else {
+                // Popped past initial modal step state -> close modal safely (stays on ProductPage)
+                onClose();
+            }
+
+            setTimeout(() => {
+                isPoppingHistoryRef.current = false;
+            }, 50);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [isOpen]);
 
 const DEFAULT_FALLBACK_TYPES = [
     { _id: 'with', key: 'with', name: 'With Power', description: 'Positive, Negative or Cylindrical', allowPackages: true },
@@ -290,19 +376,20 @@ const DEFAULT_FALLBACK_PACKAGES = [
             const shouldSkipPower = type.name?.toLowerCase().includes("zero") || type.name?.toLowerCase().includes("frame only") || type.skipPowerEntry;
 
             if (shouldSkipPower) {
-                onSelect({
+                handleSelectCleanly({
                     type,
                     package: null,
                     prescription: null
                 });
-                onClose();
             } else {
                 // If it's a prescription lens but has no "Packages", we go directly to Step 3
                 setStep(3);
+                pushModalHistory(3, false);
             }
         } else {
             // Proceed to Step 2: Choose Lenses
             setStep(2);
+            pushModalHistory(2, false);
         }
     };
 
@@ -310,23 +397,23 @@ const DEFAULT_FALLBACK_PACKAGES = [
         if (step === 1) {
             if (isFrameOnly) {
                 // Skip lens package + prescription for frame only
-                onSelect({ type: selectedType, package: null, prescription: null });
-                onClose();
+                handleSelectCleanly({ type: selectedType, package: null, prescription: null });
             } else {
                 setStep(2);
+                pushModalHistory(2, false);
             }
         } else if (step === 2) {
             const isZeroPower = selectedType?.name?.toLowerCase().includes("zero") || selectedType?.skipPowerEntry;
             if (isZeroPower) {
                 // Skip eye power step if it's a zero power lens OR admin explicitly set skipPowerEntry
-                onSelect({ type: selectedType, package: selectedPackage, prescription: null });
-                onClose();
+                handleSelectCleanly({ type: selectedType, package: selectedPackage, prescription: null });
             } else {
                 setStep(3);
+                pushModalHistory(3, false);
             }
         } else if (step === 3) {
             if (powerOption === 'later') {
-                onSelect({
+                handleSelectCleanly({
                     type: selectedType,
                     package: selectedPackage,
                     prescription: {
@@ -334,9 +421,8 @@ const DEFAULT_FALLBACK_PACKAGES = [
                         text: 'Submit Power Later (WhatsApp / Call after order)'
                     }
                 });
-                onClose();
             } else if (powerOption === 'upload') {
-                onSelect({
+                handleSelectCleanly({
                     type: selectedType,
                     package: selectedPackage,
                     prescription: {
@@ -346,12 +432,12 @@ const DEFAULT_FALLBACK_PACKAGES = [
                         text: `Uploaded Prescription (${prescriptionFileName || 'Image/PDF'})`
                     }
                 });
-                onClose();
             } else if (powerOption === 'manual') {
                 if (!showPrescriptionForm) {
                     setShowPrescriptionForm(true);
+                    pushModalHistory(3, true);
                 } else {
-                    onSelect({
+                    handleSelectCleanly({
                         type: selectedType,
                         package: selectedPackage,
                         prescription: {
@@ -359,17 +445,22 @@ const DEFAULT_FALLBACK_PACKAGES = [
                             method: 'manual'
                         }
                     });
-                    onClose();
                 }
             }
         }
     };
 
     const handleBack = () => {
-        if (showPrescriptionForm) {
-            setShowPrescriptionForm(false);
-        } else if (step > 1) {
-            setStep((step - 1) as 1 | 2 | 3);
+        if (modalHistoryDepthRef.current > 0) {
+            window.history.back();
+        } else {
+            if (showPrescriptionForm) {
+                setShowPrescriptionForm(false);
+            } else if (step > 1) {
+                setStep((step - 1) as 1 | 2 | 3);
+            } else {
+                handleCloseCleanly();
+            }
         }
     };
 
@@ -488,7 +579,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
             <div
                 className="fixed inset-0 bg-black/50 z-[99]"
                 style={{ transition: "opacity 0.3s" }}
-                onClick={onClose}
+                onClick={handleCloseCleanly}
             />
 
             {/* Sidebar Drawer */}
@@ -511,7 +602,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                 <div className="flex items-center gap-2 px-5 pt-5 pb-0 flex-shrink-0">
                     <button
                         onClick={handleBack}
-                        style={{ visibility: step > 1 || showPrescriptionForm ? 'visible' : 'hidden' }}
+                        style={{ visibility: 'visible' }}
                         className="flex items-center gap-1 text-sm text-slate-700 font-medium bg-none border-none cursor-pointer px-0 hover:opacity-70 transition-opacity"
                     >
                         <ChevronLeft className="w-4 h-4" />
@@ -519,7 +610,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                     </button>
                     <div className="flex-1 text-center font-bold text-[1.05rem] text-slate-900">{getStepTitle()}</div>
                     <button
-                        onClick={onClose}
+                        onClick={handleCloseCleanly}
                         className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 transition-colors"
                     >
                         <X className="w-5 h-5" />
@@ -826,6 +917,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setShowPrescriptionForm(true);
+                                                    pushModalHistory(3, true);
                                                 }}
                                                 className="px-3.5 py-1.5 rounded-lg bg-teal-600 text-white text-[.78rem] font-semibold flex items-center gap-1.5 hover:bg-teal-700 transition-colors shadow-sm"
                                             >

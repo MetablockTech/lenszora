@@ -1,96 +1,101 @@
-import Header from "@/components/layout/Header"
-import Footer from "@/components/layout/Footer"
+import { useEffect, useState } from "react";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import { settings } from "@/lib/api";
+import { Loader2, ShieldCheck } from "lucide-react";
+
+const DEFAULT_PRIVACY_POLICY = `
+<p className="text-slate-400 mb-6">Last Updated: September 2026</p>
+
+<section className="mb-8">
+    <h2 className="text-xl font-bold text-white mb-3">1. Information We Collect</h2>
+    <p className="text-slate-300 mb-3 leading-relaxed">At LensZora, we prioritize your privacy and are committed to protecting your personal information. When you use our platform, we collect:</p>
+    <ul className="list-disc list-inside text-slate-300 space-y-2 pl-2">
+        <li><strong>Personal Information:</strong> Full name, email address, phone number, and delivery addresses.</li>
+        <li><strong>Optical & Eye Power Details:</strong> Prescription values (SPH, CYL, AXIS, ADD, PD) and uploaded prescription documents/photos.</li>
+        <li><strong>Payment Details:</strong> Encrypted payment metadata (transactions processed securely via PCI-DSS compliant payment gateways).</li>
+        <li><strong>Usage & Device Data:</strong> IP address, browser type, and interactions with our store.</li>
+    </ul>
+</section>
+
+<section className="mb-8">
+    <h2 className="text-xl font-bold text-white mb-3">2. How We Use Your Data</h2>
+    <p className="text-slate-300 mb-3 leading-relaxed">Your data enables us to provide a seamless optical shopping experience, including:</p>
+    <ul className="list-disc list-inside text-slate-300 space-y-2 pl-2">
+        <li>Custom crafting and quality testing your prescription optical lenses.</li>
+        <li>Processing payments and fulfilling orders accurately.</li>
+        <li>Providing real-time order updates via SMS, WhatsApp, and Email.</li>
+        <li>Continuous optimization of user interface and store recommendations.</li>
+    </ul>
+</section>
+
+<section className="mb-8">
+    <h2 className="text-xl font-bold text-white mb-3">3. Prescription Data Security</h2>
+    <p className="text-slate-300 leading-relaxed">All uploaded eye test prescriptions and manual power entries are strictly accessible only by authorized optical technicians and stored with AES-256 encryption.</p>
+</section>
+
+<section className="mb-8">
+    <h2 className="text-xl font-bold text-white mb-3">4. Third-Party Services</h2>
+    <p className="text-slate-300 leading-relaxed">We share necessary order details only with verified logistics partners (couriers) and certified payment processors. We NEVER sell or rent your personal information to third-party advertisers.</p>
+</section>
+
+<section className="mb-8">
+    <h2 className="text-xl font-bold text-white mb-3">5. Contact Us Regarding Privacy</h2>
+    <p className="text-slate-300 leading-relaxed">If you have any questions or data requests, contact our privacy team at <a href="mailto:support@lenszora.com" className="text-[#DAAB34] underline font-semibold">support@lenszora.com</a>.</p>
+</section>
+`;
 
 export default function PrivacyPage() {
-    return (
-        <div className="min-h-screen bg-background">
-            <Header />
-            <main className="container mx-auto px-4 py-12">
-                <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
+  const [content, setContent] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
 
-                <div className="prose prose-invert max-w-none">
-                    <p className="text-muted-foreground mb-6">
-                        Last Updated: December 30, 2024
-                    </p>
+  useEffect(() => {
+    async function loadPrivacy() {
+      try {
+        const res = await settings.get("privacy_policy");
+        if (res && res.value) {
+          setContent(res.value);
+        } else {
+          setContent(DEFAULT_PRIVACY_POLICY);
+        }
+      } catch (err) {
+        setContent(DEFAULT_PRIVACY_POLICY);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPrivacy();
+  }, []);
 
-                    <section className="mb-8">
-                        <h2 className="text-2xl font-semibold mb-4">1. Information We Collect</h2>
-                        <p className="text-muted-foreground mb-4">
-                            We collect information that you provide directly to us, including:
-                        </p>
-                        <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                            <li>Name, email address, and contact information</li>
-                            <li>Shipping and billing addresses</li>
-                            <li>Payment information</li>
-                            <li>Order history and preferences</li>
-                            <li>Communications with customer service</li>
-                        </ul>
-                    </section>
+  return (
+    <div className="min-h-screen bg-background text-slate-100 flex flex-col font-sans">
+      <Header />
 
-                    <section className="mb-8">
-                        <h2 className="text-2xl font-semibold mb-4">2. How We Use Your Information</h2>
-                        <p className="text-muted-foreground mb-4">
-                            We use the information we collect to:
-                        </p>
-                        <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                            <li>Process and fulfill your orders</li>
-                            <li>Communicate with you about your orders</li>
-                            <li>Send you marketing communications (with your consent)</li>
-                            <li>Improve our products and services</li>
-                            <li>Prevent fraud and enhance security</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8">
-                        <h2 className="text-2xl font-semibold mb-4">3. Information Sharing</h2>
-                        <p className="text-muted-foreground mb-4">
-                            We do not sell your personal information. We may share your information with:
-                        </p>
-                        <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                            <li>Service providers who assist in our operations</li>
-                            <li>Payment processors for transaction handling</li>
-                            <li>Shipping partners for order delivery</li>
-                            <li>Legal authorities when required by law</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8">
-                        <h2 className="text-2xl font-semibold mb-4">4. Cookies and Tracking</h2>
-                        <p className="text-muted-foreground mb-4">
-                            We use cookies and similar tracking technologies to improve your browsing experience, analyze site traffic, and personalize content.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h2 className="text-2xl font-semibold mb-4">5. Data Security</h2>
-                        <p className="text-muted-foreground mb-4">
-                            We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h2 className="text-2xl font-semibold mb-4">6. Your Rights</h2>
-                        <p className="text-muted-foreground mb-4">
-                            You have the right to:
-                        </p>
-                        <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                            <li>Access your personal information</li>
-                            <li>Correct inaccurate data</li>
-                            <li>Request deletion of your data</li>
-                            <li>Opt-out of marketing communications</li>
-                            <li>Data portability</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8">
-                        <h2 className="text-2xl font-semibold mb-4">7. Contact Us</h2>
-                        <p className="text-muted-foreground">
-                            For privacy-related questions or concerns, contact us at privacy@visionaryemporium.com
-                        </p>
-                    </section>
-                </div>
-            </main>
-            <Footer />
+      <main className="flex-1 container mx-auto px-4 py-10 max-w-4xl">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
+          <div className="p-3 rounded-2xl bg-[#DAAB34]/10 border border-[#DAAB34]/30 text-[#DAAB34]">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Privacy Policy</h1>
+            <p className="text-sm text-slate-400">LensZora Customer Data Protection & Privacy Terms</p>
+          </div>
         </div>
-    )
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-[#DAAB34]" />
+            <p className="text-sm text-slate-400">Loading Privacy Policy...</p>
+          </div>
+        ) : (
+          <div 
+            className="bg-slate-900/60 border border-white/10 rounded-2xl p-6 sm:p-10 shadow-2xl backdrop-blur-sm prose prose-invert max-w-none text-slate-200 leading-relaxed text-sm sm:text-base font-normal space-y-6"
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
+        )}
+      </main>
+
+      <Footer />
+    </div>
+  );
 }
