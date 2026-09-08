@@ -3,7 +3,7 @@ import Footer from '@/components/layout/Footer'
 import { useCart } from '@/hooks/use-cart'
 import { orders, addresses, pincodes, getUser } from '@/lib/api'
 import { getToken } from '@/lib/api'
-import { Trash2, ChevronRight, AlertCircle, MapPin, Plus, Check, Edit2, Tag, Home, Briefcase, Star, Sparkles, X } from 'lucide-react'
+import { Trash2, ChevronRight, AlertCircle, MapPin, Plus, Check, Edit2, Tag, Home, Briefcase, Star, Sparkles, X, Mail } from 'lucide-react'
 import { getImageUrl } from '@/lib/utils'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -43,6 +43,7 @@ const Checkout = () => {
   const [newAddressData, setNewAddressData] = useState({
     name: getUser()?.name || '',
     phone: getUser()?.phone || '',
+    email: getUser()?.email || '',
     addressLine1: '',
     addressLine2: '',
     city: '',
@@ -187,10 +188,11 @@ const Checkout = () => {
 
   function selectAddress(address: SavedAddress) {
     setSelectedAddressId(address._id)
+    const phone = address.phone || getUser()?.phone || 'customer'
     setFormData(prev => ({
-      firstName: address.name.split(' ')[0] || '',
+      firstName: address.name.split(' ')[0] || address.name || 'Customer',
       lastName: address.name.split(' ').slice(1).join(' ') || '',
-      email: prev.email || getUser()?.email || '', // Use existing form email, or fallback to user email
+      email: prev.email || getUser()?.email || `${phone}@lenszora.com`,
       phone: address.phone,
       address: `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}`,
       city: address.city,
@@ -407,14 +409,50 @@ const Checkout = () => {
     e?.preventDefault();
     if (isProcessingRef.current) return;
 
-    if (!formData.firstName || !formData.email || !formData.address || !formData.phone) {
-      alert('Please fill all required fields')
-      return
+    let currentFormData = { ...formData };
+
+    // If formData is missing name, address or phone, try syncing from newAddressData if valid
+    if ((!currentFormData.firstName || !currentFormData.address || !currentFormData.phone) && newAddressData.name && newAddressData.phone && newAddressData.addressLine1 && newAddressData.pincode) {
+      const nameParts = newAddressData.name.trim().split(' ');
+      currentFormData = {
+        firstName: nameParts[0] || newAddressData.name || 'Customer',
+        lastName: nameParts.slice(1).join(' ') || '',
+        email: currentFormData.email || getUser()?.email || `${newAddressData.phone}@lenszora.com`,
+        phone: newAddressData.phone,
+        address: `${newAddressData.addressLine1}${newAddressData.addressLine2 ? ', ' + newAddressData.addressLine2 : ''}`,
+        city: newAddressData.city || 'City',
+        state: newAddressData.state || 'State',
+        zipCode: newAddressData.pincode,
+        country: 'India',
+      };
+      setFormData(currentFormData);
     }
 
-    if (!deliveryInfo || !deliveryInfo.serviceable) {
-      alert('Delivery is not available for this pincode. Please select a different address.')
-      return
+    // Ensure email is populated (fallback if user logged in via phone OTP without email)
+    if (!currentFormData.email) {
+      currentFormData.email = getUser()?.email || `${currentFormData.phone || 'customer'}@lenszora.com`;
+      setFormData(currentFormData);
+    }
+
+    if (!currentFormData.firstName || !currentFormData.address || !currentFormData.phone || !currentFormData.zipCode) {
+      alert('Please fill all required delivery address fields (Full Name, Phone, Address Line 1, Pincode).');
+      return;
+    }
+
+    // Check pincode serviceability if not checked yet
+    let currentDeliveryInfo = deliveryInfo;
+    if (!currentDeliveryInfo && currentFormData.zipCode && currentFormData.zipCode.length === 6) {
+      try {
+        currentDeliveryInfo = await pincodes.check(currentFormData.zipCode);
+        setDeliveryInfo(currentDeliveryInfo);
+      } catch (err) {
+        console.error('Failed to verify pincode:', err);
+      }
+    }
+
+    if (currentDeliveryInfo && currentDeliveryInfo.serviceable === false) {
+      alert(`Delivery is not available for pincode ${currentFormData.zipCode}. Please select a different address or pincode.`);
+      return;
     }
 
     if (paymentMethod === 'manual') {
@@ -445,7 +483,7 @@ const Checkout = () => {
         couponCode: appliedCoupon?.code,
         discountAmount: couponDiscount,
         total: finalTotal,
-        shippingAddress: formData,
+        shippingAddress: currentFormData,
         paymentMethod,
         paymentProof: paymentMethod === 'manual' ? paymentProof : undefined,
         utrNumber: paymentMethod === 'manual' ? utrNumber : undefined
@@ -679,6 +717,33 @@ const Checkout = () => {
                 </motion.div>
               )}
 
+              {/* Email Field for saved address users */}
+              {savedAddresses.length > 0 && !showNewAddressForm && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl"
+                >
+                  <h2 className="text-lg font-playfair font-bold text-white flex items-center gap-2 mb-4">
+                    <Mail className="h-5 w-5 text-gold" />
+                    Contact & Receipt Email
+                  </h2>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                      Email Address <span className="text-gray-500 font-normal">(for order updates & invoice)</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full bg-black border border-zinc-800 text-white p-3 rounded-xl focus:outline-none focus:border-gold placeholder:text-gray-600 text-sm"
+                      placeholder="name@example.com"
+                    />
+                    <p className="text-[11px] text-gray-500 mt-1.5">We'll send your order confirmation and tax invoice to this email.</p>
+                  </div>
+                </motion.div>
+              )}
+
               {/* New Address Form (Amazon Style) */}
               {(showNewAddressForm || savedAddresses.length === 0) && (
                 <motion.div
@@ -734,7 +799,7 @@ const Checkout = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
                           Full Name <span className="text-red-500">*</span>
@@ -751,7 +816,7 @@ const Checkout = () => {
 
                       <div>
                         <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
-                          10-digit Mobile Number <span className="text-red-500">*</span>
+                          10-digit Mobile <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="tel"
@@ -761,6 +826,23 @@ const Checkout = () => {
                           onChange={(e) => setNewAddressData({ ...newAddressData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                           className="w-full bg-black border border-zinc-800 text-white p-3 rounded-xl focus:outline-none focus:border-gold placeholder:text-gray-600 text-sm font-mono"
                           placeholder="9876543210"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                          Email Address <span className="text-gray-500 font-normal">(Receipt & Invoice)</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={newAddressData.email}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewAddressData({ ...newAddressData, email: val });
+                            setFormData(prev => ({ ...prev, email: val }));
+                          }}
+                          className="w-full bg-black border border-zinc-800 text-white p-3 rounded-xl focus:outline-none focus:border-gold placeholder:text-gray-600 text-sm"
+                          placeholder="name@example.com"
                         />
                       </div>
                     </div>
