@@ -89,7 +89,7 @@ const TrendingBanners = () => {
       // 1. Add Admin Trending Sliders
       if (sliderList && sliderList.length > 0) {
         sliderList.forEach((s: any) => {
-          if ((s.bannerType === "Trending Banner" || s.bannerType === "Main Banner") && s.isActive) {
+          if (s.bannerType === "Trending Banner" && s.isActive) {
             trendingCards.push({
               _id: s._id,
               title: s.title || "Trending Collection",

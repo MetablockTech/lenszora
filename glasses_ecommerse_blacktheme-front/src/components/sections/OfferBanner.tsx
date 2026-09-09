@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { sliders, API_URL } from "@/lib/api";
+import { sliders } from "@/lib/api";
+import { getImageUrl } from "@/lib/utils";
 
 const OfferBanner = () => {
   const [banner, setBanner] = useState<any>(null);
@@ -10,9 +11,9 @@ const OfferBanner = () => {
     const fetchOfferBanner = async () => {
       try {
         const data = await sliders.list();
-        // Find active Footer Banner, Offer Banner, or any active slider
+        // Find active Footer Banner, Offer Banner, Trending Banner, or any active slider
         const active = data.find((s: any) => 
-          (s.bannerType === 'Footer Banner' || s.bannerType === 'Offer Banner' || s.bannerType === 'Promo Banner') && (s.isActive !== false)
+          (s.bannerType === 'Footer Banner' || s.bannerType === 'Offer Banner' || s.bannerType === 'Promo Banner' || s.bannerType === 'Trending Banner') && (s.isActive !== false)
         ) || data.find((s: any) => s.isActive !== false);
 
         if (active) setBanner(active);
@@ -35,20 +36,18 @@ const OfferBanner = () => {
   };
 
   const activeBanner = banner || defaultBanner;
-  const imageUrl = activeBanner.image
-    ? (activeBanner.image.startsWith('http') ? activeBanner.image : `${API_URL}${activeBanner.image}`)
-    : "";
+  const imageUrl = activeBanner.image ? getImageUrl(activeBanner.image) : "";
 
-  const redirectLink = activeBanner.buttonLink || activeBanner.url || "/store-locator";
+  const redirectLink = activeBanner.buttonLink || activeBanner.url || "/shop";
   const isExternal = redirectLink.startsWith('http://') || redirectLink.startsWith('https://');
 
   const bannerContent = (
-    <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 group cursor-pointer bg-gradient-to-r from-zinc-950 via-slate-900 to-zinc-950 transition-all duration-300 hover:border-gold/40">
+    <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 group cursor-pointer bg-gradient-to-r from-zinc-950 via-slate-900 to-zinc-950 transition-all duration-300 hover:border-amber-400/40">
       {imageUrl ? (
         <img 
           src={imageUrl} 
           alt={activeBanner.title || "Offer Banner"}
-          className="w-full h-auto max-h-[460px] object-contain sm:object-cover object-center rounded-2xl transition-transform duration-500 group-hover:scale-[1.01]"
+          className="w-full h-auto block rounded-2xl transition-transform duration-500 group-hover:scale-[1.005]"
         />
       ) : (
         /* Fallback Offer Banner Card */

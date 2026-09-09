@@ -8,7 +8,8 @@ import {
   CarouselPrevious
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
-import { sliders, API_URL } from "@/lib/api";
+import { sliders } from "@/lib/api";
+import { getImageUrl } from "@/lib/utils";
 
 interface SliderData {
   _id: string;
@@ -93,8 +94,9 @@ const HeroSection = () => {
         <CarouselContent className="-ml-0">
           {displaySlides.map((slide) => {
             const targetUrl = getSlideTargetUrl(slide);
-            const imageUrl = slide.image.startsWith('http') ? slide.image : `${API_URL}${slide.image}`;
+            const imageUrl = getImageUrl(slide.image);
             const isExternal = targetUrl ? (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) : false;
+            const hasOverlayText = Boolean(slide.title || slide.subtitle || slide.buttonText);
 
             const SlideWrapper = ({ children }: { children: React.ReactNode }) => {
               if (!targetUrl) return <div className="relative w-full h-full">{children}</div>;
@@ -127,7 +129,9 @@ const HeroSection = () => {
                     <img
                       src={imageUrl}
                       alt={slide.title || "Hero Banner"}
-                      className="w-full h-full object-contain sm:object-cover object-center transition-transform duration-500 group-hover:scale-[1.01]"
+                      className={`w-full h-full object-center transition-transform duration-500 group-hover:scale-[1.01] ${
+                        hasOverlayText ? "object-contain sm:object-cover" : "object-contain"
+                      }`}
                     />
                   </div>
 
