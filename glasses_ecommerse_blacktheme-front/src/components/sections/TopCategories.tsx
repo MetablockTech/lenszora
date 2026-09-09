@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { categories as categoriesAPI, settings, API_URL } from "@/lib/api";
+import { getImageUrl } from "@/lib/utils";
 
 interface NavItem {
   id: string;
@@ -146,8 +147,16 @@ const TopCategories = () => {
           settings.get("homepage_categories_nav").catch(() => null),
         ]);
         if (catsData) setDbCategories(catsData);
-        if (navSettings && navSettings.value && Array.isArray(navSettings.value) && navSettings.value.length > 0) {
-          setNavGroups(navSettings.value);
+        let navVal = navSettings?.value;
+        if (typeof navVal === 'string') {
+          try {
+            navVal = JSON.parse(navVal);
+          } catch {
+            // ignore
+          }
+        }
+        if (Array.isArray(navVal) && navVal.length > 0) {
+          setNavGroups(navVal);
         }
       } catch (err) {
         console.error("Failed to fetch categories / nav settings:", err);
@@ -201,7 +210,8 @@ const TopCategories = () => {
               {/* 4 Cards Grid - Takes Full Width of screen with generous responsive gaps */}
               <div className="grid grid-cols-4 gap-3 sm:gap-5 md:gap-7 lg:gap-9 xl:gap-11">
                 {group.items.map((item) => {
-                  const finalImage = item.image || getDbImage(item.dbSlugKey);
+                  const rawImage = item.image || getDbImage(item.dbSlugKey);
+                  const finalImage = getImageUrl(rawImage);
 
                   return (
                     <Link

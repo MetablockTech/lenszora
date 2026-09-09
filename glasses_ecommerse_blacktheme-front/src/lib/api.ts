@@ -7,7 +7,8 @@ type LoginResponse = {
 
 function getHeaders(token?: string) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') || undefined : undefined)
+  if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`
   return headers
 }
 
@@ -376,22 +377,39 @@ export const settings = {
     return res.json()
   },
   async update(key: string, payload: any, token?: string) {
+    const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') || undefined : undefined)
+    const body = (payload && typeof payload === 'object' && 'value' in payload)
+      ? payload
+      : { value: payload }
     const res = await fetch(`${API_URL}/api/settings/${key}`, {
       method: 'PUT',
-      headers: getHeaders(token),
-      body: JSON.stringify(payload)
+      headers: getHeaders(activeToken),
+      body: JSON.stringify(body)
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      let errMsg = 'Failed to update setting'
+      try {
+        const json = await res.json()
+        errMsg = json.message || json.error || errMsg
+      } catch {
+        errMsg = (await res.text()) || errMsg
+      }
+      throw new Error(errMsg)
+    }
     return res.json()
+  },
+  async set(key: string, payload: any, token?: string) {
+    return this.update(key, payload, token)
   },
   async uploadLogo(file: File, token?: string) {
     const formData = new FormData()
     formData.append('folder', 'settings')
     formData.append('file', file)
+    const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') || undefined : undefined)
     const res = await fetch(`${API_URL}/api/upload`, {
       method: 'POST',
       headers: {
-        'Authorization': token ? `Bearer ${token}` : ''
+        'Authorization': activeToken ? `Bearer ${activeToken}` : ''
       },
       body: formData
     })

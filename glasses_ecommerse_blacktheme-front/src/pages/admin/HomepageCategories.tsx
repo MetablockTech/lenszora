@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Save, UploadCloud, RotateCcw, Link as LinkIcon, Sparkles, Tag, Eye, ArrowUpRight, Check } from "lucide-react";
+import { Save, UploadCloud, RotateCcw, Link as LinkIcon, Sparkles, Tag, Eye, ArrowUpRight, Check, AlertCircle } from "lucide-react";
 import { settings, products, getToken, API_URL } from "@/lib/api";
+import { getImageUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -137,14 +138,13 @@ const HomepageCategories: React.FC = () => {
   const [groups, setGroups] = useState<NavGroup[]>(DEFAULT_HOMEPAGE_NAV);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Edit Modal State
   const [editGroupIndex, setEditGroupIndex] = useState<number | null>(null);
   const [editItemIndex, setEditItemIndex] = useState<number | null>(null);
   const [editItem, setEditItem] = useState<NavItem | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-
-  const token = getToken();
 
   useEffect(() => {
     loadSettings();
@@ -154,8 +154,16 @@ const HomepageCategories: React.FC = () => {
     setLoading(true);
     try {
       const res = await settings.get("homepage_categories_nav");
-      if (res && res.value && Array.isArray(res.value) && res.value.length > 0) {
-        setGroups(res.value);
+      let val = res?.value;
+      if (typeof val === "string") {
+        try {
+          val = JSON.parse(val);
+        } catch {
+          // ignore
+        }
+      }
+      if (Array.isArray(val) && val.length > 0) {
+        setGroups(val);
       } else {
         setGroups(DEFAULT_HOMEPAGE_NAV);
       }
@@ -170,11 +178,21 @@ const HomepageCategories: React.FC = () => {
   async function saveSettings(dataToSave?: NavGroup[]) {
     setSaving(true);
     try {
+      const token = getToken();
       const payload = dataToSave || groups;
-      await settings.set("homepage_categories_nav", payload);
-      toast.success("Homepage Category Navigation updated successfully!");
+      await settings.update(
+        "homepage_categories_nav",
+        {
+          value: payload,
+          category: "homepage",
+          type: "array",
+        },
+        token
+      );
+      setHasUnsavedChanges(false);
+      toast.success("Homepage Category Navigation saved successfully!");
     } catch (err: any) {
-      console.error(err);
+      console.error("Save settings error:", err);
       toast.error(err.message || "Failed to save settings");
     } finally {
       setSaving(false);
@@ -194,25 +212,40 @@ const HomepageCategories: React.FC = () => {
     setEditItem({ ...groups[groupIdx].items[itemIdx] });
   };
 
-  const handleSaveModalItem = () => {
+  const handleSaveModalItem = async (saveImmediately: boolean = false) => {
     if (editGroupIndex === null || editItemIndex === null || !editItem) return;
 
-    const newGroups = [...groups];
-    newGroups[editGroupIndex].items[editItemIndex] = editItem;
+    const newGroups = groups.map((g, gIdx) => {
+      if (gIdx !== editGroupIndex) return g;
+      return {
+        ...g,
+        items: g.items.map((item, iIdx) => (iIdx === editItemIndex ? editItem : item)),
+      };
+    });
+
     setGroups(newGroups);
     setEditItem(null);
     setEditGroupIndex(null);
     setEditItemIndex(null);
-    toast.info("Card modified locally. Click 'Save All Changes' to apply to live website.");
+
+    if (saveImmediately) {
+      await saveSettings(newGroups);
+    } else {
+      setHasUnsavedChanges(true);
+      toast.info("Card modified. Click 'Save All Changes' to apply to live website.");
+    }
   };
 
   const handleGroupHeaderChange = (groupIdx: number, field: "title" | "pillBadge" | "viewAllHref", val: string) => {
-    const newGroups = [...groups];
-    newGroups[groupIdx] = {
-      ...newGroups[groupIdx],
-      [field]: val,
-    };
+    const newGroups = groups.map((group, idx) => {
+      if (idx !== groupIdx) return group;
+      return {
+        ...group,
+        [field]: val,
+      };
+    });
     setGroups(newGroups);
+    setHasUnsavedChanges(true);
   };
 
   const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -221,6 +254,7 @@ const HomepageCategories: React.FC = () => {
 
     setUploadingImage(true);
     try {
+      const token = getToken();
       const res = await products.uploadImage(file, "categories", undefined, undefined, token);
       const uploadedUrl = res.url?.startsWith("http") ? res.url : `${API_URL}${res.url}`;
       setEditItem({ ...editItem, image: uploadedUrl });
@@ -269,13 +303,35 @@ const HomepageCategories: React.FC = () => {
           <Button
             onClick={() => saveSettings()}
             disabled={saving}
-            className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-amber-500/20"
+            className={`font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all ${
+              hasUnsavedChanges
+                ? "bg-amber-400 hover:bg-amber-300 text-black shadow-amber-500/30 ring-2 ring-amber-400/50 animate-pulse"
+                : "bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/20"
+            }`}
           >
             <Save className="w-4 h-4" />
-            {saving ? "Saving..." : "Save All Changes"}
+            {saving ? "Saving..." : hasUnsavedChanges ? "Save All Changes (Unsaved)" : "Save All Changes"}
           </Button>
         </div>
       </div>
+
+      {/* Unsaved Changes Banner */}
+      {hasUnsavedChanges && (
+        <div className="flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/30 text-amber-300 px-5 py-3 rounded-2xl text-xs sm:text-sm font-medium">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+            <span>You have unsaved changes. Remember to click <strong>Save All Changes</strong> to publish them to your live website.</span>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => saveSettings()}
+            disabled={saving}
+            className="bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs px-3 h-8 shrink-0"
+          >
+            {saving ? "Saving..." : "Save Now"}
+          </Button>
+        </div>
+      )}
 
       {/* 3 Rows of Categories */}
       <div className="space-y-8">
@@ -339,7 +395,7 @@ const HomepageCategories: React.FC = () => {
                     {/* Image Preview */}
                     <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-900 relative mb-3">
                       <img
-                        src={item.image}
+                        src={getImageUrl(item.image)}
                         alt={item.label}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -385,7 +441,7 @@ const HomepageCategories: React.FC = () => {
                 <Label className="text-xs font-bold text-slate-300">Card Photo / Image</Label>
                 <div className="flex items-center gap-4 mt-2">
                   <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-950 border border-slate-700 shrink-0">
-                    <img src={editItem.image} alt="Preview" className="w-full h-full object-cover" />
+                    <img src={getImageUrl(editItem.image)} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 space-y-2">
                     <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-semibold text-white transition-colors">
@@ -465,7 +521,7 @@ const HomepageCategories: React.FC = () => {
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="gap-2 sm:gap-2 flex-col-reverse sm:flex-row">
               <Button
                 variant="outline"
                 onClick={() => setEditItem(null)}
@@ -474,11 +530,19 @@ const HomepageCategories: React.FC = () => {
                 Cancel
               </Button>
               <Button
-                onClick={handleSaveModalItem}
-                className="bg-amber-500 hover:bg-amber-400 text-black font-bold"
+                variant="secondary"
+                onClick={() => handleSaveModalItem(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs"
               >
-                <Check className="w-4 h-4 mr-1" />
-                Done Editing
+                Apply to Draft
+              </Button>
+              <Button
+                onClick={() => handleSaveModalItem(true)}
+                disabled={saving}
+                className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-md shadow-amber-500/20"
+              >
+                <Check className="w-4 h-4 mr-1.5" />
+                {saving ? "Publishing..." : "Save & Publish Now"}
               </Button>
             </DialogFooter>
           </DialogContent>
