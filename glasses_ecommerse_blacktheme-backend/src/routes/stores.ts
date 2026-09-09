@@ -61,40 +61,95 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
 // Update store
 router.put('/:id', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res) => {
   try {
-    const store = await Store.findById(req.params.id)
+    const { id } = req.params
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: 'Valid Store ID is required' })
+    }
+
+    let store = null
+    try {
+      store = await Store.findById(id)
+    } catch (e) {
+      // Catch CastError if ID is a custom string
+    }
+
+    if (!store) {
+      store = await Store.findOne({ _id: id })
+    }
+
     if (!store) return res.status(404).json({ error: 'Store not found' })
 
-    // Selection check
+    // Selection check - only restrict if user is vendor and doesn't own this store
     if (req.user!.role === 'vendor' && store.vendorId?.toString() !== (req.user!.vendorId || req.user!.id)) {
       return res.status(403).json({ error: 'Forbidden: You do not own this store' })
     }
 
     const updateData = { ...req.body }
-    if (!updateData.vendorId || updateData.vendorId === '' || updateData.vendorId === 'none') {
+    delete updateData._id
+    delete updateData.id
+
+    if (updateData.vendorId === '' || updateData.vendorId === 'none') {
       delete updateData.vendorId
     }
 
-    const updated = await Store.findByIdAndUpdate(req.params.id, updateData, { new: true })
+    // If location is provided, ensure valid coordinates array
+    if (updateData.location) {
+      if (!updateData.location.coordinates || !Array.isArray(updateData.location.coordinates) || updateData.location.coordinates.length < 2) {
+        delete updateData.location
+      }
+    }
+
+    let updated = null
+    try {
+      updated = await Store.findByIdAndUpdate(store._id, updateData, { new: true, runValidators: false })
+    } catch (e) {
+      updated = await Store.findOneAndUpdate({ _id: store._id }, updateData, { new: true, runValidators: false })
+    }
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Failed to update store' })
+    }
+
     res.json(updated)
   } catch (err: any) {
-    res.status(400).json({ error: err.message })
+    console.error('Store update error:', err)
+    res.status(400).json({ error: err.message || 'Failed to update store' })
   }
 })
 
 // Delete store
 router.delete('/:id', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res) => {
   try {
-    const store = await Store.findById(req.params.id)
+    const { id } = req.params
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: 'Valid Store ID is required' })
+    }
+
+    let store = null
+    try {
+      store = await Store.findById(id)
+    } catch (e) {
+      // ignore
+    }
+    if (!store) {
+      store = await Store.findOne({ _id: id })
+    }
+
     if (!store) return res.status(404).json({ error: 'Store not found' })
 
     if (req.user!.role === 'vendor' && store.vendorId?.toString() !== (req.user!.vendorId || req.user!.id)) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
-    await Store.findByIdAndDelete(req.params.id)
+    try {
+      await Store.findByIdAndDelete(store._id)
+    } catch (e) {
+      await Store.deleteOne({ _id: store._id })
+    }
+
     res.json({ ok: true })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message || 'Failed to delete store' })
   }
 })
 

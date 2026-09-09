@@ -150,11 +150,13 @@ const VendorStores = () => {
       delete (payload as any).latitude
       delete (payload as any).longitude
 
+      const activeToken = token || getToken() || localStorage.getItem('token') || undefined
       if (editingStore) {
-        await storesApi.update(editingStore._id, payload, token)
+        const storeId = editingStore._id || editingStore.id
+        await storesApi.update(storeId, payload, activeToken)
         toast.success('Store updated successfully')
       } else {
-        await storesApi.create(payload, token)
+        await storesApi.create(payload, activeToken)
         toast.success('Store created successfully')
       }
 

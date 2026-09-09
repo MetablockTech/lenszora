@@ -123,11 +123,12 @@ const AdminStores = () => {
     e.preventDefault()
     setUploading(true)
     try {
+      const activeToken = token || getToken() || localStorage.getItem('token') || undefined
       let finalImageUrl = formData.image
 
       // 1. Upload image if selected
       if (selectedFile) {
-        const uploadRes = await products.uploadImage(selectedFile, 'stores', 'general', formData.name.replace(/\s+/g, '-'), token)
+        const uploadRes = await products.uploadImage(selectedFile, 'stores', 'general', formData.name.replace(/\s+/g, '-'), activeToken)
         finalImageUrl = uploadRes.url || uploadRes.path
       }
 
@@ -135,24 +136,48 @@ const AdminStores = () => {
         ? formData.services.split(',').map(s => s.trim()).filter(Boolean)
         : (Array.isArray(formData.services) ? formData.services : [])
 
-      const payload = {
-        ...formData,
-        images: finalImageUrl ? [finalImageUrl] : [],
+      const lat = parseFloat(formData.latitude)
+      const lng = parseFloat(formData.longitude)
+      const hasCoordinates = !isNaN(lat) && !isNaN(lng) && formData.latitude !== '' && formData.longitude !== ''
+
+      const payload: any = {
+        name: formData.name,
+        addressLine: formData.addressLine,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+        phone: formData.phone,
+        email: formData.email || '',
+        hours: formData.hours || '10:00 AM - 9:00 PM',
         services: parsedServices,
-        location: {
+        isActive: formData.isActive,
+        freeGift: formData.freeGift,
+        images: finalImageUrl ? [finalImageUrl] : (editingStore?.images || []),
+      }
+
+      if (hasCoordinates) {
+        payload.location = {
           type: 'Point',
-          coordinates: [parseFloat(formData.longitude) || 0, parseFloat(formData.latitude) || 0]
+          coordinates: [lng, lat]
+        }
+      } else if (editingStore?.location?.coordinates) {
+        payload.location = editingStore.location
+      } else {
+        payload.location = {
+          type: 'Point',
+          coordinates: [0, 0]
         }
       }
-      delete (payload as any).image // Cleanup local state field
-      delete (payload as any).latitude
-      delete (payload as any).longitude
 
       if (editingStore) {
-        await storesApi.update(editingStore._id, payload, token)
+        const storeId = editingStore._id || editingStore.id
+        if (!storeId) {
+          throw new Error('Store ID not found')
+        }
+        await storesApi.update(storeId, payload, activeToken)
         toast.success('Store updated successfully')
       } else {
-        await storesApi.create(payload, token)
+        await storesApi.create(payload, activeToken)
         toast.success('Store created successfully')
       }
 
@@ -186,8 +211,8 @@ const AdminStores = () => {
       isActive: store.isActive ?? true,
       freeGift: store.freeGift || false,
       image: storeImage,
-      latitude: store.location?.coordinates?.[1]?.toString() || '',
-      longitude: store.location?.coordinates?.[0]?.toString() || ''
+      latitude: store.location?.coordinates?.[1] !== undefined ? store.location.coordinates[1].toString() : '',
+      longitude: store.location?.coordinates?.[0] !== undefined ? store.location.coordinates[0].toString() : ''
     })
     setImagePreview(storeImage ? getImageUrl(storeImage) : null)
     setIsDialogOpen(true)
@@ -196,17 +221,18 @@ const AdminStores = () => {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this store?')) return
     try {
-      await storesApi.remove(id, token)
+      const activeToken = token || getToken() || localStorage.getItem('token') || undefined
+      await storesApi.remove(id, activeToken)
       toast.success('Store deleted')
       fetchStores()
-    } catch (error) {
-      toast.error('Failed to delete store')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete store')
     }
   }
 
   const filteredStores = stores.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.city.toLowerCase().includes(search.toLowerCase())
+    (s.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (s.city || '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -431,7 +457,7 @@ const AdminStores = () => {
                           <Button variant="ghost" size="sm" onClick={() => handleEdit(store)} className="text-primary hover:bg-primary/10">
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(store._id)} className="text-red-500 hover:bg-red-10/20">
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(store._id || store.id)} className="text-red-500 hover:bg-red-10/20">
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>

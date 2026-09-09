@@ -154,8 +154,9 @@ const TrendingBanners = () => {
         {/* Header matching Lenskart design */}
         <div className="flex items-center justify-between mb-8 px-1">
           <div>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
-              <span className="text-blue-600 font-black">#Trending</span> at LensZora
+            <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-1.5">
+              <span className="text-blue-500 font-black">#Trending</span>
+              <span className="text-white font-bold">at LensZora</span>
             </h2>
           </div>
 

@@ -1071,29 +1071,62 @@ export const stores = {
     return res.json()
   },
   async create(payload: any, token?: string) {
+    const activeToken = token || getToken()
     const res = await fetch(`${API_URL}/api/stores`, {
       method: 'POST',
-      headers: getHeaders(token),
+      headers: getHeaders(activeToken),
       body: JSON.stringify(payload)
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      let message = 'Failed to create store'
+      try {
+        const text = await res.text()
+        const data = JSON.parse(text)
+        message = data.error || data.message || text
+      } catch (e) {
+        // ignore
+      }
+      throw new Error(message)
+    }
     return res.json()
   },
   async update(id: string, payload: any, token?: string) {
+    const activeToken = token || getToken()
     const res = await fetch(`${API_URL}/api/stores/${id}`, {
       method: 'PUT',
-      headers: getHeaders(token),
+      headers: getHeaders(activeToken),
       body: JSON.stringify(payload)
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      let message = 'Failed to update store'
+      try {
+        const text = await res.text()
+        const data = JSON.parse(text)
+        message = data.error || data.message || text
+      } catch (e) {
+        // ignore
+      }
+      throw new Error(message)
+    }
     return res.json()
   },
   async remove(id: string, token?: string) {
+    const activeToken = token || getToken()
     const res = await fetch(`${API_URL}/api/stores/${id}`, {
       method: 'DELETE',
-      headers: getHeaders(token)
+      headers: getHeaders(activeToken)
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      let message = 'Failed to delete store'
+      try {
+        const text = await res.text()
+        const data = JSON.parse(text)
+        message = data.error || data.message || text
+      } catch (e) {
+        // ignore
+      }
+      throw new Error(message)
+    }
     return res.json()
   }
 }
