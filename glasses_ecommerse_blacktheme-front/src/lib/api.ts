@@ -387,6 +387,9 @@ export const settings = {
       body: JSON.stringify(body)
     })
     if (!res.ok) {
+      if (res.status === 401) {
+        clearToken()
+      }
       let errMsg = 'Failed to update setting'
       try {
         const json = await res.json()
@@ -683,8 +686,38 @@ export const inquiries = {
   }
 }
 
+export function isTokenExpired(token?: string): boolean {
+  if (!token) return true
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return true
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    const payload = JSON.parse(jsonPayload)
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return true
+    }
+    return false
+  } catch {
+    return true
+  }
+}
+
 export function getToken() {
-  return localStorage.getItem('token') || undefined
+  if (typeof window === 'undefined') return undefined
+  const token = localStorage.getItem('token')
+  if (!token || token === 'undefined' || token === 'null') return undefined
+  if (isTokenExpired(token)) {
+    console.warn('Authentication token has expired. Clearing session.')
+    clearToken()
+    return undefined
+  }
+  return token
 }
 
 export function setToken(token: string) {

@@ -60,6 +60,8 @@ export default function AdminLogin() {
         }
     }
 
+    const isExpired = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('expired') === '1'
+
     return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center py-12 px-4">
             <motion.div
@@ -91,6 +93,11 @@ export default function AdminLogin() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
+                        {isExpired && (
+                            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs font-medium">
+                                Your admin session expired or was invalid. Please enter your credentials to log back in.
+                            </div>
+                        )}
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="email" className="text-slate-300">Email</Label>

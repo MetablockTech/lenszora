@@ -37,9 +37,7 @@ export function getProductImage(product: any): string {
   return getImageUrl(img)
 }
 
-export function getToken() {
-  return localStorage.getItem('token')
-}
+export { getToken } from "./api"
 
 export function formatPrice(price: number | undefined | null) {
   if (price === undefined || price === null) return '₹0.00'

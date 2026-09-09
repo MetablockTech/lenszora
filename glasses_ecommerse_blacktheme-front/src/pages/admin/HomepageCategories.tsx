@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Save, UploadCloud, RotateCcw, Link as LinkIcon, Sparkles, Tag, Eye, ArrowUpRight, Check, AlertCircle } from "lucide-react";
-import { settings, products, getToken, API_URL } from "@/lib/api";
+import { settings, products, getToken, clearToken, API_URL } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,6 +136,7 @@ export const DEFAULT_HOMEPAGE_NAV: NavGroup[] = [
 ];
 
 const HomepageCategories: React.FC = () => {
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<NavGroup[]>(DEFAULT_HOMEPAGE_NAV);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -176,9 +178,16 @@ const HomepageCategories: React.FC = () => {
   }
 
   async function saveSettings(dataToSave?: NavGroup[]) {
+    const token = getToken();
+    if (!token) {
+      toast.error("Admin session expired. Please log in again.");
+      clearToken();
+      setTimeout(() => navigate("/admin/login?expired=1"), 1000);
+      return;
+    }
+
     setSaving(true);
     try {
-      const token = getToken();
       const payload = dataToSave || groups;
       await settings.update(
         "homepage_categories_nav",
@@ -193,7 +202,17 @@ const HomepageCategories: React.FC = () => {
       toast.success("Homepage Category Navigation saved successfully!");
     } catch (err: any) {
       console.error("Save settings error:", err);
-      toast.error(err.message || "Failed to save settings");
+      const isAuthError =
+        err.message?.toLowerCase().includes("token") ||
+        err.message?.toLowerCase().includes("unauthorized") ||
+        err.message?.toLowerCase().includes("forbidden");
+      if (isAuthError) {
+        toast.error("Admin session expired or invalid token. Redirecting to login...");
+        clearToken();
+        setTimeout(() => navigate("/admin/login?expired=1"), 1200);
+      } else {
+        toast.error(err.message || "Failed to save settings");
+      }
     } finally {
       setSaving(false);
     }

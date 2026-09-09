@@ -32,12 +32,17 @@ const AdminLayout: React.FC = () => {
   const [stats, setStats] = React.useState({ pending: 0, active: 0, rejected: 0 })
 
   const fetchStats = async () => {
-    if (token && user?.role === 'admin') {
+    const currentToken = getToken()
+    if (currentToken && user?.role === 'admin') {
       try {
-        const data = await products.stats(token)
+        const data = await products.stats(currentToken)
         setStats(data)
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to fetch product stats', err)
+        if (err.message?.toLowerCase().includes('token') || err.message?.toLowerCase().includes('unauthorized')) {
+          clearToken()
+          navigate('/admin/login?expired=1')
+        }
       }
     }
   }
@@ -46,14 +51,16 @@ const AdminLayout: React.FC = () => {
   const userId = user?.id
 
   React.useEffect(() => {
-    if (!token || userRole !== 'admin') {
-      navigate('/admin/login')
+    const activeToken = getToken()
+    if (!activeToken || userRole !== 'admin') {
+      clearToken()
+      navigate('/admin/login?expired=1')
     } else {
       fetchStats()
       const interval = setInterval(fetchStats, 30000) // Update every 30s
       return () => clearInterval(interval)
     }
-  }, [token, userRole, userId, navigate])
+  }, [userRole, userId, navigate])
 
   function handleLogout() {
     clearToken()
