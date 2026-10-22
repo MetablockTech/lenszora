@@ -31,6 +31,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Where each banner type appears on the site and the image size that fits it
+const BANNER_TYPES = [
+  { value: 'Main Banner', label: 'Main Banner', hint: 'Large slider at the top of the homepage', ratio: '4:1', size: '1920 × 480 px', aspect: 'aspect-[4/1]', usesText: true, note: 'Text is shown on top of the image, so keep the left side of the photo simple.' },
+  { value: 'Hero Sub Banner', label: 'Hero Sub Banner', hint: 'Smaller banners right below the main banner', ratio: '12:5', size: '1200 × 500 px', aspect: 'aspect-[12/5]', usesText: false, note: 'Up to 3 show side by side (1 spans the full width). Put any text inside the image itself.' },
+  { value: 'Footer Banner', label: 'Footer Banner', hint: 'Wide offer banner on the homepage', ratio: '4:1', size: '1920 × 480 px', aspect: 'aspect-[4/1]', usesText: true, note: 'Shown as a wide strip; if no image is set a text card is used instead.' },
+  { value: 'Footer Sub Banner', label: 'Footer Sub Banner', hint: 'Banners just above the footer on the homepage', ratio: '12:5', size: '1200 × 500 px', aspect: 'aspect-[12/5]', usesText: false, note: 'Up to 3 show side by side (1 spans the full width). Put any text inside the image itself.' },
+  { value: 'Trending Banner', label: 'Trending Banner', hint: '"#Trending at LensZora" section on the homepage', ratio: '4:1', size: '1920 × 480 px', aspect: 'aspect-[4/1]', usesText: true, note: 'Shown in the trending section; keep important content in the centre.' },
+  { value: 'Brand Banner', label: 'Brand Banner', hint: 'Brand slider on the homepage', ratio: '4:1', size: '1920 × 480 px', aspect: 'aspect-[4/1]', usesText: true, note: 'Shown in the brand slider; keep the brand logo clearly visible.' },
+  { value: 'Popup Banner', label: 'Popup Banner (Advertisement)', hint: 'Popup shown on the chosen page after a short delay', ratio: '1:1', size: '1080 × 1080 px', aspect: 'aspect-square', usesText: true, note: 'Opens as a popup; a square image works best on phones.' },
+]
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
 interface Slider {
   _id: string;
   title?: string;
@@ -58,6 +71,8 @@ const AdminSliders = () => {
   // Local state to hold the physical file before saving to server
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Initialize with a default sliding structure to prevent undefined errors
   const defaultSlide: Partial<Slider> = { 
@@ -96,9 +111,10 @@ const AdminSliders = () => {
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!token) return;
+    if (isSaving) return;
     try {
-      setIsLoading(true);
-      
+      setIsSaving(true);
+
       let finalImageUrl = editingSlide.image;
 
       // Only hit the server to upload the image when they actually click Save
@@ -112,8 +128,7 @@ const AdminSliders = () => {
       }
 
       if (!finalImageUrl) {
-         toast.error("Please provide a banner image");
-         setIsLoading(false);
+         toast.error("Please add a banner image");
          return;
       }
       
@@ -131,9 +146,16 @@ const AdminSliders = () => {
       setPreviewUrl(null);
       fetchSlides();
     } catch (error: any) {
-      toast.error(error.message || "Failed to save slider");
+      let message = error?.message || "Failed to save banner";
+      try {
+        const parsed = JSON.parse(message);
+        message = parsed.message || parsed.error || message;
+      } catch {
+        // plain text
+      }
+      toast.error(message);
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
       setIsUploading(false);
     }
   };
@@ -194,15 +216,29 @@ const AdminSliders = () => {
     setIsDialogOpen(true);
   };
 
+  // Validate and keep the file locally; it is uploaded when the banner is saved
+  const acceptFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please choose an image file (JPG, PNG, WEBP or GIF)");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error(`Image is ${(file.size / 1024 / 1024).toFixed(1)} MB. Max allowed is 5 MB.`);
+      return;
+    }
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Create a local blob URL for immediate preview without hitting server
-    const objectUrl = URL.createObjectURL(file);
-    setSelectedFile(file);
-    setPreviewUrl(objectUrl);
+    e.target.value = "";
+    if (file) acceptFile(file);
   };
+
+  const typeInfo = BANNER_TYPES.find((t) => t.value === editingSlide.bannerType) || BANNER_TYPES[0];
+  const rawImage = previewUrl || editingSlide.image || "";
+  const currentImageSrc = !rawImage ? "" : rawImage.startsWith('blob:') || rawImage.startsWith('http') ? rawImage : `${API_URL}${rawImage}`;
 
   const filteredSlides = slides.filter(s => {
     if (filterType === 'main') return s.bannerType === 'Main Banner';
@@ -367,231 +403,235 @@ const AdminSliders = () => {
         }
       }}>
         {/* Add/Edit Dialog Form */}
-        <DialogContent className="max-w-4xl bg-white border border-slate-200 p-0 text-slate-700">
-          <div className="p-6 border-b border-slate-200 flex items-center gap-2">
-             <ImageIcon className="h-5 w-5 text-blue-600" />
-             <DialogTitle className="text-xl font-bold text-slate-900">Banner Setup <span className="text-blue-600 font-normal">(Default)</span></DialogTitle>
+        <DialogContent className="max-w-4xl w-[calc(100vw-2rem)] max-h-[92vh] p-0 gap-0 flex flex-col overflow-hidden bg-white border border-slate-200 text-slate-700">
+          <div className="shrink-0 px-6 py-4 border-b border-slate-200 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center">
+              <ImageIcon className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-lg font-bold text-slate-900">{editingSlide._id ? 'Edit Banner' : 'Add Banner'}</DialogTitle>
+              <p className="text-xs text-slate-500 truncate">{typeInfo.hint}</p>
+            </div>
           </div>
-          
-          <form onSubmit={handleSubmit} className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column - Dropdowns & Texts */}
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <Label className="text-slate-600 text-sm font-semibold">Banner type <span className="text-red-500">*</span></Label>
-                  <Select 
-                    value={editingSlide.bannerType} 
-                    onValueChange={(val) => setEditingSlide(prev => ({ ...prev, bannerType: val }))}
-                  >
-                    <SelectTrigger className="w-full bg-white border-slate-200 h-10">
-                      <SelectValue placeholder="Select Banner Type" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="Main Banner">Main Banner</SelectItem>
-                      <SelectItem value="Hero Sub Banner">Hero Sub Banner (below main banner)</SelectItem>
-                      <SelectItem value="Footer Banner">Footer Banner</SelectItem>
-                      <SelectItem value="Footer Sub Banner">Footer Sub Banner (above footer)</SelectItem>
-                      <SelectItem value="Trending Banner">Trending Banner</SelectItem>
-                      <SelectItem value="Brand Banner">Brand Banner</SelectItem>
-                      <SelectItem value="Popup Banner">Popup Banner (Advertisement Popup)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                <div className="space-y-2">
-                  <Label className="text-slate-600 text-sm font-semibold">Resource type <span className="text-red-500">*</span></Label>
-                  <Select 
-                    value={editingSlide.resourceType || "Custom"} 
-                    onValueChange={(val) => setEditingSlide(prev => ({ ...prev, resourceType: val }))}
-                  >
-                    <SelectTrigger className="w-full bg-white border-slate-200 h-10">
-                      <SelectValue placeholder="Select Resource Type" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="Custom">Custom Link</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Advertisement Popup Target Page & Settings */}
-                {editingSlide.bannerType === 'Popup Banner' && (
-                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider">
-                      <Sparkles className="w-4 h-4" />
-                      <span>Ad Popup Trigger & Target Page</span>
-                    </div>
-
-                    {/* Target Page Selection */}
-                    <div className="space-y-2">
-                      <Label className="text-slate-900 text-xs font-bold uppercase tracking-wider">
-                        Occurs On Page <span className="text-red-500">*</span>
-                      </Label>
-                      
-                      {/* Quick Select Buttons */}
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          { label: '🏠 Home Page (/)', value: '/' },
-                          { label: '🛍️ Shop (/shop)', value: '/shop' },
-                          { label: '👓 Products (/product)', value: '/product' },
-                          { label: '🛒 Checkout (/checkout)', value: '/checkout' },
-                          { label: '🌐 All Pages (*)', value: '*' },
-                        ].map(item => (
-                          <button
-                            key={item.value}
-                            type="button"
-                            onClick={() => setEditingSlide(prev => ({ ...prev, targetPage: item.value }))}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                              editingSlide.targetPage === item.value
-                                ? 'bg-amber-500 text-black shadow-sm font-bold'
-                                : 'bg-white text-slate-600 hover:bg-white border border-slate-200 hover:border-amber-500/40'
-                            }`}
-                          >
-                            {item.label}
-                          </button>
+          <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_1.1fr] gap-6">
+                {/* Left: settings */}
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-slate-700 text-sm font-semibold">Banner type <span className="text-red-500">*</span></Label>
+                    <Select
+                      value={editingSlide.bannerType}
+                      onValueChange={(val) => setEditingSlide(prev => ({ ...prev, bannerType: val }))}
+                    >
+                      <SelectTrigger className="w-full bg-white border-slate-200 h-10">
+                        <SelectValue placeholder="Select Banner Type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200">
+                        {BANNER_TYPES.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Advertisement Popup Target Page & Settings */}
+                  {editingSlide.bannerType === 'Popup Banner' && (
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-4">
+                      <div className="flex items-center gap-2 text-amber-700 font-bold text-xs uppercase tracking-wider">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Ad Popup Trigger & Target Page</span>
                       </div>
-
-                      <Input 
-                        placeholder="e.g. / or /shop or /brands or *" 
-                        className="bg-white border-slate-200 h-9 text-xs font-mono"
-                        value={editingSlide.targetPage || "/"}
-                        onChange={(e) => setEditingSlide(prev => ({ ...prev, targetPage: e.target.value }))}
-                      />
-                      <p className="text-[11px] text-slate-500">
-                        Popup will trigger when customer lands on this page route. (e.g. <code>/</code> for Home, <code>/shop</code> for Shop, or <code>*</code> for all pages).
-                      </p>
+                      <div className="space-y-2">
+                        <Label className="text-slate-900 text-xs font-bold uppercase tracking-wider">
+                          Occurs On Page <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { label: '🏠 Home Page (/)', value: '/' },
+                            { label: '🛍️ Shop (/shop)', value: '/shop' },
+                            { label: '👓 Products (/product)', value: '/product' },
+                            { label: '🛒 Checkout (/checkout)', value: '/checkout' },
+                            { label: '🌐 All Pages (*)', value: '*' },
+                          ].map(item => (
+                            <button
+                              key={item.value}
+                              type="button"
+                              onClick={() => setEditingSlide(prev => ({ ...prev, targetPage: item.value }))}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                                editingSlide.targetPage === item.value
+                                  ? 'bg-amber-500 text-black shadow-sm font-bold'
+                                  : 'bg-white text-slate-600 border border-slate-200 hover:border-amber-500/40'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                        <Input
+                          placeholder="e.g. / or /shop or /brands or *"
+                          className="bg-white border-slate-200 h-9 text-xs font-mono"
+                          value={editingSlide.targetPage || "/"}
+                          onChange={(e) => setEditingSlide(prev => ({ ...prev, targetPage: e.target.value }))}
+                        />
+                        <p className="text-[11px] text-slate-500">
+                          Popup will trigger when customer lands on this page route (<code>/</code> Home, <code>/shop</code> Shop, <code>*</code> all pages).
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-900 text-xs font-semibold">Popup Delay (Seconds before opening)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="30"
+                          step="0.5"
+                          className="bg-white border-slate-200 h-9 text-xs"
+                          value={editingSlide.delaySeconds ?? 1}
+                          onChange={(e) => setEditingSlide(prev => ({ ...prev, delaySeconds: parseFloat(e.target.value) || 0 }))}
+                        />
+                      </div>
                     </div>
+                  )}
 
-                    {/* Popup Delay in Seconds */}
+                  <div className="space-y-1.5">
+                    <Label className="text-slate-700 text-sm font-semibold">
+                      {editingSlide.bannerType === 'Popup Banner' ? 'Popup click link' : 'Banner click link'}
+                    </Label>
+                    <Input
+                      placeholder="e.g. /shop?category=sunglasses, /sale, /store-locator"
+                      className="bg-white border-slate-200 h-10"
+                      value={editingSlide.buttonLink || ""}
+                      onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonLink: e.target.value }))}
+                    />
+                    <p className="text-[11px] text-slate-500">Where customers go when they click the banner.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-slate-700 text-sm font-semibold">
+                      {typeInfo.usesText ? 'Title / Headline' : 'Title'} <span className="font-normal text-slate-400">(optional)</span>
+                    </Label>
+                    <Input
+                      placeholder={typeInfo.usesText ? "e.g. FLAT 20% OFF ON ALL GLASSES" : "Used as image description for accessibility"}
+                      className="bg-white border-slate-200 h-10"
+                      value={editingSlide.title || ""}
+                      onChange={(e) => setEditingSlide(prev => ({ ...prev, title: e.target.value }))}
+                    />
+                  </div>
+
+                  {typeInfo.usesText && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-700 text-sm font-semibold">Subtitle / Offer description <span className="font-normal text-slate-400">(optional)</span></Label>
+                        <Input
+                          placeholder="e.g. Use code LENSEZORA20 at checkout"
+                          className="bg-white border-slate-200 h-10"
+                          value={editingSlide.subtitle || ""}
+                          onChange={(e) => setEditingSlide(prev => ({ ...prev, subtitle: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-700 text-sm font-semibold">Button label <span className="font-normal text-slate-400">(optional)</span></Label>
+                        <Input
+                          placeholder="e.g. SHOP NOW or CLAIM OFFER"
+                          className="bg-white border-slate-200 h-10"
+                          value={editingSlide.buttonText || ""}
+                          onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonText: e.target.value }))}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-slate-900 text-xs font-semibold">
-                        Popup Delay (Seconds before opening)
-                      </Label>
-                      <Input 
+                      <Label className="text-slate-700 text-sm font-semibold">Display order</Label>
+                      <Input
                         type="number"
-                        min="0"
-                        max="30"
-                        step="0.5"
-                        className="bg-white border-slate-200 h-9 text-xs"
-                        value={editingSlide.delaySeconds ?? 1}
-                        onChange={(e) => setEditingSlide(prev => ({ ...prev, delaySeconds: parseFloat(e.target.value) || 0 }))}
+                        min={0}
+                        className="bg-white border-slate-200 h-10"
+                        value={editingSlide.order ?? 0}
+                        onChange={(e) => setEditingSlide(prev => ({ ...prev, order: parseInt(e.target.value, 10) || 0 }))}
                       />
-                      <p className="text-[11px] text-slate-500">
-                        How many seconds to wait after page loads before the popup appears (default: 1 sec).
-                      </p>
+                      <p className="text-[11px] text-slate-500">Lower shows first.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-slate-700 text-sm font-semibold">Status</Label>
+                      <label className="flex h-10 items-center gap-2.5 rounded-md border border-slate-200 px-3 cursor-pointer">
+                        <Switch
+                          checked={editingSlide.isActive !== false}
+                          onCheckedChange={(checked) => setEditingSlide(prev => ({ ...prev, isActive: checked }))}
+                        />
+                        <span className="text-sm text-slate-700">{editingSlide.isActive !== false ? 'Active' : 'Hidden'}</span>
+                      </label>
                     </div>
                   </div>
-                )}
-
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-4 duration-300">
-                  <Label className="text-slate-600 text-sm font-semibold">
-                    {editingSlide.bannerType === 'Popup Banner' ? 'Popup Click Redirect URL / Page Link' : 'Banner Redirect URL / Link'}
-                  </Label>
-                  <Input 
-                    placeholder="e.g. /shop?category=sunglasses, /sale, or /store-locator" 
-                    className="bg-white border-slate-200 h-10"
-                    value={editingSlide.buttonLink || ""}
-                    onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonLink: e.target.value }))}
-                  />
-                  <p className="text-[11px] text-slate-500">
-                    When customer clicks on the popup banner or button, they will be redirected to this link.
-                  </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-slate-600 text-sm font-semibold">Title / Headline (Optional)</Label>
-                  <Input 
-                    placeholder="e.g. FLAT 20% OFF ON ALL GLASSES" 
-                    className="bg-white border-slate-200 h-10"
-                    value={editingSlide.title || ""}
-                    onChange={(e) => setEditingSlide(prev => ({ ...prev, title: e.target.value }))}
-                  />
-                </div>
+                {/* Right: image */}
+                <div className="space-y-3">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Label className="text-slate-700 text-sm font-semibold">Banner image <span className="text-red-500">*</span></Label>
+                    <span className="text-xs font-semibold text-blue-600">Ratio {typeInfo.ratio} · {typeInfo.size}</span>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label className="text-slate-600 text-sm font-semibold">Subtitle / Offer Description (Optional)</Label>
-                  <Input 
-                    placeholder="e.g. Use code LENSEZORA20 at checkout for instant discount" 
-                    className="bg-white border-slate-200 h-10"
-                    value={editingSlide.subtitle || ""}
-                    onChange={(e) => setEditingSlide(prev => ({ ...prev, subtitle: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-slate-600 text-sm font-semibold">Button Label (Optional)</Label>
-                  <Input 
-                    placeholder="e.g. SHOP NOW or CLAIM OFFER" 
-                    className="bg-white border-slate-200 h-10"
-                    value={editingSlide.buttonText || ""}
-                    onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonText: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              {/* Right Column - Image Upload */}
-              <div className="bg-white border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center">
-                <div className="w-full text-center mb-4">
-                  <h3 className="font-semibold text-slate-700">Banner image <span className="text-red-500">*</span></h3>
-                  <p className="text-blue-600 text-sm">( Ratio {editingSlide.bannerType === 'Hero Sub Banner' || editingSlide.bannerType === 'Footer Sub Banner' ? '12:5' : '4:1'} )</p>
-                </div>
-
-                <div className="w-full border-2 border-dashed border-slate-200 hover:border-blue-500/50 bg-white rounded-lg group cursor-pointer transition-colors pt-1">
-                   <label className="flex flex-col items-center justify-center py-8 px-4 text-center cursor-pointer w-full h-full relative">
-                     <input 
-                       type="file" 
-                       accept="image/*" 
-                       className="hidden" 
-                       onChange={handleImageUpload} 
-                       disabled={isUploading}
-                     />
-                     <UploadCloud className="h-10 w-10 text-slate-500 group-hover:text-blue-600 transition-colors mb-4" />
-                     <p className="text-sm font-medium text-slate-600 mb-1">
-                        {isUploading ? "Uploading..." : "Click to upload"}
-                     </p>
-                     <p className="text-xs text-slate-500 mb-4 px-8 tracking-wide">Or drag and drop</p>
-                   </label>
-                   
-                   {/* Preview if URL exists */}
-                   {(previewUrl || editingSlide.image) && (
-                     <div className="w-full p-2 bg-white border-t border-slate-200 rounded-b-lg flex justify-center">
-                        <div className="h-16 w-64 rounded bg-slate-50 flex-shrink-0 relative overflow-hidden">
-                           <img 
-                             src={(previewUrl || editingSlide.image).startsWith('blob:') || (previewUrl || editingSlide.image).startsWith('http') ? (previewUrl || editingSlide.image) : `${API_URL}${(previewUrl || editingSlide.image)}`} 
-                             alt="preview" 
-                             className="object-cover w-full h-full" 
-                           />
+                  {currentImageSrc ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                      <div className={`relative w-full ${typeInfo.aspect} overflow-hidden rounded-lg bg-slate-100`}>
+                        <img src={currentImageSrc} alt="Banner preview" className="absolute inset-0 h-full w-full object-contain" />
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-2 px-1">
+                        <p className="min-w-0 truncate text-xs text-slate-500">{selectedFile ? selectedFile.name : 'Current image'}</p>
+                        <div className="flex shrink-0 gap-2">
+                          <label className="cursor-pointer rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                            Change
+                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isUploading} />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedFile(null); setPreviewUrl(null); setEditingSlide(prev => ({ ...prev, image: "" })); }}
+                            className="rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                          >
+                            Remove
+                          </button>
                         </div>
-                     </div>
-                   )}
-                </div>
-
-                <div className="w-full text-center mt-6 space-y-2">
-                  <p className="text-xs text-slate-500">Only .jpeg .png .jpg .gif .webp Allowed max size 2 mb</p>
-                  <p className="text-xs text-slate-500 px-6 leading-relaxed">Banner Image ratio is not same for all sections in website. Please review the ratio before upload</p>
-                  {(editingSlide.bannerType === 'Hero Sub Banner' || editingSlide.bannerType === 'Footer Sub Banner') && (
-                    <p className="text-xs font-semibold text-blue-600 px-6 leading-relaxed">
-                      Recommended: 1200 × 500 px (12:5). Up to 3 show side by side; with 1 it spans the full width.
-                    </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <label
+                      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) acceptFile(file);
+                      }}
+                      className={`flex ${typeInfo.aspect} min-h-[160px] w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 text-center transition-colors ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50 hover:border-blue-400'}`}
+                    >
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isUploading} />
+                      <UploadCloud className={`h-9 w-9 mb-2 ${isDragging ? 'text-blue-600' : 'text-slate-400'}`} />
+                      <p className="text-sm font-semibold text-slate-700">{isDragging ? 'Drop image here' : 'Click to upload or drag & drop'}</p>
+                      <p className="mt-1 text-xs text-slate-500">JPG, PNG, WEBP or GIF · max 5 MB</p>
+                    </label>
                   )}
+
+                  <p className="text-[11px] leading-relaxed text-slate-500">{typeInfo.note}</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-8 pb-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-600"
-                onClick={() => {
-                   setEditingSlide(defaultSlide);
-                   if (!editingSlide._id) setIsDialogOpen(false); // only close if we were adding, otherwise just reset form
-                }}
+            <div className="shrink-0 flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="bg-white border-slate-200 hover:bg-slate-100 text-slate-700"
+                onClick={() => setIsDialogOpen(false)}
+                disabled={isSaving}
               >
-                Reset
+                Cancel
               </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white min-w-[100px]">
-                Save
+              <Button type="submit" disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[130px]">
+                {isUploading ? 'Uploading image…' : isSaving ? 'Saving…' : editingSlide._id ? 'Save Changes' : 'Save Banner'}
               </Button>
             </div>
           </form>
