@@ -209,6 +209,8 @@ const AdminSliders = () => {
     if (filterType === 'footer') return s.bannerType === 'Footer Banner';
     if (filterType === 'trending') return s.bannerType === 'Trending Banner';
     if (filterType === 'popup') return s.bannerType === 'Popup Banner';
+    if (filterType === 'hero-sub') return s.bannerType === 'Hero Sub Banner';
+    if (filterType === 'footer-sub') return s.bannerType === 'Footer Sub Banner';
     return true;
   });
 
@@ -239,6 +241,8 @@ const AdminSliders = () => {
                   <SelectItem value="footer">Footer Banner</SelectItem>
                   <SelectItem value="trending">Trending Banner</SelectItem>
                   <SelectItem value="popup">Popup Banner (Advertisement)</SelectItem>
+                  <SelectItem value="hero-sub">Hero Sub Banner</SelectItem>
+                  <SelectItem value="footer-sub">Footer Sub Banner</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -384,7 +388,9 @@ const AdminSliders = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-white border-slate-200">
                       <SelectItem value="Main Banner">Main Banner</SelectItem>
+                      <SelectItem value="Hero Sub Banner">Hero Sub Banner (below main banner)</SelectItem>
                       <SelectItem value="Footer Banner">Footer Banner</SelectItem>
+                      <SelectItem value="Footer Sub Banner">Footer Sub Banner (above footer)</SelectItem>
                       <SelectItem value="Trending Banner">Trending Banner</SelectItem>
                       <SelectItem value="Brand Banner">Brand Banner</SelectItem>
                       <SelectItem value="Popup Banner">Popup Banner (Advertisement Popup)</SelectItem>
@@ -527,7 +533,7 @@ const AdminSliders = () => {
               <div className="bg-white border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center">
                 <div className="w-full text-center mb-4">
                   <h3 className="font-semibold text-slate-700">Banner image <span className="text-red-500">*</span></h3>
-                  <p className="text-blue-600 text-sm">( Ratio 4:1 )</p>
+                  <p className="text-blue-600 text-sm">( Ratio {editingSlide.bannerType === 'Hero Sub Banner' || editingSlide.bannerType === 'Footer Sub Banner' ? '12:5' : '4:1'} )</p>
                 </div>
 
                 <div className="w-full border-2 border-dashed border-slate-200 hover:border-blue-500/50 bg-white rounded-lg group cursor-pointer transition-colors pt-1">
@@ -563,6 +569,11 @@ const AdminSliders = () => {
                 <div className="w-full text-center mt-6 space-y-2">
                   <p className="text-xs text-slate-500">Only .jpeg .png .jpg .gif .webp Allowed max size 2 mb</p>
                   <p className="text-xs text-slate-500 px-6 leading-relaxed">Banner Image ratio is not same for all sections in website. Please review the ratio before upload</p>
+                  {(editingSlide.bannerType === 'Hero Sub Banner' || editingSlide.bannerType === 'Footer Sub Banner') && (
+                    <p className="text-xs font-semibold text-blue-600 px-6 leading-relaxed">
+                      Recommended: 1200 × 500 px (12:5). Up to 3 show side by side; with 1 it spans the full width.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

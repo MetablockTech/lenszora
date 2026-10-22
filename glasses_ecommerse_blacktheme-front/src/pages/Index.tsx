@@ -6,6 +6,7 @@ import OfferBanner from "@/components/sections/OfferBanner";
 import TrendingBanners from "@/components/sections/TrendingBanners";
 import BrandHorizontalSlider from "@/components/sections/BrandHorizontalSlider";
 import FrameFinder from "@/components/sections/FrameFinder";
+import SubBanners from "@/components/sections/SubBanners";
 import CategoryProductSliders from "@/components/sections/CategoryProductSliders";
 import NewArrivals from "@/components/sections/NewArrivals";
 import TrustSection from "@/components/sections/TrustSection";
@@ -19,6 +20,7 @@ const Index = () => {
       <Header />
       <main className="space-y-0">
         <HeroSection />
+        <SubBanners bannerType="Hero Sub Banner" />
         <TopCategories />
         <OfferBanner />
         <FrameFinder />
@@ -34,6 +36,7 @@ const Index = () => {
         <Testimonials />
         <FAQSection />
         <TrustSection />
+        <SubBanners bannerType="Footer Sub Banner" />
       </main>
       <Footer />
     </div>

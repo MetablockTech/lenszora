@@ -14,7 +14,7 @@ const OfferBanner = () => {
         // Find active Footer Banner, Offer Banner, Trending Banner, or any active slider
         const active = data.find((s: any) => 
           (s.bannerType === 'Footer Banner' || s.bannerType === 'Offer Banner' || s.bannerType === 'Promo Banner' || s.bannerType === 'Trending Banner') && (s.isActive !== false)
-        ) || data.find((s: any) => s.isActive !== false);
+        ) || data.find((s: any) => s.isActive !== false && !['Hero Sub Banner', 'Footer Sub Banner', 'Popup Banner'].includes(s.bannerType));
 
         if (active) setBanner(active);
       } catch (error) {
