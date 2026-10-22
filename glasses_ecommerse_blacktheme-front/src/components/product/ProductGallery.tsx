@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, getImageUrl } from "@/lib/utils";
 
 interface ProductGalleryProps {
@@ -22,28 +23,44 @@ const ProductGallery = ({ images, productName, hideThumbnails, currentImage, onI
   return (
     <div className="w-full space-y-4">
       {/* Main Image */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="relative w-full aspect-[4/3] sm:aspect-[16/11] max-w-[650px] mx-auto overflow-hidden bg-gradient-to-b from-slate-900/90 via-slate-900 to-slate-950 border border-slate-800/80 group rounded-2xl shadow-2xl flex items-center justify-center"
-      >
-        <img
-          src={getImageUrl(images[selectedImage] || images[0])}
-          alt={`${productName} - View ${selectedImage + 1}`}
-          className="w-full h-full object-contain p-2 sm:p-4 scale-105 group-hover:scale-110 transition-transform duration-500"
-        />
+      <div className="relative w-full aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_center,_#1f1f23_0%,_#0d0d0f_75%)] group">
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={selectedImage}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            src={getImageUrl(images[selectedImage] || images[0])}
+            alt={`${productName} - View ${selectedImage + 1}`}
+            className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+          />
+        </AnimatePresence>
 
-        {/* Gold corner accents */}
-        <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-amber-400/40" />
-        <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-amber-400/40" />
-        <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-amber-400/40" />
-        <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-amber-400/40" />
-
-        {/* Studio Badge */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/60 backdrop-blur-md border border-amber-400/30 rounded-full text-[10px] font-bold text-amber-400 uppercase tracking-widest pointer-events-none shadow-md">
-          HD Studio View
-        </div>
-      </motion.div>
+        {images.length > 1 && (
+          <>
+            <button
+              type="button"
+              aria-label="Previous image"
+              onClick={() => setSelectedImage((selectedImage - 1 + images.length) % images.length)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-black/50 backdrop-blur text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Next image"
+              onClick={() => setSelectedImage((selectedImage + 1) % images.length)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-black/50 backdrop-blur text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-[11px] font-medium text-white/80 pointer-events-none">
+              {selectedImage + 1} / {images.length}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Thumbnails — hidden when handled externally */}
       {!hideThumbnails && (

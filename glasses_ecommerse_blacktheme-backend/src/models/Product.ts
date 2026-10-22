@@ -32,6 +32,7 @@ export interface IProduct extends Document {
   status: 'active' | 'inactive' | 'pending' | 'rejected'
   rejectionReason?: string
   colors: string[]
+  colorSwatches?: Record<string, string[]>
   attributes: Array<{ name: string; values: string[] }>
   variants?: IProductVariant[] // Optional variant configurations
   hasVariants: boolean // Flag to indicate if product uses variant system
@@ -110,6 +111,8 @@ const ProductSchema = new Schema<IProduct>({
   status: { type: String, enum: ['active', 'inactive', 'pending', 'rejected'], default: 'pending' },
   rejectionReason: { type: String },
   colors: { type: [String], default: [] },
+  // Optional swatch colours per colour name, e.g. { "Red/Blue": ["#e53935", "#1e63d6"] } for two-tone frames
+  colorSwatches: { type: Schema.Types.Mixed, default: {} },
   attributes: [{
     name: { type: String },
     values: { type: [String] }

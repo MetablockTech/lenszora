@@ -221,16 +221,16 @@ const AdminSliders = () => {
       </div>
 
       {/* Main Table Card */}
-      <Card className="bg-[#111111] border-white/10 overflow-hidden shadow-xl rounded-xl">
-          <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <Card className="bg-white border-slate-200 overflow-hidden shadow-xl rounded-xl">
+          <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-white">Banner table</h2>
-              <Badge variant="secondary" className="bg-white/10 text-white rounded-full px-3">{filteredSlides.length}</Badge>
+              <h2 className="text-lg font-semibold text-slate-900">Banner table</h2>
+              <Badge variant="secondary" className="bg-slate-50 text-slate-900 rounded-full px-3">{filteredSlides.length}</Badge>
             </div>
             
             <div className="flex items-center gap-4 w-full sm:w-auto">
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-[200px] bg-black border-white/10">
+                <SelectTrigger className="w-[200px] bg-white border-slate-200">
                   <SelectValue placeholder="All Banners" />
                 </SelectTrigger>
                 <SelectContent>
@@ -253,30 +253,30 @@ const AdminSliders = () => {
 
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-black/40">
-                <TableRow className="border-white/5 hover:bg-transparent">
-                  <TableHead className="text-slate-400 font-semibold h-12">SL</TableHead>
-                  <TableHead className="text-slate-400 font-semibold h-12">Image</TableHead>
-                  <TableHead className="text-slate-400 font-semibold h-12">Banner Type</TableHead>
-                  <TableHead className="text-slate-400 font-semibold h-12">Occurs On / Target</TableHead>
-                  <TableHead className="text-slate-400 font-semibold h-12">Redirect Link</TableHead>
-                  <TableHead className="text-slate-400 font-semibold h-12">Status</TableHead>
-                  <TableHead className="text-slate-400 font-semibold h-12 text-center">Action</TableHead>
+              <TableHeader className="bg-white">
+                <TableRow className="border-slate-200 hover:bg-transparent">
+                  <TableHead className="text-slate-500 font-semibold h-12">SL</TableHead>
+                  <TableHead className="text-slate-500 font-semibold h-12">Image</TableHead>
+                  <TableHead className="text-slate-500 font-semibold h-12">Banner Type</TableHead>
+                  <TableHead className="text-slate-500 font-semibold h-12">Occurs On / Target</TableHead>
+                  <TableHead className="text-slate-500 font-semibold h-12">Redirect Link</TableHead>
+                  <TableHead className="text-slate-500 font-semibold h-12">Status</TableHead>
+                  <TableHead className="text-slate-500 font-semibold h-12 text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSlides.length === 0 && !isLoading ? (
-                  <TableRow className="border-white/5">
+                  <TableRow className="border-slate-200">
                     <TableCell colSpan={6} className="h-32 text-center text-slate-500">
                       No banners found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredSlides.map((slide, index) => (
-                    <TableRow key={slide._id} className="border-white/5 hover:bg-white/5 transition-colors">
-                      <TableCell className="font-medium text-slate-300 py-4">{index + 1}</TableCell>
+                    <TableRow key={slide._id} className="border-slate-200 hover:bg-slate-100 transition-colors">
+                      <TableCell className="font-medium text-slate-600 py-4">{index + 1}</TableCell>
                       <TableCell className="py-4">
-                        <div className="h-12 w-28 rounded-md bg-white/5 overflow-hidden border border-white/10 flex items-center justify-center">
+                        <div className="h-12 w-28 rounded-md bg-slate-50 overflow-hidden border border-slate-200 flex items-center justify-center">
                           {slide.image ? (
                             <img 
                               src={slide.image.startsWith('http') ? slide.image : `${API_URL}${slide.image}`} 
@@ -288,21 +288,21 @@ const AdminSliders = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-300 py-4 font-medium">
-                        <Badge variant="outline" className={slide.bannerType === 'Popup Banner' ? 'border-amber-500/50 text-amber-400 bg-amber-500/10' : 'border-white/20 text-slate-300'}>
+                      <TableCell className="text-slate-600 py-4 font-medium">
+                        <Badge variant="outline" className={slide.bannerType === 'Popup Banner' ? 'border-amber-500/50 text-amber-600 bg-amber-500/10' : 'border-slate-200 text-slate-600'}>
                           {slide.bannerType === 'Popup Banner' ? '🔥 Ad Popup' : slide.bannerType}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-300 py-4">
+                      <TableCell className="text-slate-600 py-4">
                         {slide.bannerType === 'Popup Banner' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-semibold">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-700 border border-amber-500/30 text-xs font-semibold">
                             🎯 {slide.targetPage === '/' ? 'Home Page (/)' : slide.targetPage === '*' ? 'All Pages (*)' : slide.targetPage || 'Home Page (/)'}
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-400">{slide.resourceType || 'Custom'}</span>
+                          <span className="text-xs text-slate-500">{slide.resourceType || 'Custom'}</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-slate-300 py-4 text-xs font-mono max-w-[150px] truncate" title={slide.buttonLink}>
+                      <TableCell className="text-slate-600 py-4 text-xs font-mono max-w-[150px] truncate" title={slide.buttonLink}>
                         {slide.buttonLink || '/shop'}
                       </TableCell>
                       <TableCell className="py-4">
@@ -317,7 +317,7 @@ const AdminSliders = () => {
                           <Button 
                             size="icon" 
                             variant="outline" 
-                            className="h-8 w-8 rounded-md border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 hover:border-blue-500/50 transition-all"
+                            className="h-8 w-8 rounded-md border-blue-500/30 text-blue-600 hover:bg-blue-500/10 hover:text-blue-700 hover:border-blue-500/50 transition-all"
                             onClick={() => {
                               setEditingSlide(slide);
                               setIsDialogOpen(true);
@@ -338,7 +338,7 @@ const AdminSliders = () => {
                             <Button 
                               size="icon" 
                               variant="outline" 
-                              className="h-8 w-8 rounded-md border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 transition-all"
+                              className="h-8 w-8 rounded-md border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700 hover:border-red-500/50 transition-all"
                               onClick={() => handleDelete(slide._id)}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -363,10 +363,10 @@ const AdminSliders = () => {
         }
       }}>
         {/* Add/Edit Dialog Form */}
-        <DialogContent className="max-w-4xl bg-[#111111] border border-white/10 p-0 text-slate-200">
-          <div className="p-6 border-b border-white/10 flex items-center gap-2">
-             <ImageIcon className="h-5 w-5 text-blue-400" />
-             <DialogTitle className="text-xl font-bold text-white">Banner Setup <span className="text-blue-400 font-normal">(Default)</span></DialogTitle>
+        <DialogContent className="max-w-4xl bg-white border border-slate-200 p-0 text-slate-700">
+          <div className="p-6 border-b border-slate-200 flex items-center gap-2">
+             <ImageIcon className="h-5 w-5 text-blue-600" />
+             <DialogTitle className="text-xl font-bold text-slate-900">Banner Setup <span className="text-blue-600 font-normal">(Default)</span></DialogTitle>
           </div>
           
           <form onSubmit={handleSubmit} className="p-6">
@@ -374,15 +374,15 @@ const AdminSliders = () => {
               {/* Left Column - Dropdowns & Texts */}
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="text-slate-300 text-sm font-semibold">Banner type <span className="text-red-500">*</span></Label>
+                  <Label className="text-slate-600 text-sm font-semibold">Banner type <span className="text-red-500">*</span></Label>
                   <Select 
                     value={editingSlide.bannerType} 
                     onValueChange={(val) => setEditingSlide(prev => ({ ...prev, bannerType: val }))}
                   >
-                    <SelectTrigger className="w-full bg-black border-white/20 h-10">
+                    <SelectTrigger className="w-full bg-white border-slate-200 h-10">
                       <SelectValue placeholder="Select Banner Type" />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-white/20">
+                    <SelectContent className="bg-white border-slate-200">
                       <SelectItem value="Main Banner">Main Banner</SelectItem>
                       <SelectItem value="Footer Banner">Footer Banner</SelectItem>
                       <SelectItem value="Trending Banner">Trending Banner</SelectItem>
@@ -393,15 +393,15 @@ const AdminSliders = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-300 text-sm font-semibold">Resource type <span className="text-red-500">*</span></Label>
+                  <Label className="text-slate-600 text-sm font-semibold">Resource type <span className="text-red-500">*</span></Label>
                   <Select 
                     value={editingSlide.resourceType || "Custom"} 
                     onValueChange={(val) => setEditingSlide(prev => ({ ...prev, resourceType: val }))}
                   >
-                    <SelectTrigger className="w-full bg-black border-white/20 h-10">
+                    <SelectTrigger className="w-full bg-white border-slate-200 h-10">
                       <SelectValue placeholder="Select Resource Type" />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-white/20">
+                    <SelectContent className="bg-white border-slate-200">
                       <SelectItem value="Custom">Custom Link</SelectItem>
                     </SelectContent>
                   </Select>
@@ -410,14 +410,14 @@ const AdminSliders = () => {
                 {/* Advertisement Popup Target Page & Settings */}
                 {editingSlide.bannerType === 'Popup Banner' && (
                   <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider">
                       <Sparkles className="w-4 h-4" />
                       <span>Ad Popup Trigger & Target Page</span>
                     </div>
 
                     {/* Target Page Selection */}
                     <div className="space-y-2">
-                      <Label className="text-white text-xs font-bold uppercase tracking-wider">
+                      <Label className="text-slate-900 text-xs font-bold uppercase tracking-wider">
                         Occurs On Page <span className="text-red-500">*</span>
                       </Label>
                       
@@ -437,7 +437,7 @@ const AdminSliders = () => {
                             className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                               editingSlide.targetPage === item.value
                                 ? 'bg-amber-500 text-black shadow-sm font-bold'
-                                : 'bg-black/60 text-slate-300 hover:bg-black border border-white/10 hover:border-amber-500/40'
+                                : 'bg-white text-slate-600 hover:bg-white border border-slate-200 hover:border-amber-500/40'
                             }`}
                           >
                             {item.label}
@@ -447,18 +447,18 @@ const AdminSliders = () => {
 
                       <Input 
                         placeholder="e.g. / or /shop or /brands or *" 
-                        className="bg-black border-white/20 h-9 text-xs font-mono"
+                        className="bg-white border-slate-200 h-9 text-xs font-mono"
                         value={editingSlide.targetPage || "/"}
                         onChange={(e) => setEditingSlide(prev => ({ ...prev, targetPage: e.target.value }))}
                       />
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-slate-500">
                         Popup will trigger when customer lands on this page route. (e.g. <code>/</code> for Home, <code>/shop</code> for Shop, or <code>*</code> for all pages).
                       </p>
                     </div>
 
                     {/* Popup Delay in Seconds */}
                     <div className="space-y-1.5">
-                      <Label className="text-white text-xs font-semibold">
+                      <Label className="text-slate-900 text-xs font-semibold">
                         Popup Delay (Seconds before opening)
                       </Label>
                       <Input 
@@ -466,11 +466,11 @@ const AdminSliders = () => {
                         min="0"
                         max="30"
                         step="0.5"
-                        className="bg-black border-white/20 h-9 text-xs"
+                        className="bg-white border-slate-200 h-9 text-xs"
                         value={editingSlide.delaySeconds ?? 1}
                         onChange={(e) => setEditingSlide(prev => ({ ...prev, delaySeconds: parseFloat(e.target.value) || 0 }))}
                       />
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-slate-500">
                         How many seconds to wait after page loads before the popup appears (default: 1 sec).
                       </p>
                     </div>
@@ -478,45 +478,45 @@ const AdminSliders = () => {
                 )}
 
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-4 duration-300">
-                  <Label className="text-slate-300 text-sm font-semibold">
+                  <Label className="text-slate-600 text-sm font-semibold">
                     {editingSlide.bannerType === 'Popup Banner' ? 'Popup Click Redirect URL / Page Link' : 'Banner Redirect URL / Link'}
                   </Label>
                   <Input 
                     placeholder="e.g. /shop?category=sunglasses, /sale, or /store-locator" 
-                    className="bg-black border-white/20 h-10"
+                    className="bg-white border-slate-200 h-10"
                     value={editingSlide.buttonLink || ""}
                     onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonLink: e.target.value }))}
                   />
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     When customer clicks on the popup banner or button, they will be redirected to this link.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-300 text-sm font-semibold">Title / Headline (Optional)</Label>
+                  <Label className="text-slate-600 text-sm font-semibold">Title / Headline (Optional)</Label>
                   <Input 
                     placeholder="e.g. FLAT 20% OFF ON ALL GLASSES" 
-                    className="bg-black border-white/20 h-10"
+                    className="bg-white border-slate-200 h-10"
                     value={editingSlide.title || ""}
                     onChange={(e) => setEditingSlide(prev => ({ ...prev, title: e.target.value }))}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-300 text-sm font-semibold">Subtitle / Offer Description (Optional)</Label>
+                  <Label className="text-slate-600 text-sm font-semibold">Subtitle / Offer Description (Optional)</Label>
                   <Input 
                     placeholder="e.g. Use code LENSEZORA20 at checkout for instant discount" 
-                    className="bg-black border-white/20 h-10"
+                    className="bg-white border-slate-200 h-10"
                     value={editingSlide.subtitle || ""}
                     onChange={(e) => setEditingSlide(prev => ({ ...prev, subtitle: e.target.value }))}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-300 text-sm font-semibold">Button Label (Optional)</Label>
+                  <Label className="text-slate-600 text-sm font-semibold">Button Label (Optional)</Label>
                   <Input 
                     placeholder="e.g. SHOP NOW or CLAIM OFFER" 
-                    className="bg-black border-white/20 h-10"
+                    className="bg-white border-slate-200 h-10"
                     value={editingSlide.buttonText || ""}
                     onChange={(e) => setEditingSlide(prev => ({ ...prev, buttonText: e.target.value }))}
                   />
@@ -524,13 +524,13 @@ const AdminSliders = () => {
               </div>
 
               {/* Right Column - Image Upload */}
-              <div className="bg-[#1A1A1A] border border-white/5 rounded-xl p-6 flex flex-col items-center justify-center">
+              <div className="bg-white border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center">
                 <div className="w-full text-center mb-4">
-                  <h3 className="font-semibold text-slate-200">Banner image <span className="text-red-500">*</span></h3>
-                  <p className="text-blue-400 text-sm">( Ratio 4:1 )</p>
+                  <h3 className="font-semibold text-slate-700">Banner image <span className="text-red-500">*</span></h3>
+                  <p className="text-blue-600 text-sm">( Ratio 4:1 )</p>
                 </div>
 
-                <div className="w-full border-2 border-dashed border-white/20 hover:border-blue-500/50 bg-black/40 rounded-lg group cursor-pointer transition-colors pt-1">
+                <div className="w-full border-2 border-dashed border-slate-200 hover:border-blue-500/50 bg-white rounded-lg group cursor-pointer transition-colors pt-1">
                    <label className="flex flex-col items-center justify-center py-8 px-4 text-center cursor-pointer w-full h-full relative">
                      <input 
                        type="file" 
@@ -539,8 +539,8 @@ const AdminSliders = () => {
                        onChange={handleImageUpload} 
                        disabled={isUploading}
                      />
-                     <UploadCloud className="h-10 w-10 text-slate-500 group-hover:text-blue-400 transition-colors mb-4" />
-                     <p className="text-sm font-medium text-slate-300 mb-1">
+                     <UploadCloud className="h-10 w-10 text-slate-500 group-hover:text-blue-600 transition-colors mb-4" />
+                     <p className="text-sm font-medium text-slate-600 mb-1">
                         {isUploading ? "Uploading..." : "Click to upload"}
                      </p>
                      <p className="text-xs text-slate-500 mb-4 px-8 tracking-wide">Or drag and drop</p>
@@ -548,8 +548,8 @@ const AdminSliders = () => {
                    
                    {/* Preview if URL exists */}
                    {(previewUrl || editingSlide.image) && (
-                     <div className="w-full p-2 bg-black/80 border-t border-white/10 rounded-b-lg flex justify-center">
-                        <div className="h-16 w-64 rounded bg-white/5 flex-shrink-0 relative overflow-hidden">
+                     <div className="w-full p-2 bg-white border-t border-slate-200 rounded-b-lg flex justify-center">
+                        <div className="h-16 w-64 rounded bg-slate-50 flex-shrink-0 relative overflow-hidden">
                            <img 
                              src={(previewUrl || editingSlide.image).startsWith('blob:') || (previewUrl || editingSlide.image).startsWith('http') ? (previewUrl || editingSlide.image) : `${API_URL}${(previewUrl || editingSlide.image)}`} 
                              alt="preview" 
@@ -571,7 +571,7 @@ const AdminSliders = () => {
               <Button 
                 type="button" 
                 variant="outline" 
-                className="bg-white/5 border-white/10 hover:bg-white/10 text-slate-300"
+                className="bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-600"
                 onClick={() => {
                    setEditingSlide(defaultSlide);
                    if (!editingSlide._id) setIsDialogOpen(false); // only close if we were adding, otherwise just reset form

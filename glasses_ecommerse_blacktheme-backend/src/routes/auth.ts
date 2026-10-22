@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { User } from '../models/User'
 import twilio from 'twilio'
+import { applyReferral } from '../utils/referral'
 
 // Twilio Setup (Injected directly to definitively resolve "Cannot find module")
 const accountSid = process.env.TWILIO_ACCOUNT_SID
@@ -56,8 +57,9 @@ router.use((req, res, next) => {
 // Utility to generate a 6-digit OTP (Fixed to 123456)
 const generateOTP = () => '123456'
 
+// Referral codes are applied in /verify-otp, once the phone number is verified
 router.post('/send-otp', async (req, res) => {
-  const { phone, referredByCode, refCode } = req.body
+  const { phone } = req.body
   if (!phone) return res.status(400).json({ error: 'Phone number is required' })
 
   const otp = '123456'
@@ -68,17 +70,6 @@ router.post('/send-otp', async (req, res) => {
     if (!user) {
       const generatedRefCode = `LZ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
       user = new User({ phone, role: 'user', referralCode: generatedRefCode })
-
-      // Check if referred by another user
-      const codeToMatch = (referredByCode || refCode || '').trim().toUpperCase()
-      if (codeToMatch) {
-        const referrer = await User.findOne({ referralCode: codeToMatch })
-        if (referrer) {
-          user.referredBy = referrer._id
-          referrer.referralCount = (referrer.referralCount || 0) + 1
-          await referrer.save()
-        }
-      }
     } else if (!user.referralCode) {
       user.referralCode = `LZ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
     }
@@ -101,7 +92,7 @@ router.post('/send-otp', async (req, res) => {
 })
 
 router.post('/verify-otp', async (req, res) => {
-  const { phone, otp } = req.body
+  const { phone, otp, refCode } = req.body
   if (!phone || !otp) return res.status(400).json({ error: 'Phone and OTP are required' })
 
   try {
@@ -125,6 +116,12 @@ router.post('/verify-otp', async (req, res) => {
     // Clear OTP after successful verification
     user.otp = undefined
     user.otpExpires = undefined
+    if (!user.referralCode) {
+      user.referralCode = `LZ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+    }
+
+    // A bad referral code should never block login, so failures are only reported back
+    const referral = await applyReferral(user, refCode)
     await user.save()
 
     const secret = process.env.JWT_SECRET || 'secret'
@@ -132,7 +129,8 @@ router.post('/verify-otp', async (req, res) => {
 
     return res.json({
       token,
-      user: { id: user._id, phone: user.phone, role: user.role, email: user.email, vendorId: user.vendorId }
+      user: { id: user._id, phone: user.phone, role: user.role, email: user.email, vendorId: user.vendorId },
+      referral
     })
   } catch (err) {
     console.error('Error in /verify-otp:', err)

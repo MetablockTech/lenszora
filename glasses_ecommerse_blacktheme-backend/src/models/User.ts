@@ -1,10 +1,30 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
+export interface IEyePower {
+  sph?: number
+  cyl?: number
+  axis?: number
+  add?: number
+}
+
+export interface IPrescription {
+  right?: IEyePower
+  left?: IEyePower
+  pd?: number
+  prescribedOn?: Date
+  notes?: string
+}
+
 export interface IUser extends Document {
   email?: string
   password?: string
   name?: string
   phone: string
+  alternatePhone?: string
+  gender?: 'male' | 'female' | 'other'
+  dateOfBirth?: Date
+  avatar?: string
+  prescription?: IPrescription
   otp?: string
   otpExpires?: Date
   role: 'user' | 'admin' | 'vendor' | 'agent'
@@ -27,11 +47,29 @@ export interface IUser extends Document {
   createdAt: Date
 }
 
+const EyePowerSchema = new Schema<IEyePower>({
+  sph: Number,
+  cyl: Number,
+  axis: Number,
+  add: Number
+}, { _id: false })
+
 const UserSchema = new Schema<IUser>({
   email: { type: String, unique: true, sparse: true },
   password: { type: String },
   name: { type: String },
   phone: { type: String, required: true, unique: true },
+  alternatePhone: { type: String },
+  gender: { type: String, enum: ['male', 'female', 'other'] },
+  dateOfBirth: { type: Date },
+  avatar: { type: String },
+  prescription: {
+    right: EyePowerSchema,
+    left: EyePowerSchema,
+    pd: Number,
+    prescribedOn: Date,
+    notes: String
+  },
   otp: { type: String },
   otpExpires: { type: Date },
   role: { type: String, enum: ['user', 'admin', 'vendor', 'agent'], default: 'user' },

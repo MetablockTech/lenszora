@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -29,6 +29,7 @@ const loginSchema = z.object({
 export default function VendorLogin() {
     const { settings } = useSettings()
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     const [isLoading, setIsLoading] = useState(false)
 
     const form = useForm<z.infer<typeof loginSchema>>({
@@ -53,7 +54,8 @@ export default function VendorLogin() {
             localStorage.setItem('userRole', data.user.role) // For VendorLayout compatibility
             setUser(data.user)
             toast.success('Vendor logged in successfully')
-            navigate('/vendor/dashboard')
+            const redirect = searchParams.get('redirect') || ''
+            navigate(redirect.startsWith('/vendor/') ? redirect : '/vendor/dashboard')
         } catch (error: any) {
             toast.error(error.message || 'Failed to login')
         } finally {

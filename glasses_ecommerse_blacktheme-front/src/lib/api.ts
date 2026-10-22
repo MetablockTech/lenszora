@@ -3,6 +3,7 @@ export const API_URL = import.meta.env.VITE_API_URL || 'https://api.lenszora.com
 type LoginResponse = {
   token: string
   user: { id: string; email?: string; phone: string; role: string }
+  referral?: { applied: boolean; referrerName?: string; error?: string }
 }
 
 function getHeaders(token?: string) {
@@ -32,11 +33,11 @@ export const auth = {
     if (!res.ok) throw new Error(await res.text())
     return res.json()
   },
-  async verifyOTP(phone: string, otp: string) {
+  async verifyOTP(phone: string, otp: string, refCode?: string) {
     const res = await fetch(`${API_URL}/api/auth/verify-otp`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ phone, otp })
+      body: JSON.stringify({ phone, otp, refCode })
     })
     if (!res.ok) throw new Error(await res.text())
     const data = (await res.json()) as LoginResponse
@@ -214,6 +215,15 @@ export const categories = {
       method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload)
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  },
+  async updateNavSettings(items: { id: string; showInNav: boolean; navOrder: number }[], token?: string) {
+    const res = await fetch(`${API_URL}/api/categories/nav-settings`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify({ items })
     })
     if (!res.ok) throw new Error(await res.text())
     return res.json()
@@ -579,6 +589,31 @@ export const payouts = {
 }
 
 export const users = {
+  async getMe(token?: string) {
+    const res = await fetch(`${API_URL}/api/users/me`, {
+      headers: getHeaders(token)
+    })
+    if (!res.ok) throw new Error('Failed to fetch profile')
+    return res.json()
+  },
+  async updateMe(payload: Record<string, unknown>, token?: string) {
+    const res = await fetch(`${API_URL}/api/users/me`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload)
+    })
+    if (!res.ok) {
+      let errMsg = 'Failed to update profile'
+      try {
+        const data = await res.json()
+        errMsg = data.error || data.message || errMsg
+      } catch {
+        // ignore
+      }
+      throw new Error(errMsg)
+    }
+    return res.json()
+  },
   async getAll(token?: string) {
     const res = await fetch(`${API_URL}/api/users`, {
       headers: getHeaders(token)
@@ -1183,7 +1218,16 @@ export const stores = {
 }
 
 export const appointments = {
-  async create(payload: { storeId: string; customerName: string; customerPhone: string; appointmentDate: string; timeSlot: string; reason?: string }) {
+  async create(payload: {
+    visitType?: 'store' | 'home'
+    storeId?: string
+    customerName: string
+    customerPhone: string
+    appointmentDate: string
+    timeSlot: string
+    reason?: string
+    address?: { line1: string; line2?: string; landmark?: string; city: string; state?: string; pincode: string }
+  }) {
     const res = await fetch(`${API_URL}/api/appointments`, {
       method: 'POST',
       headers: getHeaders(),
@@ -1264,7 +1308,48 @@ export const coupons = {
   }
 }
 
+const REFERRAL_STORAGE_KEY = 'referralCode'
+const REFERRAL_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+// Remember a referral code from a ?ref= link so it survives browsing before signup
+export function storeReferralCode(code: string) {
+  try {
+    localStorage.setItem(REFERRAL_STORAGE_KEY, JSON.stringify({ code: code.trim().toUpperCase(), savedAt: Date.now() }))
+  } catch {
+    // storage unavailable
+  }
+}
+
+export function getStoredReferralCode(): string {
+  try {
+    const raw = localStorage.getItem(REFERRAL_STORAGE_KEY)
+    if (!raw) return ''
+    const { code, savedAt } = JSON.parse(raw)
+    if (!code || Date.now() - savedAt > REFERRAL_TTL_MS) {
+      localStorage.removeItem(REFERRAL_STORAGE_KEY)
+      return ''
+    }
+    return code
+  } catch {
+    return ''
+  }
+}
+
+export function clearStoredReferralCode() {
+  try {
+    localStorage.removeItem(REFERRAL_STORAGE_KEY)
+  } catch {
+    // storage unavailable
+  }
+}
+
 export const referrals = {
+  async validate(code: string): Promise<{ valid: boolean; code?: string; referrerName?: string; error?: string }> {
+    const res = await fetch(`${API_URL}/api/referral/validate/${encodeURIComponent(code.trim())}`)
+    if (res.status === 404) return { valid: false, error: 'Invalid referral code' }
+    if (!res.ok) throw new Error('Failed to check referral code')
+    return res.json()
+  },
   async getMyInfo(token?: string) {
     const res = await fetch(`${API_URL}/api/referral/my-info`, {
       headers: getHeaders(token)
@@ -1287,5 +1372,58 @@ export const referrals = {
     })
     if (!res.ok) throw new Error('Failed to update referral settings')
     return res.json()
+  }
+}
+
+// ---- Store visits: reserve online, buy at the vendor's store (tracked via visit pass) ----
+async function svRequest(path: string, init: RequestInit = {}, token?: string) {
+  const res = await fetch(`${API_URL}/api/store-visits${path}`, { ...init, headers: getHeaders(token) })
+  if (!res.ok) {
+    let msg = 'Request failed'
+    try {
+      const data = await res.json()
+      msg = data.error || data.message || msg
+    } catch {
+      // not JSON
+    }
+    throw new Error(msg)
+  }
+  return res.json()
+}
+
+export const storeVisits = {
+  book(payload: { productId: string; storeId: string; visitDate: string; variantSku?: string; color?: string }, token?: string) {
+    return svRequest('', { method: 'POST', body: JSON.stringify(payload) }, token)
+  },
+  my(token?: string) {
+    return svRequest('/my', {}, token)
+  },
+  cancel(id: string, token?: string) {
+    return svRequest(`/${id}/cancel`, { method: 'POST' }, token)
+  },
+  feedback(id: string, purchased: boolean, token?: string) {
+    return svRequest(`/${id}/feedback`, { method: 'POST', body: JSON.stringify({ purchased }) }, token)
+  },
+  vendorList(token?: string, status?: string) {
+    return svRequest(`/vendor${status ? `?status=${encodeURIComponent(status)}` : ''}`, {}, token)
+  },
+  vendorLookup(code: string, token?: string) {
+    return svRequest(`/vendor/code/${encodeURIComponent(code.trim())}`, {}, token)
+  },
+  vendorOutcome(code: string, payload: { outcome: 'sold' | 'not_purchased'; saleAmount?: number; billNumber?: string; reason?: string }, token?: string) {
+    return svRequest(`/vendor/code/${encodeURIComponent(code.trim())}/outcome`, { method: 'POST', body: JSON.stringify(payload) }, token)
+  },
+  adminList(params: { status?: string; vendorId?: string; flagged?: boolean } = {}, token?: string) {
+    const q = new URLSearchParams()
+    if (params.status) q.append('status', params.status)
+    if (params.vendorId) q.append('vendorId', params.vendorId)
+    if (params.flagged) q.append('flagged', 'true')
+    return svRequest(`/admin?${q.toString()}`, {}, token)
+  },
+  adminSummary(token?: string) {
+    return svRequest('/admin/summary', {}, token)
+  },
+  markCommissionCollected(id: string, token?: string) {
+    return svRequest(`/admin/${id}/commission-collected`, { method: 'POST' }, token)
   }
 }

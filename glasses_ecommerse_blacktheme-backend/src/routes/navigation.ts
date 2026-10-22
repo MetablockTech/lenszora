@@ -18,7 +18,10 @@ router.get('/navigation', async (req, res) => {
         const navConfig = await Setting.findOne({ key: 'navigation_config' }).lean()
 
         // Build hierarchical structure
-        const mainCategories = allCategories.filter(cat => cat.level === 'main')
+        const mainCategories = allCategories
+            .filter(cat => cat.level === 'main' && cat.showInNav !== false)
+            .sort((a, b) => (a.navOrder ?? 0) - (b.navOrder ?? 0)
+                || new Date((a as any).createdAt).getTime() - new Date((b as any).createdAt).getTime())
 
         const navigation = mainCategories.map(mainCat => {
             // Get subcategories (e.g., Men, Women, Kids)

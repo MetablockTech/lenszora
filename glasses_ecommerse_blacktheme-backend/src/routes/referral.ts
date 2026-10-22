@@ -3,6 +3,7 @@ import { User } from '../models/User'
 import { Coupon } from '../models/Coupon'
 import { Setting } from '../models/Setting'
 import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth'
+import { findReferrerByCode, referrerDisplayName } from '../utils/referral'
 
 const router = express.Router()
 
@@ -15,6 +16,17 @@ const DEFAULT_REFERRAL_SETTINGS = {
   couponValidityDays: 30,     // Valid for 30 days
   triggerOn: 'first_order'    // Triggered when User B places first order
 }
+
+// Public: check a referral code before signup and show who it belongs to
+router.get('/validate/:code', async (req, res) => {
+  try {
+    const referrer = await findReferrerByCode(req.params.code)
+    if (!referrer) return res.status(404).json({ valid: false, error: 'Invalid referral code' })
+    res.json({ valid: true, code: referrer.referralCode, referrerName: referrerDisplayName(referrer) })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
 
 // Get user's referral info, link, and coupons
 router.get('/my-info', requireAuth, async (req: AuthRequest, res) => {

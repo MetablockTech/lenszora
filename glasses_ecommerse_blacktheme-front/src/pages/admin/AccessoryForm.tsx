@@ -291,9 +291,9 @@ const AccessoryFormPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 bg-slate-950 min-h-screen">
+      <div className="flex flex-col items-center justify-center py-24 bg-slate-50 min-h-screen">
         <Loader2 className="w-10 h-10 animate-spin text-amber-500 mb-3" />
-        <p className="text-slate-400 text-xs font-semibold">Loading Accessory Details...</p>
+        <p className="text-slate-500 text-xs font-semibold">Loading Accessory Details...</p>
       </div>
     )
   }
@@ -302,7 +302,7 @@ const AccessoryFormPage: React.FC = () => {
     <div className="max-w-4xl mx-auto py-6 px-4">
       <button
         onClick={() => navigate('/admin/accessories')}
-        className="inline-flex items-center gap-2 text-slate-400 hover:text-amber-400 text-xs font-bold mb-6 transition-colors bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl hover:border-amber-500/40"
+        className="inline-flex items-center gap-2 text-slate-500 hover:text-amber-600 text-xs font-bold mb-6 transition-colors bg-white border border-slate-200 px-4 py-2 rounded-xl hover:border-amber-500/40"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Accessories List
@@ -322,85 +322,85 @@ const AccessoryFormPage: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Section 1: Basic Info */}
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-5">
-          <h2 className="text-xs font-black text-amber-400 uppercase tracking-widest border-b border-slate-800 pb-3 flex items-center gap-2">
-            <PackageCheck className="w-4 h-4 text-amber-400" />
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-5">
+          <h2 className="text-xs font-black text-amber-600 uppercase tracking-widest border-b border-slate-200 pb-3 flex items-center gap-2">
+            <PackageCheck className="w-4 h-4 text-amber-600" />
             Basic Accessory Details
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                Accessory Title <span className="text-red-400">*</span>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Accessory Title <span className="text-red-600">*</span>
               </label>
               <Input
                 type="text"
                 placeholder="e.g. Anti-Fog Lens Cleaner Spray (100ml)"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20 h-11"
+                className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20 h-11"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">SKU Code</label>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">SKU Code</label>
               <Input
                 type="text"
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
-                className="bg-slate-950 border-slate-800 text-amber-400 font-mono h-11"
+                className="bg-slate-50 border-slate-200 text-amber-600 font-mono h-11"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                Selling Price (₹) <span className="text-red-400">*</span>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Selling Price (₹) <span className="text-red-600">*</span>
               </label>
               <Input
                 type="number"
                 placeholder="399"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-amber-500 h-11"
+                className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-500 focus:border-amber-500 h-11"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Discount Amount (₹)</label>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Discount Amount (₹)</label>
               <Input
                 type="number"
                 placeholder="0"
                 value={discountAmount}
                 onChange={(e) => setDiscountAmount(e.target.value)}
-                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-amber-500 h-11"
+                className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-500 focus:border-amber-500 h-11"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Stock Quantity</label>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Stock Quantity</label>
               <Input
                 type="number"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
-                className="bg-slate-950 border-slate-800 text-white focus:border-amber-500 h-11"
+                className="bg-slate-50 border-slate-200 text-slate-900 focus:border-amber-500 h-11"
               />
             </div>
 
             {/* Dynamic Main Category */}
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                Main Category <span className="text-red-400">*</span>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Main Category <span className="text-red-600">*</span>
               </label>
               <select
                 value={selectedMain}
                 onChange={(e) => handleMainCategoryChange(e.target.value)}
-                className="w-full h-11 px-3 bg-slate-950 border border-slate-800 rounded-md text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-900 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
               >
-                <option value="" className="bg-slate-900 text-slate-400">Select Main Category</option>
+                <option value="" className="bg-white text-slate-500">Select Main Category</option>
                 {mainCats.map((c: any) => (
-                  <option key={c._id} value={c._id} className="bg-slate-900 text-white font-bold">{c.name}</option>
+                  <option key={c._id} value={c._id} className="bg-white text-slate-900 font-bold">{c.name}</option>
                 ))}
               </select>
             </div>
@@ -408,17 +408,17 @@ const AccessoryFormPage: React.FC = () => {
             {/* Dynamic Subcategory (If available in DB) */}
             {subCats.length > 0 && (
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
                   Subcategory
                 </label>
                 <select
                   value={selectedSub}
                   onChange={(e) => handleSubCategoryChange(e.target.value)}
-                  className="w-full h-11 px-3 bg-slate-950 border border-amber-500/30 rounded-md text-sm text-amber-300 font-semibold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  className="w-full h-11 px-3 bg-slate-50 border border-amber-500/30 rounded-md text-sm text-amber-700 font-semibold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                 >
-                  <option value="" className="bg-slate-900 text-slate-400">Select Subcategory (Optional)</option>
+                  <option value="" className="bg-white text-slate-500">Select Subcategory (Optional)</option>
                   {subCats.map((c: any) => (
-                    <option key={c._id} value={c._id} className="bg-slate-900 text-white">{c.name}</option>
+                    <option key={c._id} value={c._id} className="bg-white text-slate-900">{c.name}</option>
                   ))}
                 </select>
               </div>
@@ -427,17 +427,17 @@ const AccessoryFormPage: React.FC = () => {
             {/* Dynamic Sub-subcategory (If available in DB) */}
             {subSubCats.length > 0 && (
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
                   Sub-Subcategory
                 </label>
                 <select
                   value={selectedSubSub}
                   onChange={(e) => handleSubSubCategoryChange(e.target.value)}
-                  className="w-full h-11 px-3 bg-slate-950 border border-amber-500/30 rounded-md text-sm text-amber-400 font-semibold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  className="w-full h-11 px-3 bg-slate-50 border border-amber-500/30 rounded-md text-sm text-amber-600 font-semibold outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                 >
-                  <option value="" className="bg-slate-900 text-slate-400">Select Sub-Subcategory (Optional)</option>
+                  <option value="" className="bg-white text-slate-500">Select Sub-Subcategory (Optional)</option>
                   {subSubCats.map((c: any) => (
-                    <option key={c._id} value={c._id} className="bg-slate-900 text-white">{c.name}</option>
+                    <option key={c._id} value={c._id} className="bg-white text-slate-900">{c.name}</option>
                   ))}
                 </select>
               </div>
@@ -445,24 +445,24 @@ const AccessoryFormPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Description</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Description</label>
             <Textarea
               rows={3}
               placeholder="Describe the care kit, cleaning solution, cloth size, or case material..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-amber-500"
+              className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-500 focus:border-amber-500"
             />
           </div>
         </div>
 
         {/* Section 2: Search & Mega Menu Tags */}
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-          <h2 className="text-xs font-black text-amber-400 uppercase tracking-widest border-b border-slate-800 pb-3 flex items-center gap-2">
-            <Tag className="w-4 h-4 text-amber-400" />
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
+          <h2 className="text-xs font-black text-amber-600 uppercase tracking-widest border-b border-slate-200 pb-3 flex items-center gap-2">
+            <Tag className="w-4 h-4 text-amber-600" />
             Search & Mega Menu Matching Keywords
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Click preset keywords to automatically display this item under Header Mega Menu care kit dropdowns.
           </p>
 
@@ -477,7 +477,7 @@ const AccessoryFormPage: React.FC = () => {
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                     active
                       ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 scale-105'
-                      : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-amber-500/40 hover:text-amber-400'
+                      : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-amber-500/40 hover:text-amber-600'
                   }`}
                 >
                   {active && <Check className="w-3.5 h-3.5 text-slate-950" />}
@@ -489,19 +489,19 @@ const AccessoryFormPage: React.FC = () => {
 
           {/* Active Tags Pills */}
           {searchTags.length > 0 && (
-            <div className="pt-3 border-t border-slate-800/80">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Active Applied Tags:</label>
+            <div className="pt-3 border-t border-slate-200">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Active Applied Tags:</label>
               <div className="flex flex-wrap gap-2">
                 {searchTags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold"
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-semibold"
                   >
                     #{tag}
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tag)}
-                      className="hover:text-red-400 transition-colors ml-1"
+                      className="hover:text-red-600 transition-colors ml-1"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -523,12 +523,12 @@ const AccessoryFormPage: React.FC = () => {
                   handleAddCustomTag()
                 }
               }}
-              className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 h-10"
+              className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-500 h-10"
             />
             <Button
               type="button"
               onClick={handleAddCustomTag}
-              className="bg-slate-800 hover:bg-slate-700 text-white font-bold h-10 px-4 shrink-0"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold h-10 px-4 shrink-0"
             >
               Add
             </Button>
@@ -536,25 +536,25 @@ const AccessoryFormPage: React.FC = () => {
         </div>
 
         {/* Section 3: Product Media Upload */}
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-          <h2 className="text-xs font-black text-amber-400 uppercase tracking-widest border-b border-slate-800 pb-3 flex items-center gap-2">
-            <Upload className="w-4 h-4 text-amber-400" />
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
+          <h2 className="text-xs font-black text-amber-600 uppercase tracking-widest border-b border-slate-200 pb-3 flex items-center gap-2">
+            <Upload className="w-4 h-4 text-amber-600" />
             Accessory Media & Photos
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Main Cover Upload */}
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Main Cover Photo</label>
-              <div className="border-2 border-dashed border-slate-800 hover:border-amber-500/50 bg-slate-950 rounded-2xl p-4 text-center transition-colors relative min-h-[160px] flex items-center justify-center">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Main Cover Photo</label>
+              <div className="border-2 border-dashed border-slate-200 hover:border-amber-500/50 bg-slate-50 rounded-2xl p-4 text-center transition-colors relative min-h-[160px] flex items-center justify-center">
                 {uploading && (
-                  <div className="absolute inset-0 bg-slate-950/80 rounded-2xl z-20 flex flex-col items-center justify-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-amber-400 mb-1" />
-                    <span className="text-[10px] text-amber-400 font-bold uppercase">Uploading...</span>
+                  <div className="absolute inset-0 bg-slate-50 rounded-2xl z-20 flex flex-col items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-amber-600 mb-1" />
+                    <span className="text-[10px] text-amber-600 font-bold uppercase">Uploading...</span>
                   </div>
                 )}
                 {thumbnail ? (
-                  <div className="relative group rounded-xl overflow-hidden bg-slate-900 border border-slate-800 w-full aspect-video flex items-center justify-center">
+                  <div className="relative group rounded-xl overflow-hidden bg-white border border-slate-200 w-full aspect-video flex items-center justify-center">
                     <img src={getImageUrl(thumbnail)} alt="Thumbnail" className="h-full object-contain p-2" />
                     <button
                       type="button"
@@ -566,8 +566,8 @@ const AccessoryFormPage: React.FC = () => {
                   </div>
                 ) : (
                   <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full py-4">
-                    <Upload className="w-8 h-8 text-amber-400 mb-2" />
-                    <span className="text-xs font-bold text-white">Upload Cover Photo</span>
+                    <Upload className="w-8 h-8 text-amber-600 mb-2" />
+                    <span className="text-xs font-bold text-slate-900">Upload Cover Photo</span>
                     <span className="text-[10px] text-slate-500 mt-1">PNG, JPG, WEBP up to 10MB</span>
                     <input
                       type="file"
@@ -583,11 +583,11 @@ const AccessoryFormPage: React.FC = () => {
 
             {/* Gallery Images Upload */}
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Gallery Photos</label>
-              <div className="border-2 border-dashed border-slate-800 hover:border-amber-500/50 bg-slate-950 rounded-2xl p-4 text-center transition-colors min-h-[160px] flex flex-col justify-between">
-                <label className="cursor-pointer flex flex-col items-center py-2 border-b border-slate-800/80 mb-2">
-                  <Plus className="w-6 h-6 text-amber-400 mb-1" />
-                  <span className="text-xs font-bold text-amber-400">Add More Photos</span>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Gallery Photos</label>
+              <div className="border-2 border-dashed border-slate-200 hover:border-amber-500/50 bg-slate-50 rounded-2xl p-4 text-center transition-colors min-h-[160px] flex flex-col justify-between">
+                <label className="cursor-pointer flex flex-col items-center py-2 border-b border-slate-200 mb-2">
+                  <Plus className="w-6 h-6 text-amber-600 mb-1" />
+                  <span className="text-xs font-bold text-amber-600">Add More Photos</span>
                   <input
                     type="file"
                     multiple
@@ -601,7 +601,7 @@ const AccessoryFormPage: React.FC = () => {
                 {images.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2 max-h-36 overflow-y-auto pr-1">
                     {images.map((imgUrl, idx) => (
-                      <div key={idx} className="relative group rounded-lg bg-slate-900 border border-slate-800 aspect-square flex items-center justify-center">
+                      <div key={idx} className="relative group rounded-lg bg-white border border-slate-200 aspect-square flex items-center justify-center">
                         <img src={getImageUrl(imgUrl)} alt={`Gallery ${idx}`} className="h-full object-contain p-1" />
                         <button
                           type="button"
@@ -621,20 +621,20 @@ const AccessoryFormPage: React.FC = () => {
           </div>
 
           {/* Alternative Image URL Input */}
-          <div className="pt-3 border-t border-slate-800/80">
-            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Or Paste Direct Image URL:</label>
+          <div className="pt-3 border-t border-slate-200">
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Or Paste Direct Image URL:</label>
             <div className="flex gap-2">
               <Input
                 type="url"
                 placeholder="https://example.com/accessory-photo.jpg"
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
-                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 h-10 text-xs"
+                className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-500 h-10 text-xs"
               />
               <Button
                 type="button"
                 onClick={handleAddImageUrl}
-                className="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold h-10 px-4 shrink-0 text-xs"
+                className="bg-slate-100 hover:bg-slate-200 text-amber-600 font-bold h-10 px-4 shrink-0 text-xs"
               >
                 <Link2 className="w-3.5 h-3.5 mr-1" /> Add URL
               </Button>
@@ -643,16 +643,16 @@ const AccessoryFormPage: React.FC = () => {
         </div>
 
         {/* Section 4: Status & Submit */}
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Publish Status:</label>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Publish Status:</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
-              className="h-10 px-3 bg-slate-950 border border-slate-800 rounded-lg text-xs font-bold text-amber-400 outline-none"
+              className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-amber-600 outline-none"
             >
-              <option value="active" className="bg-slate-900 text-amber-400">Active (Live in Store)</option>
-              <option value="inactive" className="bg-slate-900 text-slate-400">Inactive (Draft)</option>
+              <option value="active" className="bg-white text-amber-600">Active (Live in Store)</option>
+              <option value="inactive" className="bg-white text-slate-500">Inactive (Draft)</option>
             </select>
           </div>
 
@@ -660,7 +660,7 @@ const AccessoryFormPage: React.FC = () => {
             <Button
               type="button"
               onClick={() => navigate('/admin/accessories')}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 h-11 rounded-xl w-full sm:w-auto"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-6 h-11 rounded-xl w-full sm:w-auto"
             >
               Cancel
             </Button>

@@ -29,6 +29,7 @@ import appointmentRoutes from './routes/appointments'
 import inquiryRoutes from './routes/inquiries'
 import couponsRoutes from './routes/coupons'
 import referralRoutes from './routes/referral'
+import storeVisitRoutes from './routes/storeVisits'
 
 export function startServer() {
   const app = express()
@@ -72,6 +73,7 @@ export function startServer() {
   app.use('/api/inquiries', inquiryRoutes)
   app.use('/api/coupons', couponsRoutes)
   app.use('/api/referral', referralRoutes)
+  app.use('/api/store-visits', storeVisitRoutes)
 
   app.get('/', (req, res) => res.json({ ok: true }))
 

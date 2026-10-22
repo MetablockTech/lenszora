@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Calendar, Clock, User, Phone, MapPin, Eye, Search, Filter, CheckCircle2, XCircle } from 'lucide-react'
+import { Calendar, Clock, User, Phone, MapPin, Eye, Search, Filter, CheckCircle2, XCircle, Home } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -56,11 +56,19 @@ const AppointmentsPage: React.FC = () => {
     }
   }
 
-  const filteredAppointments = appointmentList.filter(app => 
-    app.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.customerPhone.includes(searchTerm) ||
-    app.storeId?.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const [visitFilter, setVisitFilter] = useState<'all' | 'store' | 'home'>('all')
+
+  const formatAddress = (a?: { line1?: string; line2?: string; landmark?: string; city?: string; state?: string; pincode?: string }) => a ? [a.line1, a.line2, a.landmark, a.city, a.state, a.pincode].filter(Boolean).join(', ') : ''
+
+  const filteredAppointments = appointmentList.filter(app => {
+    const isHome = app.visitType === 'home'
+    if (visitFilter !== 'all' && (visitFilter === 'home') !== isHome) return false
+    const q = searchTerm.toLowerCase()
+    return app.customerName.toLowerCase().includes(q) ||
+      app.customerPhone.includes(searchTerm) ||
+      app.storeId?.name?.toLowerCase().includes(q) ||
+      formatAddress(app.address).toLowerCase().includes(q)
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -75,15 +83,27 @@ const AppointmentsPage: React.FC = () => {
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 font-playfair">Store Appointments</h1>
-          <p className="text-slate-500 text-sm mt-1">Manage customer bookings for all locations.</p>
+          <h1 className="text-3xl font-bold text-slate-900 font-playfair">Appointments</h1>
+          <p className="text-slate-500 text-sm mt-1">Store visits and home eye-test visits.</p>
         </div>
         
-        <div className="flex w-full md:w-auto gap-3">
+        <div className="flex flex-wrap w-full md:w-auto gap-3">
+          <div className="flex rounded-lg border border-slate-200 overflow-hidden h-10">
+            {(['all', 'store', 'home'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setVisitFilter(v)}
+                className={`px-3 text-xs font-bold uppercase tracking-wider ${visitFilter === v ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+              >
+                {v === 'all' ? 'All' : v === 'store' ? 'Store' : 'Home Visit'}
+              </button>
+            ))}
+          </div>
           <div className="relative flex-1 md:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input 
-              placeholder="Search by name, phone or store..." 
+              placeholder="Search by name, phone, store or address..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-10 bg-white border-slate-200"
@@ -100,7 +120,7 @@ const AppointmentsPage: React.FC = () => {
           <TableHeader className="bg-slate-50/50">
             <TableRow className="hover:bg-transparent">
               <TableHead className="font-bold text-slate-700">Customer</TableHead>
-              <TableHead className="font-bold text-slate-700">Store</TableHead>
+              <TableHead className="font-bold text-slate-700">Location</TableHead>
               <TableHead className="font-bold text-slate-700">Date & Time</TableHead>
               <TableHead className="font-bold text-slate-700">Reason</TableHead>
               <TableHead className="font-bold text-slate-700">Status</TableHead>
@@ -110,11 +130,11 @@ const AppointmentsPage: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-20 text-slate-400">Loading appointments...</TableCell>
+                <TableCell colSpan={6} className="text-center py-20 text-slate-400">Loading appointments...</TableCell>
               </TableRow>
             ) : filteredAppointments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-20 text-slate-400">No appointments found.</TableCell>
+                <TableCell colSpan={6} className="text-center py-20 text-slate-400">No appointments found.</TableCell>
               </TableRow>
             ) : (
               filteredAppointments.map((app) => (
@@ -128,10 +148,19 @@ const AppointmentsPage: React.FC = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium text-slate-700 flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                      {app.storeId?.name || 'Unknown Store'}
-                    </span>
+                    {app.visitType === 'home' ? (
+                      <div className="flex flex-col max-w-[260px]">
+                        <span className="inline-flex w-fit items-center gap-1 text-[10px] font-black uppercase tracking-wider text-violet-700 bg-violet-50 border border-violet-200 rounded px-1.5 py-0.5">
+                          <Home className="w-3 h-3" /> Home Visit
+                        </span>
+                        <span className="text-xs text-slate-500 mt-1 truncate">{formatAddress(app.address)}</span>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-slate-700 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        {app.storeId?.name || 'Unknown Store'}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
@@ -172,9 +201,9 @@ const AppointmentsPage: React.FC = () => {
       </div>
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-md p-6">
+        <DialogContent className="max-w-md w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-6 bg-white text-slate-900 border-slate-200">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-2xl font-bold font-playfair">Appointment Details</DialogTitle>
+            <DialogTitle className="text-2xl font-bold font-playfair text-slate-900">Appointment Details</DialogTitle>
           </DialogHeader>
 
           {selectedAppointment && (
@@ -210,13 +239,31 @@ const AppointmentsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-slate-900">{selectedAppointment.storeId?.name}</p>
-                    <p className="text-sm text-slate-500 italic">Lenzora Outlet Store</p>
+                {selectedAppointment.visitType === 'home' ? (
+                  <div className="flex items-start gap-3 bg-violet-50 p-3 rounded-lg border border-violet-100">
+                    <Home className="w-5 h-5 text-violet-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-black text-violet-900 uppercase text-[10px] tracking-widest leading-none mb-1">Home Visit Address</p>
+                      <p className="font-medium text-slate-800">{formatAddress(selectedAppointment.address)}</p>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatAddress(selectedAppointment.address))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-violet-700 hover:underline mt-1 inline-block"
+                      >
+                        Open in Google Maps →
+                      </a>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-slate-900">{selectedAppointment.storeId?.name}</p>
+                      <p className="text-sm text-slate-500 italic">Lenzora Outlet Store</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-start gap-3 bg-amber-50 p-3 rounded-lg border border-amber-100">
                   <Eye className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -234,10 +281,17 @@ const AppointmentsPage: React.FC = () => {
                 >
                   <CheckCircle2 className="w-4 h-4" /> Confirm Visit
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
+                  onClick={() => handleUpdateStatus(selectedAppointment._id, 'completed')}
+                  className="flex-1 border-blue-200 text-blue-600 hover:bg-blue-50 gap-2 h-11 bg-white"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Done
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => handleUpdateStatus(selectedAppointment._id, 'cancelled')}
-                  className="flex-1 border-red-200 text-red-600 hover:bg-red-50 gap-2 h-11"
+                  className="flex-1 border-red-200 text-red-600 hover:bg-red-50 gap-2 h-11 bg-white"
                 >
                   <XCircle className="w-4 h-4" /> Cancel
                 </Button>

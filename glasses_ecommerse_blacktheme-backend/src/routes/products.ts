@@ -163,8 +163,10 @@ router.get('/', async (req, res) => {
 
     // Eyewear details filters (case-insensitive regex matching)
     if (gender) {
-      const gStr = String(gender).trim()
-      filter['eyewearDetails.gender'] = { $regex: new RegExp(`^${gStr}$`, 'i') }
+      const gStr = String(gender).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      // Unisex frames are shown to both men and women
+      const genders = /^(men|women|male|female)$/i.test(gStr) ? [gStr, 'unisex'] : [gStr]
+      filter['eyewearDetails.gender'] = { $in: genders.map((g) => new RegExp(`^${g}$`, 'i')) }
     }
 
     if (frameType) {
@@ -173,8 +175,11 @@ router.get('/', async (req, res) => {
     }
 
     if (frameShape) {
-      const fsStr = String(frameShape).trim().replace(/[-_]/g, ' ')
-      filter['eyewearDetails.frameShape'] = { $regex: new RegExp(fsStr.replace(/\s+/g, '[-\\s]?'), 'i') }
+      // Separator-insensitive: "cateye", "cat-eye" and "Cat Eye" all match each other
+      const letters = String(frameShape).toLowerCase().replace(/[^a-z0-9]/g, '').split('')
+      if (letters.length) {
+        filter['eyewearDetails.frameShape'] = { $regex: new RegExp(letters.join('[-\\s_]?'), 'i') }
+      }
     }
 
     if (frameMaterial) {
@@ -316,7 +321,7 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
     title, description, price, images, thumbnail, stock, category, brand,
     productType, sku, unit, searchTags, minOrderQuantity,
     discountAmount, discountType, shippingCost, shippingCostMultiply,
-    status, colors, attributes, variants, hasVariants, returnPolicy,
+    status, colors, colorSwatches, attributes, variants, hasVariants, returnPolicy,
     vendorId, eyewearDetails, lensSettings, isBulk, isSale
   } = req.body
 
@@ -363,6 +368,7 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
       shippingCostMultiply: shippingCostMultiply || false,
       status: finalStatus,
       colors: colors || [],
+      colorSwatches: colorSwatches || {},
       attributes: attributes || [],
       variants: variants || [],
       hasVariants: hasVariants || false,

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
-import { getImageUrl, getProductImage, calculateProductDiscount } from "@/lib/utils";
+import { getProductImage, calculateProductDiscount } from "@/lib/utils";
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 
@@ -87,12 +87,12 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
                     {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
                 </div>
 
-                <a
-                    href={viewAllLink}
+                <Link
+                    to={viewAllLink}
                     className="hidden md:flex items-center gap-2 text-primary hover:gap-3 transition-all font-medium"
                 >
                     {viewAllText} <ArrowRight className="w-4 h-4" />
-                </a>
+                </Link>
             </div>
 
             {/* Slider */}
@@ -100,7 +100,7 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
                 {/* Navigation Buttons */}
                 <button
                     onClick={scrollPrev}
-                    className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/80 hover:bg-black text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity -translate-x-1/2 hidden md:block border border-white/10 ${!canScrollLeft ? 'pointer-events-none opacity-0' : ''}`}
+                    className={`absolute left-2 top-[38%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black backdrop-blur text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hidden md:block border border-white/15 ${!canScrollLeft ? 'pointer-events-none opacity-0' : ''}`}
                     aria-label="Previous"
                 >
                     <ChevronLeft className="w-5 h-5" />
@@ -108,7 +108,7 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
 
                 <button
                     onClick={scrollNext}
-                    className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/80 hover:bg-black text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity translate-x-1/2 hidden md:block border border-white/10 ${!canScrollRight ? 'pointer-events-none opacity-0' : ''}`}
+                    className={`absolute right-2 top-[38%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black backdrop-blur text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hidden md:block border border-white/15 ${!canScrollRight ? 'pointer-events-none opacity-0' : ''}`}
                     aria-label="Next"
                 >
                     <ChevronRight className="w-5 h-5" />
@@ -120,106 +120,69 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
                         {products.map((product) => (
                             <div
                                 key={product._id}
-                                className="flex-[0_0_auto] w-64 md:w-72 pl-4"
+                                className="flex-[0_0_auto] w-56 sm:w-64 md:w-72 pl-4"
                             >
                                 <Link
                                     to={`/product/${product._id}`}
                                     className="block group/card h-full"
                                 >
-                                    <div className="bg-slate-900/80 rounded-2xl overflow-hidden border border-slate-800/90 hover:border-amber-400/60 transition-all duration-300 h-full flex flex-col shadow-xl hover:shadow-2xl hover:shadow-amber-500/10">
-                                        {/* Product Image Area — aspect-[16/11] object-contain so glasses are NEVER cropped */}
-                                        <div className="relative aspect-[16/11] overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800/60 p-2 flex items-center justify-center">
-                                            <img
-                                                src={getProductImage(product)}
-                                                alt={product.title}
-                                                className="w-full h-full object-contain p-1.5 sm:p-2.5 group-hover/card:scale-105 transition-transform duration-500"
-                                            />
-                                            {(() => {
-                                                const calc = calculateProductDiscount(product);
-                                                return calc.hasDiscount ? (
-                                                    <div className="absolute top-2.5 left-2.5 bg-gradient-to-r from-red-600 to-amber-600 text-white px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-wider shadow-md">
-                                                        {calc.discountLabel} OFF
-                                                    </div>
-                                                ) : null;
-                                            })()}
-                                            {product.eyewearDetails?.polarized && (
-                                                <div className="absolute top-2.5 right-2.5 bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full text-[10px] uppercase font-black tracking-wider shadow-md">
-                                                    ⚡ Polarized
+                                    {(() => {
+                                        const calc = calculateProductDiscount(product);
+                                        const brandName = product.brand ? (typeof product.brand === 'string' ? product.brand : product.brand.name) : '';
+                                        // One short spec line, without repeating the same word (e.g. category "Women" + gender "Women")
+                                        const specs = [product.eyewearDetails?.frameShape, product.eyewearDetails?.frameMaterial, product.eyewearDetails?.gender]
+                                            .filter((v): v is string => !!v)
+                                            .filter((v, i, arr) => arr.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i);
+                                        return (
+                                            <div className="h-full flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition-all duration-300 hover:border-amber-400/50 hover:shadow-[0_8px_30px_rgba(218,171,52,0.12)]">
+                                                {/* Image fills the top of the card edge to edge */}
+                                                <div className="relative aspect-[4/3] overflow-hidden bg-[#0d0d0f]">
+                                                    <img
+                                                        src={getProductImage(product)}
+                                                        alt={product.title}
+                                                        loading="lazy"
+                                                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-105"
+                                                    />
+                                                    {calc.hasDiscount && (
+                                                        <span className="absolute top-2.5 left-2.5 rounded-md bg-red-600/90 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-md">
+                                                            {calc.discountLabel}
+                                                        </span>
+                                                    )}
+                                                    {product.eyewearDetails?.polarized && (
+                                                        <span className="absolute top-2.5 right-2.5 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300 backdrop-blur">
+                                                            Polarized
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
 
-                                        {/* Product Info */}
-                                        <div className="p-4 flex-grow flex flex-col space-y-2.5">
-                                            <h3 className="text-sm font-bold text-white line-clamp-1 group-hover/card:text-amber-400 transition-colors">
-                                                {product.title}
-                                            </h3>
+                                                <div className="flex flex-1 flex-col p-3.5">
+                                                    {brandName && (
+                                                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-400/90 truncate">{brandName}</p>
+                                                    )}
+                                                    <h3 className="mt-0.5 text-sm font-bold text-white line-clamp-1 transition-colors group-hover/card:text-amber-400">
+                                                        {product.title}
+                                                    </h3>
+                                                    {specs.length > 0 && (
+                                                        <p className="mt-1 text-[11px] text-slate-400 truncate capitalize">{specs.join(' · ').toLowerCase()}</p>
+                                                    )}
 
-                                            {/* Specs Pills */}
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {product.brand && (
-                                                    <span className="text-[9px] font-extrabold text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-md uppercase tracking-tighter">
-                                                        {typeof product.brand === 'string' ? product.brand : product.brand.name}
-                                                    </span>
-                                                )}
-
-                                                {product.category && (
-                                                    <span className="text-[9px] text-slate-300 bg-slate-800/60 border border-slate-700/80 px-2 py-0.5 rounded-md uppercase font-semibold">
-                                                        {typeof product.category === 'string' ? product.category : product.category.name}
-                                                    </span>
-                                                )}
-
-                                                {product.eyewearDetails?.gender && (
-                                                    <span className="text-[9px] text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md uppercase">
-                                                        {product.eyewearDetails.gender}
-                                                    </span>
-                                                )}
-
-                                                {product.eyewearDetails?.frameMaterial && (
-                                                    <span className="text-[9px] text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md uppercase">
-                                                        {product.eyewearDetails.frameMaterial}
-                                                    </span>
-                                                )}
-
-                                                {product.eyewearDetails?.frameShape && (
-                                                    <span className="text-[9px] text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md uppercase">
-                                                        {product.eyewearDetails.frameShape}
-                                                    </span>
-                                                )}
-
-                                                {(product.eyewearDetails?.frameColor || product.eyewearDetails?.glassColor) && (
-                                                    <span className="text-[9px] text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md uppercase">
-                                                        {product.eyewearDetails.glassColor || product.eyewearDetails.frameColor}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="mt-auto pt-2 flex items-center justify-between border-t border-slate-800/60">
-                                                <div className="flex flex-col">
-                                                    {(() => {
-                                                        const calc = calculateProductDiscount(product);
-                                                        return calc.hasDiscount ? (
-                                                            <>
-                                                                <span className="text-base font-extrabold text-amber-400">
-                                                                    ₹{calc.sellingPrice.toLocaleString()}
-                                                                </span>
-                                                                <span className="text-xs text-slate-500 line-through font-medium">
-                                                                    ₹{calc.mrpPrice.toLocaleString()}
-                                                                </span>
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-base font-extrabold text-white">
+                                                    <div className="mt-auto pt-3 flex items-center justify-between gap-2">
+                                                        <div className="flex items-baseline gap-1.5 whitespace-nowrap overflow-hidden">
+                                                            <span className={`text-base font-extrabold ${calc.hasDiscount ? 'text-amber-400' : 'text-white'}`}>
                                                                 ₹{calc.sellingPrice.toLocaleString()}
                                                             </span>
-                                                        );
-                                                    })()}
-                                                </div>
-                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover/card:bg-amber-400 group-hover/card:text-slate-950 transition-all shadow-md">
-                                                    <ArrowRight className="w-4 h-4 text-white group-hover/card:text-slate-950" />
+                                                            {calc.hasDiscount && (
+                                                                <span className="text-xs text-slate-500 line-through">₹{calc.mrpPrice.toLocaleString()}</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover/card:bg-amber-400 group-hover/card:text-slate-950">
+                                                            <ArrowRight className="h-4 w-4" />
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
+                                        );
+                                    })()}
                                 </Link>
                             </div>
                         ))}
@@ -228,12 +191,12 @@ const ProductSlider: React.FC<ProductSliderProps> = ({
             </div>
 
             {/* Mobile View All Link */}
-            <a
-                href={viewAllLink}
+            <Link
+                to={viewAllLink}
                 className="md:hidden flex items-center justify-center gap-2 text-primary hover:gap-3 transition-all font-medium mt-4"
             >
                 {viewAllText} <ArrowRight className="w-4 h-4" />
-            </a>
+            </Link>
         </div>
     );
 };

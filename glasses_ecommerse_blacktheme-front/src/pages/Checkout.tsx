@@ -4,9 +4,9 @@ import { useCart } from '@/hooks/use-cart'
 import { orders, addresses, pincodes, getUser } from '@/lib/api'
 import { getToken } from '@/lib/api'
 import { Trash2, ChevronRight, AlertCircle, MapPin, Plus, Check, Edit2, Tag, Home, Briefcase, Star, Sparkles, X, Mail } from 'lucide-react'
-import { getImageUrl } from '@/lib/utils'
+import { getImageUrl, isFrameOnlyLens } from '@/lib/utils'
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from '@/hooks/use-toast'
 import LensSelectionModal from '@/components/product/LensSelectionModal'
@@ -478,7 +478,7 @@ const Checkout = () => {
           price: item.price,
           quantity: item.quantity,
           image: item.image,
-          lens: item.lens,
+          lens: isFrameOnlyLens(item.lens) ? undefined : item.lens,
         })),
         couponCode: appliedCoupon?.code,
         discountAmount: couponDiscount,
@@ -568,6 +568,122 @@ const Checkout = () => {
     }
   }
 
+  // Zero-power and frame-only lenses have no eye power to edit
+  const lensNeedsPower = (lens: any) => {
+    const name = String(lens?.type?.name || lens?.typeName || lens?.name || '').toLowerCase();
+    return !(lens?.type?.skipPowerEntry || name.includes('zero') || name.includes('frame only'));
+  };
+
+  const formatSph = (v?: string) => {
+    if (v === undefined || v === null || v === '') return '—';
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? `+${v}` : String(v);
+  };
+
+  const describePrescription = (p: any) => {
+    if (!p) return 'Power not added yet';
+    if (p.method === 'later') return 'Power: will share after order (WhatsApp / Call)';
+    if (p.method === 'upload') return `Prescription uploaded${p.fileName ? ` (${p.fileName})` : ''}`;
+    const eye = (label: string, e: any) => {
+      if (!e) return `${label}: —`;
+      const cyl = e.cyl && Number(e.cyl) !== 0 ? ` / ${e.cyl} × ${e.axis || 0}°` : '';
+      return `${label}: ${formatSph(e.sph)}${cyl}`;
+    };
+    return `${eye('R', p.od)}  ·  ${eye('L', p.os)}${p.pd ? `  ·  PD ${p.pd}` : ''}`;
+  };
+
+  // stacked = phone layout: big image on top, details below (desktop sidebar keeps the compact row)
+  const renderCartItems = (stacked = false) => (
+    <>
+      {cart.map((item, idx) => {
+        const productUrl = `/product/${item.productId}`;
+        const lensBlock = item.lens && !isFrameOnlyLens(item.lens) && (
+          <div className="space-y-1.5 mt-2">
+            <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider break-words line-clamp-2">
+              Lens: {item.lens.packageName || item.lens.name} (+₹{item.lens.price.toLocaleString()})
+            </p>
+            {lensNeedsPower(item.lens) && (
+              <div className={`text-[11px] rounded-md px-2 py-1.5 border ${item.lens.prescription ? 'border-green-500/20 bg-green-500/5 text-green-400' : 'border-amber-500/30 bg-amber-500/10 text-amber-400'}`}>
+                {describePrescription(item.lens.prescription)}
+              </div>
+            )}
+            <button
+              onClick={() => setEditingIndex(idx)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold hover:text-amber-300 border border-gold/40 hover:border-gold rounded-md px-2.5 py-1 transition-colors"
+            >
+              <Edit2 className="w-3 h-3" />
+              {!lensNeedsPower(item.lens) ? 'Change Lens' : item.lens.prescription ? 'Edit Power' : 'Add Power'}
+            </button>
+          </div>
+        );
+        const lineTotal = `₹${((item.price + (item.lens?.price || 0)) * item.quantity).toLocaleString()}`;
+
+        if (stacked) {
+          return (
+            <div key={`${item.productId}-${idx}`} className="pb-5 border-b border-zinc-800 last:border-0 last:pb-0">
+              <div className="relative">
+                <Link to={productUrl} aria-label={`View ${item.title}`} className="block w-full aspect-[4/3] rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800">
+                  <img src={getImageUrl(item.image)} alt={item.title} className="w-full h-full object-contain" />
+                </Link>
+                <button
+                  onClick={() => removeFromCart(item.productId, item.variant?.sku)}
+                  className="absolute top-2 right-2 p-2 rounded-full bg-black/60 backdrop-blur text-gray-300 hover:text-red-500 transition-colors"
+                  title="Remove item"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <Link to={productUrl} className="block mt-3 group/details">
+                <h3 className="font-semibold text-white leading-snug line-clamp-2 group-hover/details:text-gold transition-colors">
+                  {item.title}
+                </h3>
+                <div className="flex items-center justify-between gap-3 mt-1">
+                  <p className="text-sm text-gray-400">Qty: {item.quantity} × ₹{item.price.toLocaleString()}</p>
+                  <p className="font-bold text-white">{lineTotal}</p>
+                </div>
+              </Link>
+              {lensBlock}
+            </div>
+          );
+        }
+
+        return (
+          <div
+            key={`${item.productId}-${idx}`}
+            className="flex gap-4 pb-4 border-b border-zinc-800 last:border-0 relative group"
+          >
+            <Link to={productUrl} className="shrink-0" aria-label={`View ${item.title}`}>
+              <img
+                src={getImageUrl(item.image)}
+                alt={item.title}
+                className="h-16 w-16 object-cover rounded-lg hover:opacity-80 transition-opacity"
+              />
+            </Link>
+            <div className="flex-1 min-w-0 pr-6">
+              <Link to={productUrl} className="block group/details">
+                <h3 className="font-medium text-white truncate group-hover/details:text-gold transition-colors">
+                  {item.title}
+                </h3>
+                <p className="text-sm text-gray-400">
+                  Qty: {item.quantity} × ₹{item.price.toLocaleString()}
+                </p>
+              </Link>
+              {lensBlock}
+              <p className="font-semibold text-white mt-1">{lineTotal}</p>
+            </div>
+            <button
+              onClick={() => removeFromCart(item.productId, item.variant?.sku)}
+              className="absolute top-0 right-0 p-1 text-gray-500 hover:text-red-500 transition-colors"
+              title="Remove item"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        );
+      })}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
       <Header />
@@ -579,6 +695,16 @@ const Checkout = () => {
           </h1>
 
           <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8 w-full">
+            {/* Phones: products first, then address/billing, then summary + pay */}
+            <div className="lg:hidden bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
+              <h2 className="text-xl font-playfair font-bold text-white mb-4">
+                Your Items ({cart.length})
+              </h2>
+              <div className="space-y-5">
+                {renderCartItems(true)}
+              </div>
+            </div>
+
             {/* Left: Shipping Form */}
             <div className="lg:col-span-2 space-y-8 w-full min-w-0">
               {/* Saved Addresses Section (Amazon Style) */}
@@ -1210,56 +1336,9 @@ const Checkout = () => {
                   Order Summary
                 </h2>
 
-                {/* Cart Items */}
-                <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-                  {cart.map((item, idx) => (
-                    <div
-                      key={`${item.productId}-${idx}`}
-                      className="flex gap-4 pb-4 border-b border-zinc-800 last:border-0 relative group"
-                    >
-                      <img
-                        src={getImageUrl(item.image)}
-                        alt={item.title}
-                        className="h-16 w-16 object-cover rounded-lg shrink-0"
-                      />
-                      <div className="flex-1 min-w-0 pr-6">
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-medium text-white truncate">
-                            {item.title}
-                          </h3>
-                        </div>
-                        <p className="text-sm text-gray-400">
-                          Qty: {item.quantity} × ₹{item.price.toLocaleString()}
-                        </p>
-                        {item.lens && (
-                          <div className="space-y-1 mt-1">
-                            <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider break-words line-clamp-2">
-                              Lens: {item.lens.packageName || item.lens.name} (+₹{item.lens.price.toLocaleString()})
-                            </p>
-                            {item.lens.prescription && (
-                              <p className="text-[9px] text-green-500 font-medium">✓ Prescription Added</p>
-                            )}
-                            <button
-                              onClick={() => setEditingIndex(idx)}
-                              className="text-[10px] text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
-                            >
-                              <Edit2 className="w-2.5 h-2.5" /> Edit Power
-                            </button>
-                          </div>
-                        )}
-                        <p className="font-semibold text-white mt-1">
-                          ₹{((item.price + (item.lens?.price || 0)) * item.quantity).toLocaleString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => removeFromCart(item.productId, item.variant?.sku)}
-                        className="absolute top-0 right-0 p-1 text-gray-500 hover:text-red-500 transition-colors"
-                        title="Remove item"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+                {/* Cart Items (desktop; phones show them above the form) */}
+                <div className="hidden lg:block space-y-4 mb-6 max-h-96 overflow-y-auto">
+                  {renderCartItems()}
                 </div>
 
                 {/* Coupon Code Section */}
@@ -1378,6 +1457,7 @@ const Checkout = () => {
       {editingIndex !== null && (
         <LensSelectionModal
           isOpen={true}
+          openPowerForm
           onClose={() => setEditingIndex(null)}
           product={{ 
              vendorId: cart[editingIndex].vendorId,
@@ -1403,6 +1483,10 @@ const Checkout = () => {
               }
             };
             updateItem(editingIndex, updatedItem);
+            toast({
+              title: "Lens updated",
+              description: lensNeedsPower(updatedItem.lens) ? describePrescription(lensData.prescription) : updatedItem.lens.name
+            });
             setEditingIndex(null);
           }}
         />

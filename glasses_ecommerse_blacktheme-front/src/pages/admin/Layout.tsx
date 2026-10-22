@@ -1,12 +1,12 @@
 import React from 'react'
 import { Link, NavLink, Outlet, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
-import { useSidebar, Sidebar, SidebarProvider, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton } from '@/components/ui/sidebar'
+import { Sidebar, SidebarProvider, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,50 +16,161 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Package, Tag, ShoppingCart, Users, Settings, LogOut, Percent, Link2, LayoutDashboard, Info, Menu, MapPin, ChevronDown, Clock, CheckCircle2, XCircle, Layers, Image as ImageIcon, Calendar, MessageSquare, Gift, Sparkles, Eye, UserCheck, Heart, LayoutGrid } from 'lucide-react'
+import {
+  Package, Tag, ShoppingCart, Users, Settings, LogOut, Link2, LayoutDashboard, Info, Menu, MapPin, ChevronDown, ChevronRight,
+  Layers, Image as ImageIcon, Calendar, MessageSquare, Gift, Sparkles, Eye, UserCheck, Heart, LayoutGrid, Store, RotateCcw,
+  Boxes, Navigation, ExternalLink, SlidersHorizontal, Glasses, type LucideIcon,
+} from 'lucide-react'
 import { useSettings } from '@/context/SettingsContext'
 import { clearToken, getToken, getUser, products } from '@/lib/api'
-import { Badge } from '@/components/ui/badge'
 import { getImageUrl } from '@/lib/utils'
+
+type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean }
+type NavGroup = { label: string; items: NavItem[] }
+
+// Sidebar structure. Order inside a group = order on screen.
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'Overview',
+    items: [{ to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true }],
+  },
+  {
+    label: 'Catalog',
+    items: [
+      { to: '/admin/products', label: 'Products', icon: Package },
+      { to: '/admin/accessories', label: 'Accessories', icon: Sparkles },
+      { to: '/admin/categories', label: 'Categories', icon: Tag },
+      { to: '/admin/brands', label: 'Brands', icon: Layers },
+      { to: '/admin/lens-manager', label: 'Lens Manager', icon: Eye },
+      { to: '/admin/eyewear-attributes', label: 'Eyewear Attributes', icon: Glasses },
+      { to: '/admin/gallery', label: 'Gallery', icon: ImageIcon },
+    ],
+  },
+  {
+    label: 'Sales',
+    items: [
+      { to: '/admin/orders', label: 'Orders', icon: ShoppingCart },
+      { to: '/admin/return-requests', label: 'Returns', icon: RotateCcw },
+      { to: '/admin/store-visits', label: 'Store Visits', icon: MapPin },
+      { to: '/admin/bulk-products', label: 'Wholesale', icon: Boxes },
+      { to: '/admin/referrals', label: 'Referrals & Coupons', icon: Gift },
+    ],
+  },
+  {
+    label: 'Customers',
+    items: [
+      { to: '/admin/users', label: 'Users', icon: Users },
+      { to: '/admin/customer-leads', label: 'Cart & Wishlists', icon: Heart },
+      { to: '/admin/appointments', label: 'Appointments', icon: Calendar },
+      { to: '/admin/product-inquiries', label: 'Inquiries', icon: MessageSquare },
+    ],
+  },
+  {
+    label: 'Storefront',
+    items: [
+      { to: '/admin/sliders', label: 'Banners & Popups', icon: SlidersHorizontal },
+      { to: '/admin/homepage-categories', label: 'Homepage Categories', icon: LayoutGrid },
+      { to: '/admin/navigation-manager', label: 'Navigation', icon: Navigation },
+      { to: '/admin/stores', label: 'Stores', icon: Store },
+      { to: '/admin/pincodes', label: 'Pincodes', icon: MapPin },
+    ],
+  },
+  {
+    label: 'Settings',
+    items: [
+      { to: '/admin/contact-info', label: 'Contact Info', icon: Info },
+      { to: '/admin/social-links', label: 'Social Links', icon: Link2 },
+      { to: '/admin/settings', label: 'Settings', icon: Settings },
+    ],
+  },
+]
+
+// Titles for pages that are not plain sidebar items (forms, vendor pages)
+const EXTRA_TITLES: { prefix: string; title: string; group: string }[] = [
+  { prefix: '/admin/products/new', title: 'Add Product', group: 'Catalog' },
+  { prefix: '/admin/products/', title: 'Edit Product', group: 'Catalog' },
+  { prefix: '/admin/accessories/new', title: 'Add Accessory', group: 'Catalog' },
+  { prefix: '/admin/accessories/', title: 'Edit Accessory', group: 'Catalog' },
+  { prefix: '/admin/bulk-products/', title: 'Wholesale Product', group: 'Sales' },
+  { prefix: '/admin/wholesale-orders', title: 'Wholesale Orders', group: 'Sales' },
+  { prefix: '/admin/return-request', title: 'Returns', group: 'Sales' },
+  { prefix: '/admin/vendors/create', title: 'Create Vendor', group: 'Vendors' },
+  { prefix: '/admin/vendors/withdraws', title: 'Withdrawals', group: 'Vendors' },
+  { prefix: '/admin/vendors', title: 'Vendors', group: 'Vendors' },
+  { prefix: '/admin/vendor-products', title: 'Vendor Products', group: 'Vendors' },
+  { prefix: '/admin/dashboard', title: 'Dashboard', group: 'Overview' },
+  { prefix: '/admin/social-links', title: 'Social Links', group: 'Settings' },
+]
+
+function getPageMeta(pathname: string) {
+  const path = pathname.replace(/\/+$/, '') || '/admin'
+  for (const extra of EXTRA_TITLES) {
+    if (path === extra.prefix || path.startsWith(extra.prefix)) return { title: extra.title, group: extra.group }
+  }
+  let best: { title: string; group: string; len: number } | null = null
+  for (const group of NAV_GROUPS) {
+    for (const item of group.items) {
+      const matches = item.end ? path === item.to : path === item.to || path.startsWith(`${item.to}/`)
+      if (matches && (!best || item.to.length > best.len)) best = { title: item.label, group: group.label, len: item.to.length }
+    }
+  }
+  return best ? { title: best.title, group: best.group } : { title: 'Admin', group: '' }
+}
+
+// data-[active=true] variants are needed to win over the sidebar component's own active styles
+const itemClass = (active: boolean) =>
+  active
+    ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-600 hover:text-white data-[active=true]:bg-blue-600 data-[active=true]:text-white'
+    : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+
+const subItemClass = (active: boolean) =>
+  active
+    ? 'bg-blue-600/90 text-white font-semibold data-[active=true]:bg-blue-600/90 data-[active=true]:text-white'
+    : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
 
 const AdminLayout: React.FC = () => {
   const { settings } = useSettings()
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const token = getToken()
   const user = getUser()
 
   const [stats, setStats] = React.useState({ pending: 0, active: 0, rejected: 0 })
 
-  const fetchStats = async () => {
-    const currentToken = getToken()
-    if (currentToken && user?.role === 'admin') {
+  const userRole = user?.role
+  const userId = user?.id
+
+  // Light theme for the whole admin area, including dialogs rendered in portals
+  React.useEffect(() => {
+    document.documentElement.classList.add('admin-theme')
+    return () => document.documentElement.classList.remove('admin-theme')
+  }, [])
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      const currentToken = getToken()
+      if (!currentToken || userRole !== 'admin') return
       try {
-        const data = await products.stats(currentToken)
-        setStats(data)
-      } catch (err: any) {
+        setStats(await products.stats(currentToken))
+      } catch (err) {
+        const message = err instanceof Error ? err.message.toLowerCase() : ''
         console.error('Failed to fetch product stats', err)
-        if (err.message?.toLowerCase().includes('token') || err.message?.toLowerCase().includes('unauthorized')) {
+        if (message.includes('token') || message.includes('unauthorized')) {
           clearToken()
           navigate('/admin/login?expired=1')
         }
       }
     }
-  }
 
-  const userRole = user?.role
-  const userId = user?.id
-
-  React.useEffect(() => {
-    const activeToken = getToken()
-    if (!activeToken || userRole !== 'admin') {
+    if (!getToken() || userRole !== 'admin') {
       clearToken()
       navigate('/admin/login?expired=1')
-    } else {
-      fetchStats()
-      const interval = setInterval(fetchStats, 30000) // Update every 30s
-      return () => clearInterval(interval)
+      return
     }
+    fetchStats()
+    const interval = setInterval(fetchStats, 30000) // Update every 30s
+    return () => clearInterval(interval)
   }, [userRole, userId, navigate])
 
   function handleLogout() {
@@ -71,446 +182,147 @@ const AdminLayout: React.FC = () => {
     return null
   }
 
-  const [searchParams] = useSearchParams()
-  const currentLevel = searchParams.get('level')
-
-  const isCategorySetupActive = location.pathname.startsWith('/admin/categories') || location.pathname.startsWith('/admin/lens-manager')
   const isVendorManagementActive = location.pathname.startsWith('/admin/vendors')
   const isVendorProductsActive = location.pathname.startsWith('/admin/vendor-products')
-  const activeClass = "bg-blue-600 text-white shadow-md hover:bg-blue-600 hover:text-white transition-all duration-200"
-  const inactiveClass = "text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all duration-200"
+  const vendorProductStatus = isVendorProductsActive ? searchParams.get('status') : null
+  const page = getPageMeta(location.pathname)
 
-  const activeSubClass = "bg-blue-600 text-white font-bold shadow-sm"
-  const inactiveSubClass = "text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200"
+  const vendorProductLinks = [
+    { status: 'pending', label: 'New Requests', count: stats.pending, badge: 'bg-red-500 text-white' },
+    { status: 'active', label: 'Approved', count: stats.active, badge: 'bg-emerald-500/20 text-emerald-300' },
+    { status: 'rejected', label: 'Denied', count: stats.rejected, badge: 'bg-red-500/20 text-red-300' },
+  ]
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="flex h-screen w-full bg-slate-50">
-        <Sidebar side="left" variant="sidebar" collapsible="icon" className="z-20 bg-slate-900 border-r border-slate-800">
-          <SidebarHeader className="border-b border-slate-800 p-4">
+      <div className="flex h-screen w-full bg-slate-50 text-slate-900">
+        <Sidebar side="left" variant="sidebar" collapsible="icon" className="z-20 border-r border-slate-800 [&>div]:bg-slate-950">
+          <SidebarHeader className="border-b border-white/[0.06] px-4 py-4">
             <Link to="/admin" className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 font-bold text-white overflow-hidden">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 font-bold text-white overflow-hidden">
                 {settings.logoUrl ? (
-                  <img
-                    src={getImageUrl(settings.logoUrl)}
-                    alt={settings.websiteName}
-                    className="w-full h-full object-contain"
-                  />
+                  <img src={getImageUrl(settings.logoUrl)} alt={settings.websiteName} className="w-full h-full object-contain" />
                 ) : (
                   settings.websiteName.charAt(0).toUpperCase()
                 )}
               </div>
-              <span className="font-bold text-white group-data-[collapsible=icon]:hidden">{settings.websiteName}</span>
+              <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+                <p className="font-bold text-white truncate leading-tight">{settings.websiteName}</p>
+                <p className="text-[11px] text-slate-500 leading-tight">Admin panel</p>
+              </div>
             </Link>
           </SidebarHeader>
 
-          <SidebarContent className="mt-2 px-2 overflow-x-hidden scrollbar-hide">
-            <SidebarMenu className="gap-1">
-              <SidebarMenuItem>
-                <NavLink to="/admin" end>
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <LayoutDashboard className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
-                      </a>
-                    </SidebarMenuButton>
+          <SidebarContent className="px-2 py-2 overflow-x-hidden scrollbar-hide">
+            {NAV_GROUPS.map((group) => (
+              <React.Fragment key={group.label}>
+                <SidebarGroup className="px-0 py-1.5">
+                  {group.label !== 'Overview' && (
+                    <SidebarGroupLabel className="h-6 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{group.label}</SidebarGroupLabel>
                   )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/products">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Package className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Products</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/accessories">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Sparkles className="w-5 h-5 shrink-0 text-amber-400" />
-                        <span className="group-data-[collapsible=icon]:hidden font-medium">Accessories</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/gallery">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <ImageIcon className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Gallery</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>              <SidebarMenuItem>
-                <NavLink to="/admin/bulk-products">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <ShoppingCart className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Wholesale Orders</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/product-inquiries">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <MessageSquare className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Inquiries</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/sliders">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Layers className="w-5 h-5 shrink-0 text-amber-400" />
-                        <span className="group-data-[collapsible=icon]:hidden">Banners & Popups</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/homepage-categories">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <LayoutGrid className="w-5 h-5 shrink-0 text-amber-400" />
-                        <span className="group-data-[collapsible=icon]:hidden font-medium">Homepage Categories</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <NavLink to="/admin/stores">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <MapPin className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Stores</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <NavLink to="/admin/appointments">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Calendar className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Appointments</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              {/* Category Setup Hierarchy */}
-              <SidebarMenuItem>
-                <NavLink to="/admin/categories">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Tag className="w-5 h-5 shrink-0 text-blue-400" />
-                        <span className="group-data-[collapsible=icon]:hidden font-medium">Category Tree Manager</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/lens-manager">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Eye className="w-5 h-5 shrink-0 text-cyan-400" />
-                        <span className="group-data-[collapsible=icon]:hidden font-medium">Lens Manager</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/brands">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Tag className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Brands</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              {/* Vendor Management Hierarchy */}
-              <Collapsible defaultOpen={isVendorManagementActive} className="group/collapsible">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton className={isVendorManagementActive ? "bg-slate-800 text-blue-400 font-medium" : inactiveClass}>
-                      <Users className="w-5 h-5 shrink-0" />
-                      <span className="group-data-[collapsible=icon]:hidden">Vendor Management</span>
-                      <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub className="mt-1 ml-4 border-l border-slate-700/50 space-y-1">
-                      <SidebarMenuSubItem>
-                        <NavLink to="/admin/vendors" end>
+                  <SidebarMenu className="gap-0.5">
+                    {group.items.map((item) => (
+                      <SidebarMenuItem key={item.to}>
+                        <NavLink to={item.to} end={item.end}>
                           {({ isActive }) => (
-                            <SidebarMenuSubButton isActive={isActive} className={`w-full ${isActive ? activeSubClass : inactiveSubClass}`}>
-                              <span>Vendor List</span>
-                            </SidebarMenuSubButton>
+                            <SidebarMenuButton asChild isActive={isActive} tooltip={item.label} className={`h-9 rounded-lg ${itemClass(isActive)}`}>
+                              <span>
+                                <item.icon className="w-[18px] h-[18px] shrink-0" />
+                                <span className="truncate">{item.label}</span>
+                              </span>
+                            </SidebarMenuButton>
                           )}
                         </NavLink>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <NavLink to="/admin/vendors/create">
-                          {({ isActive }) => (
-                            <SidebarMenuSubButton isActive={isActive} className={`w-full ${isActive ? activeSubClass : inactiveSubClass}`}>
-                              <span>Create Vendor</span>
-                            </SidebarMenuSubButton>
-                          )}
-                        </NavLink>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <NavLink to="/admin/vendors/withdraws">
-                          {({ isActive }) => (
-                            <SidebarMenuSubButton isActive={isActive} className={`w-full ${isActive ? activeSubClass : inactiveSubClass}`}>
-                              <span>Withdraws List</span>
-                            </SidebarMenuSubButton>
-                          )}
-                        </NavLink>
-                      </SidebarMenuSubItem>
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroup>
 
-              {/* Vendor Products Workflow */}
-              <Collapsible defaultOpen={isVendorProductsActive} className="group/collapsible">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton className={isVendorProductsActive ? "bg-slate-800 text-blue-400 font-medium" : inactiveClass}>
-                      <Package className="w-5 h-5 shrink-0" />
-                      <span className="group-data-[collapsible=icon]:hidden">Vendor Products</span>
-                      <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub className="mt-1 ml-4 border-l border-slate-700/50 space-y-1">
-                      <SidebarMenuSubItem>
-                        <Link to="/admin/vendor-products?status=pending">
-                          <SidebarMenuSubButton isActive={currentLevel === 'pending' || (isVendorProductsActive && searchParams.get('status') === 'pending')} className={`w-full justify-between items-center py-2 h-auto gap-2 pr-2 ${searchParams.get('status') === 'pending' ? activeSubClass : inactiveSubClass}`}>
-                            <div className="flex items-center gap-2 overflow-hidden">
-                              <span className="truncate whitespace-normal text-left leading-tight">New Product Request</span>
-                            </div>
-                            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-5 flex items-center justify-center shrink-0">{stats.pending}</span>
-                          </SidebarMenuSubButton>
-                        </Link>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <Link to="/admin/vendor-products?status=active">
-                          <SidebarMenuSubButton isActive={searchParams.get('status') === 'active'} className={`w-full justify-between items-center py-2 h-auto gap-2 pr-2 ${searchParams.get('status') === 'active' ? activeSubClass : inactiveSubClass}`}>
-                            <div className="flex items-center gap-2 overflow-hidden">
-                              <span className="truncate whitespace-normal text-left leading-tight">Approved Products</span>
-                            </div>
-                            <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-5 flex items-center justify-center shrink-0">{stats.active}</span>
-                          </SidebarMenuSubButton>
-                        </Link>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <Link to="/admin/vendor-products?status=rejected">
-                          <SidebarMenuSubButton isActive={searchParams.get('status') === 'rejected'} className={`w-full justify-between items-center py-2 h-auto gap-2 pr-2 ${searchParams.get('status') === 'rejected' ? activeSubClass : inactiveSubClass}`}>
-                            <div className="flex items-center gap-2 overflow-hidden">
-                              <span className="truncate whitespace-normal text-left leading-tight">Denied Products</span>
-                            </div>
-                            <span className="bg-red-500/20 text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-5 flex items-center justify-center shrink-0">{stats.rejected}</span>
-                          </SidebarMenuSubButton>
-                        </Link>
-                      </SidebarMenuSubItem>
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
+                {/* Vendors section sits between Customers and Storefront */}
+                {group.label === 'Customers' && (
+                  <SidebarGroup className="px-0 py-1.5">
+                    <SidebarGroupLabel className="h-6 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Vendors</SidebarGroupLabel>
+                    <SidebarMenu className="gap-0.5">
+                      <Collapsible defaultOpen={isVendorManagementActive} className="group/collapsible">
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton tooltip="Vendors" className={`h-9 rounded-lg ${isVendorManagementActive ? 'text-white bg-white/[0.06]' : itemClass(false)}`}>
+                              <UserCheck className="w-[18px] h-[18px] shrink-0" />
+                              <span className="truncate">Vendors</span>
+                              <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub className="mt-1 border-white/10">
+                              {[
+                                { to: '/admin/vendors', label: 'All Vendors', end: true },
+                                { to: '/admin/vendors/create', label: 'Create Vendor' },
+                                { to: '/admin/vendors/withdraws', label: 'Withdrawals' },
+                              ].map((sub) => (
+                                <SidebarMenuSubItem key={sub.to}>
+                                  <NavLink to={sub.to} end={sub.end}>
+                                    {({ isActive }) => (
+                                      <SidebarMenuSubButton asChild isActive={isActive} className={`w-full ${subItemClass(isActive)}`}>
+                                        <span>{sub.label}</span>
+                                      </SidebarMenuSubButton>
+                                    )}
+                                  </NavLink>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuItem>
+                      </Collapsible>
 
-              <SidebarMenuItem>
-                <NavLink to="/admin/orders">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <ShoppingCart className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Orders</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/return-requests">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Package className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Returns</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/users">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Users className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Users</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/customer-leads">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <UserCheck className="w-5 h-5 shrink-0 text-yellow-500" />
-                        <span className="group-data-[collapsible=icon]:hidden font-semibold text-yellow-500">Cart & Wishlists</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/pincodes">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <MapPin className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Pincodes</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/social-links">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Link2 className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Social Links</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/contact-info">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Info className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Contact Info</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/navigation-manager">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Menu className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Navigation Setup</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/referrals">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Gift className="w-5 h-5 shrink-0 text-amber-400" />
-                        <span className="group-data-[collapsible=icon]:hidden">Referrals & Coupons</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <NavLink to="/admin/settings">
-                  {({ isActive }) => (
-                    <SidebarMenuButton asChild isActive={isActive} className={isActive ? activeClass : inactiveClass}>
-                      <a>
-                        <Settings className="w-5 h-5 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden">Settings</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
-              </SidebarMenuItem>
-            </SidebarMenu>
+                      <Collapsible defaultOpen={isVendorProductsActive} className="group/collapsible">
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton tooltip="Vendor Products" className={`h-9 rounded-lg ${isVendorProductsActive ? 'text-white bg-white/[0.06]' : itemClass(false)}`}>
+                              <Package className="w-[18px] h-[18px] shrink-0" />
+                              <span className="truncate">Vendor Products</span>
+                              {stats.pending > 0 && (
+                                <span className="ml-auto rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-5 text-white group-data-[state=open]/collapsible:hidden">{stats.pending}</span>
+                              )}
+                              <ChevronDown className={`${stats.pending > 0 ? '' : 'ml-auto'} w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[state=open]/collapsible:ml-auto`} />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub className="mt-1 border-white/10">
+                              {vendorProductLinks.map((sub) => (
+                                <SidebarMenuSubItem key={sub.status}>
+                                  <SidebarMenuSubButton asChild isActive={vendorProductStatus === sub.status} className={`w-full ${subItemClass(vendorProductStatus === sub.status)}`}>
+                                    <Link to={`/admin/vendor-products?status=${sub.status}`} className="flex items-center justify-between gap-2">
+                                      <span className="truncate">{sub.label}</span>
+                                      <span className={`shrink-0 rounded-full px-1.5 text-[10px] font-bold leading-5 ${sub.badge}`}>{sub.count}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuItem>
+                      </Collapsible>
+                    </SidebarMenu>
+                  </SidebarGroup>
+                )}
+              </React.Fragment>
+            ))}
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-slate-700 p-4">
+          <SidebarFooter className="border-t border-white/[0.06] p-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex w-full items-center gap-2 rounded-lg p-2 hover:bg-slate-700/50 transition-colors">
+                <button className="flex w-full items-center gap-2.5 rounded-lg p-2 hover:bg-white/[0.06] transition-colors">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/logo192.png" />
-                    <AvatarFallback className="bg-blue-600 text-white text-xs">AD</AvatarFallback>
+                    <AvatarFallback className="bg-blue-600 text-white text-xs font-bold">{(user.name || user.email || 'A').charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm text-white group-data-[collapsible=icon]:hidden">{settings.websiteName} Admin</span>
+                  <div className="min-w-0 text-left group-data-[collapsible=icon]:hidden">
+                    <p className="text-sm font-semibold text-white truncate">{user.name || 'Admin'}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
+                  </div>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" side="top" className="w-52">
                 <DropdownMenuLabel>Account</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
                   <Settings className="w-4 h-4 mr-2" />
@@ -526,37 +338,42 @@ const AdminLayout: React.FC = () => {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset className="bg-slate-50 flex flex-col overflow-hidden">
-          <div className="border-b border-slate-200 bg-white p-4 lg:p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 lg:gap-4">
-                <SidebarTrigger className="lg:hidden text-slate-900">
-                  <Menu className="h-6 w-6" />
-                </SidebarTrigger>
-                <div>
-                  <h1 className="text-xl lg:text-3xl font-bold text-slate-900">Admin Dashboard</h1>
-                  <p className="text-sm text-slate-500 mt-1 hidden lg:block">Manage products, orders, users and site settings</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {token ? (
-                  <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                    <LogOut className="w-4 h-4 lg:mr-2" />
-                    <span className="hidden lg:inline">Logout</span>
-                  </Button>
-                ) : (
-                  <Link to="/admin/login"><Button size="sm">Login</Button></Link>
-                )}
-              </div>
+        <SidebarInset className="bg-slate-50 flex flex-col overflow-hidden min-w-0">
+          <header className="flex h-14 lg:h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-6">
+            <SidebarTrigger className="text-slate-600 hover:text-slate-900 -ml-1">
+              <Menu className="h-5 w-5" />
+            </SidebarTrigger>
+            <div className="h-5 w-px bg-slate-200 hidden sm:block" />
+            <div className="min-w-0">
+              {page.group && (
+                <p className="hidden sm:flex items-center gap-1 text-[11px] font-medium text-slate-400 leading-none mb-1">
+                  Admin <ChevronRight className="w-3 h-3" /> {page.group}
+                </p>
+              )}
+              <h1 className="text-base lg:text-lg font-bold text-slate-900 truncate leading-tight">{page.title}</h1>
             </div>
-          </div>
+            <div className="ml-auto flex items-center gap-1.5">
+              <Button asChild variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                <a href="/" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">View Store</span>
+                </a>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                <LogOut className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
+          </header>
 
-          <div className="flex-1 overflow-auto p-6">
-            <Outlet />
-          </div>
+          <main className="flex-1 overflow-auto p-4 lg:p-6">
+            <div className="mx-auto w-full max-w-[1400px]">
+              <Outlet />
+            </div>
+          </main>
         </SidebarInset>
       </div>
-    </SidebarProvider >
+    </SidebarProvider>
   )
 }
 

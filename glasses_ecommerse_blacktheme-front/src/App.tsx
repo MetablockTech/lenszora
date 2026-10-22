@@ -6,6 +6,8 @@ import { SettingsProvider, useSettings } from "@/context/SettingsContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { storeReferralCode } from "@/lib/api";
 import Index from "./pages/Index";
 import ProductPage from "./pages/ProductPage";
 import Shop from "./pages/Shop";
@@ -21,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import Maintenance from "./pages/Maintenance";
 import Wishlist from "./pages/Wishlist";
 import Addresses from "./pages/Addresses";
+import Profile from "./pages/Profile";
 import AdminLayout from "./pages/admin/Layout";
 import DashboardPage from "./pages/admin/Dashboard";
 import ProductsPage from "./pages/admin/Products";
@@ -49,6 +52,9 @@ import HomepageCategoriesPage from "./pages/admin/HomepageCategories";
 import AdminStores from "./pages/admin/Stores";
 import AppointmentsPage from "./pages/admin/Appointments";
 import StoreLocator from "./pages/StoreLocator";
+import MyStoreVisits from "./pages/MyStoreVisits";
+import VendorStoreVisits from "./pages/vendor/StoreVisits";
+import AdminStoreVisits from "./pages/admin/StoreVisits";
 import VendorStores from "./pages/vendor/Stores";
 import VendorAppointmentsPage from "./pages/vendor/Appointments";
 import AdminLensManagerPage from "./pages/admin/LensManager";
@@ -82,6 +88,12 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const { settings, loading } = useSettings();
   const location = useLocation();
+
+  // Capture ?ref= from any page so the code is applied even if the visitor signs up later
+  useEffect(() => {
+    const ref = new URLSearchParams(location.search).get('ref');
+    if (ref) storeReferralCode(ref);
+  }, [location.search]);
 
   if (loading) {
     return (
@@ -118,6 +130,8 @@ const AppContent = () => {
       <Route path="/faq" element={<FAQPage />} />
       <Route path="/support" element={<Support />} />
       <Route path="/addresses" element={<Addresses />} />
+      <Route path="/my-visits" element={<MyStoreVisits />} />
+      <Route path="/profile" element={<Profile />} />
       <Route path="/admin/login" element={<AdminLogin />} />
 
       <Route path="/vendor/login" element={<VendorLogin />} />
@@ -137,6 +151,7 @@ const AppContent = () => {
         <Route path="payouts" element={<VendorPayouts />} />
         <Route path="bulk-marketplace" element={<BulkMarketplacePage />} />
         <Route path="appointments" element={<VendorAppointmentsPage />} />
+        <Route path="store-visits" element={<VendorStoreVisits />} />
       </Route>
 
       {/* Admin Routes */}
@@ -179,6 +194,7 @@ const AppContent = () => {
         <Route path="stores" element={<AdminStores />} />
         <Route path="lens-manager" element={<AdminLensManagerPage />} />
         <Route path="appointments" element={<AppointmentsPage />} />
+        <Route path="store-visits" element={<AdminStoreVisits />} />
         <Route path="customer-leads" element={<CustomerLeads />} />
 
         </Route>

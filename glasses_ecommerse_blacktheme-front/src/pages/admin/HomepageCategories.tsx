@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Save, UploadCloud, RotateCcw, Link as LinkIcon, Sparkles, Tag, Eye, ArrowUpRight, Check, AlertCircle } from "lucide-react";
-import { settings, products, getToken, clearToken, API_URL } from "@/lib/api";
+import { Save, UploadCloud, RotateCcw, Link as LinkIcon, Sparkles, Tag, Eye, ArrowUpRight, Check, AlertCircle, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { settings, products, categories as categoriesAPI, getToken, clearToken, API_URL } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,15 @@ export interface NavItem {
   badge?: string | null;
   href: string;
   image: string;
+}
+
+interface CategoryOption {
+  _id: string;
+  name: string;
+  slug?: string;
+  image?: string;
+  level?: string;
+  parentId?: string | { _id: string } | null;
 }
 
 export interface NavGroup {
@@ -148,8 +157,15 @@ const HomepageCategories: React.FC = () => {
   const [editItem, setEditItem] = useState<NavItem | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
+  // Add Row (from an existing category) dialog state
+  const [allCategories, setAllCategories] = useState<CategoryOption[]>([]);
+  const [showAddRow, setShowAddRow] = useState(false);
+  const [newRowCategoryId, setNewRowCategoryId] = useState("");
+  const [newRowPosition, setNewRowPosition] = useState(0);
+
   useEffect(() => {
     loadSettings();
+    categoriesAPI.list().then((cats) => setAllCategories(Array.isArray(cats) ? cats : [])).catch(() => setAllCategories([]));
   }, []);
 
   async function loadSettings() {
@@ -219,7 +235,7 @@ const HomepageCategories: React.FC = () => {
   }
 
   function handleResetDefaults() {
-    if (confirm("Reset all 3 rows to original defaults? Any custom images and links will be restored.")) {
+    if (confirm("Reset to the original 3 default rows? Custom rows, images and links will be removed.")) {
       setGroups(DEFAULT_HOMEPAGE_NAV);
       saveSettings(DEFAULT_HOMEPAGE_NAV);
     }
@@ -238,7 +254,9 @@ const HomepageCategories: React.FC = () => {
       if (gIdx !== editGroupIndex) return g;
       return {
         ...g,
-        items: g.items.map((item, iIdx) => (iIdx === editItemIndex ? editItem : item)),
+        items: editItemIndex === -1
+          ? [...g.items, editItem]
+          : g.items.map((item, iIdx) => (iIdx === editItemIndex ? editItem : item)),
       };
     });
 
@@ -267,6 +285,82 @@ const HomepageCategories: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
+  const updateGroups = (newGroups: NavGroup[], message?: string) => {
+    setGroups(newGroups);
+    setHasUnsavedChanges(true);
+    if (message) toast.info(message);
+  };
+
+  const moveGroup = (groupIdx: number, direction: -1 | 1) => {
+    const target = groupIdx + direction;
+    if (target < 0 || target >= groups.length) return;
+    const next = [...groups];
+    [next[groupIdx], next[target]] = [next[target], next[groupIdx]];
+    updateGroups(next);
+  };
+
+  const deleteGroup = (groupIdx: number) => {
+    if (!confirm(`Remove the "${groups[groupIdx].title}" row from the homepage?`)) return;
+    updateGroups(groups.filter((_, idx) => idx !== groupIdx), "Row removed. Click 'Save All Changes' to publish.");
+  };
+
+  const openAddCardModal = (groupIdx: number) => {
+    setEditGroupIndex(groupIdx);
+    setEditItemIndex(-1);
+    setEditItem({ id: `card-${Date.now()}`, label: "", href: groups[groupIdx].viewAllHref || "/shop", image: "", badge: null });
+  };
+
+  const deleteEditingCard = () => {
+    if (editGroupIndex === null || editItemIndex === null || editItemIndex < 0) return;
+    if (!confirm("Delete this card?")) return;
+    updateGroups(
+      groups.map((g, gIdx) => (gIdx === editGroupIndex ? { ...g, items: g.items.filter((_, iIdx) => iIdx !== editItemIndex) } : g)),
+      "Card deleted. Click 'Save All Changes' to publish."
+    );
+    setEditItem(null);
+    setEditGroupIndex(null);
+    setEditItemIndex(null);
+  };
+
+  const mainCategories = allCategories.filter((c) => !c.parentId || c.level === "main");
+
+  const openAddRowDialog = () => {
+    // Default position: right after the Sunglasses row, else at the end
+    const sunIdx = groups.findIndex((g) => g.id === "sunglasses" || g.title.toLowerCase().includes("sunglass"));
+    setNewRowPosition(sunIdx >= 0 ? sunIdx + 1 : groups.length);
+    setNewRowCategoryId(mainCategories[0]?._id || "");
+    setShowAddRow(true);
+  };
+
+  const handleAddRow = () => {
+    const cat = allCategories.find((c) => c._id === newRowCategoryId);
+    if (!cat) {
+      toast.error("Please select a category");
+      return;
+    }
+    const catSlug = cat.slug || cat._id;
+    const parentIdOf = (c: CategoryOption) => (c.parentId && typeof c.parentId === "object" ? c.parentId._id : c.parentId);
+    const subs = allCategories.filter((c) => parentIdOf(c) === cat._id);
+    const items: NavItem[] = (subs.length > 0 ? subs : [cat]).map((c) => ({
+      id: `${catSlug}-${c.slug || c._id}`,
+      label: c.name,
+      href: `/shop?category=${encodeURIComponent(c.slug || c._id)}`,
+      image: c.image || cat.image || "",
+      badge: null,
+    }));
+    const newGroup: NavGroup = {
+      id: `cat-${cat._id}-${Date.now()}`,
+      title: cat.name,
+      viewAllHref: `/shop?category=${encodeURIComponent(catSlug)}`,
+      pillBadge: null,
+      items,
+    };
+    const next = [...groups];
+    next.splice(newRowPosition, 0, newGroup);
+    updateGroups(next, `"${cat.name}" row added with ${items.length} card(s). Add photos, then click 'Save All Changes'.`);
+    setShowAddRow(false);
+  };
+
   const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editItem) return;
@@ -288,7 +382,7 @@ const HomepageCategories: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] text-slate-400">
+      <div className="flex items-center justify-center min-h-[400px] text-slate-500">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400" />
       </div>
     );
@@ -297,24 +391,32 @@ const HomepageCategories: React.FC = () => {
   return (
     <div className="space-y-6 pb-20">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-2xl shadow-xl">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-5 h-5 text-amber-400" />
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            <Sparkles className="w-5 h-5 text-amber-600" />
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Homepage Categories Navigation
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-400">
-            Control the 3 rows on the homepage (Eyeglasses, Sunglasses, Contact Lenses): Pics, Names, Links & Badges.
+          <p className="text-xs sm:text-sm text-slate-500">
+            Control the category rows on the homepage: add rows from any category, reorder them, and edit pics, names, links & badges.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={openAddRowDialog}
+            className="border-amber-500/40 bg-amber-500/10 text-amber-700 hover:text-black hover:bg-amber-400 text-xs flex items-center gap-2"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Row
+          </Button>
           <Button
             variant="outline"
             onClick={handleResetDefaults}
-            className="border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700 text-xs flex items-center gap-2"
+            className="border-slate-300 bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 text-xs flex items-center gap-2"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Reset Defaults
@@ -336,9 +438,9 @@ const HomepageCategories: React.FC = () => {
 
       {/* Unsaved Changes Banner */}
       {hasUnsavedChanges && (
-        <div className="flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/30 text-amber-300 px-5 py-3 rounded-2xl text-xs sm:text-sm font-medium">
+        <div className="flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/30 text-amber-700 px-5 py-3 rounded-2xl text-xs sm:text-sm font-medium">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
             <span>You have unsaved changes. Remember to click <strong>Save All Changes</strong> to publish them to your live website.</span>
           </div>
           <Button
@@ -355,39 +457,53 @@ const HomepageCategories: React.FC = () => {
       {/* 3 Rows of Categories */}
       <div className="space-y-8">
         {groups.map((group, groupIdx) => (
-          <Card key={group.id} className="bg-slate-900 border-slate-800 text-white overflow-hidden shadow-xl">
-            <CardHeader className="bg-slate-950/60 border-b border-slate-800/80 p-5">
+          <Card key={group.id} className="bg-white border-slate-200 text-slate-900 overflow-hidden shadow-xl">
+            <CardHeader className="bg-slate-50 border-b border-slate-200 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Row {groupIdx + 1}</span>
+                <div className="flex items-center gap-1.5">
+                  <Button size="icon" variant="ghost" title="Move up" disabled={groupIdx === 0} onClick={() => moveGroup(groupIdx, -1)} className="h-8 w-8 text-slate-500 hover:text-slate-900 hover:bg-slate-100">
+                    <ArrowUp className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" title="Move down" disabled={groupIdx === groups.length - 1} onClick={() => moveGroup(groupIdx, 1)} className="h-8 w-8 text-slate-500 hover:text-slate-900 hover:bg-slate-100">
+                    <ArrowDown className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" title="Delete row" onClick={() => deleteGroup(groupIdx)} className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-950/40">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                 {/* Section Title */}
                 <div>
-                  <Label className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Row Title</Label>
+                  <Label className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Row Title</Label>
                   <Input
                     value={group.title}
                     onChange={(e) => handleGroupHeaderChange(groupIdx, "title", e.target.value)}
-                    className="bg-slate-900 border-slate-700 text-white font-bold mt-1 text-sm focus:border-amber-400"
+                    className="bg-white border-slate-300 text-slate-900 font-bold mt-1 text-sm focus:border-amber-400"
                   />
                 </div>
 
                 {/* Pill Badge */}
                 <div>
-                  <Label className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
+                  <Label className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
                     Pill Badge (Optional, e.g. "with Power")
                   </Label>
                   <Input
                     value={group.pillBadge || ""}
                     placeholder="e.g. with Power"
                     onChange={(e) => handleGroupHeaderChange(groupIdx, "pillBadge", e.target.value)}
-                    className="bg-slate-900 border-slate-700 text-amber-300 mt-1 text-sm focus:border-amber-400"
+                    className="bg-white border-slate-300 text-amber-700 mt-1 text-sm focus:border-amber-400"
                   />
                 </div>
 
                 {/* View All Link */}
                 <div>
-                  <Label className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">View All Redirect URL</Label>
+                  <Label className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">View All Redirect URL</Label>
                   <Input
                     value={group.viewAllHref}
                     onChange={(e) => handleGroupHeaderChange(groupIdx, "viewAllHref", e.target.value)}
-                    className="bg-slate-900 border-slate-700 text-slate-300 mt-1 text-sm focus:border-amber-400"
+                    className="bg-white border-slate-300 text-slate-600 mt-1 text-sm focus:border-amber-400"
                   />
                 </div>
               </div>
@@ -400,7 +516,7 @@ const HomepageCategories: React.FC = () => {
                   <div
                     key={item.id}
                     onClick={() => openEditModal(groupIdx, itemIdx)}
-                    className="group relative cursor-pointer flex flex-col items-center bg-slate-950/80 border border-slate-800 hover:border-amber-400/80 p-3.5 rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/10 hover:scale-[1.01]"
+                    className="group relative cursor-pointer flex flex-col items-center bg-slate-50 border border-slate-200 hover:border-amber-400/80 p-3.5 rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/10 hover:scale-[1.01]"
                   >
                     {/* Badge Overlay */}
                     {item.badge && (
@@ -412,13 +528,13 @@ const HomepageCategories: React.FC = () => {
                     )}
 
                     {/* Image Preview */}
-                    <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-900 relative mb-3">
+                    <div className="w-full aspect-square rounded-xl overflow-hidden bg-white relative mb-3">
                       <img
                         src={getImageUrl(item.image)}
                         alt={item.label}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <span className="text-xs bg-amber-400 text-black font-bold px-3 py-1 rounded-lg shadow-lg">
                           Click to Edit
                         </span>
@@ -426,45 +542,107 @@ const HomepageCategories: React.FC = () => {
                     </div>
 
                     {/* Label */}
-                    <span className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
+                    <span className="text-sm font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
                       {item.label}
                     </span>
 
                     {/* URL preview */}
-                    <span className="text-[10px] text-slate-400 truncate max-w-full mt-1 flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 truncate max-w-full mt-1 flex items-center gap-1">
                       <LinkIcon className="w-2.5 h-2.5 shrink-0" />
                       {item.href}
                     </span>
                   </div>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => openAddCardModal(groupIdx)}
+                  className="flex flex-col items-center justify-center gap-2 min-h-[160px] border-2 border-dashed border-slate-300 hover:border-amber-400/70 rounded-2xl text-slate-500 hover:text-amber-700 transition-colors"
+                >
+                  <Plus className="w-6 h-6" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Add Card</span>
+                </button>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {/* Add Row Dialog */}
+      {showAddRow && (
+        <Dialog open={true} onOpenChange={() => setShowAddRow(false)}>
+          <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-amber-600" />
+                Add Homepage Row
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <Label className="text-xs font-bold text-slate-600">Category</Label>
+                <select
+                  value={newRowCategoryId}
+                  onChange={(e) => setNewRowCategoryId(e.target.value)}
+                  className="w-full mt-1 h-10 rounded-md bg-slate-50 border border-slate-200 text-slate-900 text-sm px-3 focus:outline-none focus:border-amber-400"
+                >
+                  {mainCategories.length === 0 && <option value="">No categories found</option>}
+                  {mainCategories.map((c) => (
+                    <option key={c._id} value={c._id}>{c.name}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1.5">
+                  Its sub-categories become the cards (or one card for the category itself). You can edit photos and links after adding.
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs font-bold text-slate-600">Position</Label>
+                <select
+                  value={newRowPosition}
+                  onChange={(e) => setNewRowPosition(Number(e.target.value))}
+                  className="w-full mt-1 h-10 rounded-md bg-slate-50 border border-slate-200 text-slate-900 text-sm px-3 focus:outline-none focus:border-amber-400"
+                >
+                  <option value={0}>At the top</option>
+                  {groups.map((g, idx) => (
+                    <option key={g.id} value={idx + 1}>After "{g.title}"</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="outline" onClick={() => setShowAddRow(false)} className="border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                Cancel
+              </Button>
+              <Button onClick={handleAddRow} disabled={!newRowCategoryId} className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs">
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Row
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Edit Item Dialog */}
       {editItem && (
         <Dialog open={true} onOpenChange={() => setEditItem(null)}>
-          <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-md sm:max-w-lg">
+          <DialogContent className="bg-white border-slate-200 text-slate-900 w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto [&>*]:min-w-0">
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
-                <Tag className="w-5 h-5 text-amber-400" />
-                Edit Card: {editItem.label}
+              <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Tag className="w-5 h-5 text-amber-600" />
+                {editItemIndex === -1 ? "Add Card" : `Edit Card: ${editItem.label}`}
               </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
               {/* Image Preview & Upload */}
               <div>
-                <Label className="text-xs font-bold text-slate-300">Card Photo / Image</Label>
+                <Label className="text-xs font-bold text-slate-600">Card Photo / Image</Label>
                 <div className="flex items-center gap-4 mt-2">
-                  <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-950 border border-slate-700 shrink-0">
+                  <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-50 border border-slate-300 shrink-0">
                     <img src={getImageUrl(editItem.image)} alt="Preview" className="w-full h-full object-cover" />
                   </div>
-                  <div className="flex-1 space-y-2">
-                    <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-semibold text-white transition-colors">
-                      <UploadCloud className="w-4 h-4 text-amber-400" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 transition-colors">
+                      <UploadCloud className="w-4 h-4 text-amber-600" />
                       {uploadingImage ? "Uploading..." : "Upload New Photo"}
                       <input
                         type="file"
@@ -478,7 +656,7 @@ const HomepageCategories: React.FC = () => {
                       value={editItem.image}
                       placeholder="Or paste image URL"
                       onChange={(e) => setEditItem({ ...editItem, image: e.target.value })}
-                      className="bg-slate-950 border-slate-800 text-xs text-slate-300"
+                      className="bg-slate-50 border-slate-200 text-xs text-slate-600"
                     />
                   </div>
                 </div>
@@ -486,23 +664,23 @@ const HomepageCategories: React.FC = () => {
 
               {/* Name / Label */}
               <div>
-                <Label className="text-xs font-bold text-slate-300">Name / Label</Label>
+                <Label className="text-xs font-bold text-slate-600">Name / Label</Label>
                 <Input
                   value={editItem.label}
                   onChange={(e) => setEditItem({ ...editItem, label: e.target.value })}
                   placeholder="e.g. Men, Women, Kids, On Sale"
-                  className="bg-slate-950 border-slate-800 text-white mt-1"
+                  className="bg-slate-50 border-slate-200 text-slate-900 mt-1"
                 />
               </div>
 
               {/* Redirect Link */}
               <div>
-                <Label className="text-xs font-bold text-slate-300">Redirect Link (URL)</Label>
+                <Label className="text-xs font-bold text-slate-600">Redirect Link (URL)</Label>
                 <Input
                   value={editItem.href}
                   onChange={(e) => setEditItem({ ...editItem, href: e.target.value })}
                   placeholder="e.g. /shop?category=eyeglasses&gender=men"
-                  className="bg-slate-950 border-slate-800 text-white mt-1"
+                  className="bg-slate-50 border-slate-200 text-slate-900 mt-1"
                 />
                 {/* Quick Link Helpers */}
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -520,7 +698,7 @@ const HomepageCategories: React.FC = () => {
                       key={preset}
                       type="button"
                       onClick={() => setEditItem({ ...editItem, href: preset })}
-                      className="text-[10px] bg-slate-800 hover:bg-amber-400 hover:text-black text-slate-300 px-2 py-0.5 rounded transition-colors"
+                      className="text-[10px] bg-slate-100 hover:bg-amber-400 hover:text-black text-slate-600 px-2 py-0.5 rounded transition-colors"
                     >
                       {preset.split("?")[1] || preset}
                     </button>
@@ -530,28 +708,38 @@ const HomepageCategories: React.FC = () => {
 
               {/* Badge Text (Optional) */}
               <div>
-                <Label className="text-xs font-bold text-slate-300">Badge Text (Optional)</Label>
+                <Label className="text-xs font-bold text-slate-600">Badge Text (Optional)</Label>
                 <Input
                   value={editItem.badge || ""}
                   onChange={(e) => setEditItem({ ...editItem, badge: e.target.value || null })}
                   placeholder="e.g. Starts @₹500, Try @ 99, 50% OFF (leave blank for none)"
-                  className="bg-slate-950 border-slate-800 text-amber-300 mt-1"
+                  className="bg-slate-50 border-slate-200 text-amber-700 mt-1"
                 />
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-2 flex-col-reverse sm:flex-row">
+            <DialogFooter className="gap-2 sm:gap-2 flex-col-reverse sm:flex-row sm:flex-wrap sm:items-center">
+              {editItemIndex !== null && editItemIndex >= 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={deleteEditingCard}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-950/40 sm:mr-auto text-xs px-2"
+                >
+                  <Trash2 className="w-4 h-4 mr-1.5" />
+                  Delete Card
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => setEditItem(null)}
-                className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+                className="border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               >
                 Cancel
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => handleSaveModalItem(false)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs"
               >
                 Apply to Draft
               </Button>

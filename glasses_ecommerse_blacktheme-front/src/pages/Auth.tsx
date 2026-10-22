@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, Phone, ShieldCheck } from 'lucide-react'
+import { Loader2, Phone, ShieldCheck, Gift, CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 import Header from '@/components/layout/Header'
@@ -20,7 +20,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { auth, setToken, setUser } from '@/lib/api'
+import { auth, referrals, setToken, setUser, getStoredReferralCode, clearStoredReferralCode } from '@/lib/api'
 
 const phoneSchema = z.object({
     phone: z.string().min(10, 'Invalid phone number').max(15, 'Invalid phone number'),
@@ -38,6 +38,13 @@ export default function AuthPage() {
     const [step, setStep] = useState<'phone' | 'otp'>('phone')
     const [phoneNumber, setPhoneNumber] = useState('')
     const [resendCooldown, setResendCooldown] = useState(0)
+    const [referralCode, setReferralCode] = useState(() => (searchParams.get('ref') || getStoredReferralCode()).trim().toUpperCase())
+    const [showReferral, setShowReferral] = useState(() => !!referralCode)
+    const [referralStatus, setReferralStatus] = useState<{
+        state: 'idle' | 'checking' | 'valid' | 'invalid'
+        referrerName?: string
+        error?: string
+    }>({ state: 'idle' })
 
     const phoneForm = useForm<z.infer<typeof phoneSchema>>({
         resolver: zodResolver(phoneSchema),
@@ -59,12 +66,42 @@ export default function AuthPage() {
         return () => clearInterval(timer)
     }, [resendCooldown])
 
-    const refCode = searchParams.get('ref') || ''
+    // Validate the referral code as the user types (debounced)
+    useEffect(() => {
+        const code = referralCode.trim()
+        if (!code) {
+            setReferralStatus({ state: 'idle' })
+            return
+        }
+        setReferralStatus({ state: 'checking' })
+        let cancelled = false
+        const timer = setTimeout(async () => {
+            try {
+                const result = await referrals.validate(code)
+                if (cancelled) return
+                setReferralStatus(result.valid
+                    ? { state: 'valid', referrerName: result.referrerName }
+                    : { state: 'invalid', error: result.error || 'Invalid referral code' })
+            } catch {
+                if (!cancelled) setReferralStatus({ state: 'invalid', error: 'Could not check referral code' })
+            }
+        }, 400)
+        return () => {
+            cancelled = true
+            clearTimeout(timer)
+        }
+    }, [referralCode])
 
     async function onSendOTP(values: z.infer<typeof phoneSchema>) {
+        if (referralCode.trim() && referralStatus.state !== 'valid') {
+            toast.error(referralStatus.state === 'checking'
+                ? 'Checking referral code, please wait'
+                : 'Please fix or remove the referral code')
+            return
+        }
         setIsLoading(true)
         try {
-            await auth.sendOTP(values.phone, refCode)
+            await auth.sendOTP(values.phone)
             setPhoneNumber(values.phone)
             setStep('otp')
             otpForm.setValue('otp', '123456')
@@ -81,10 +118,17 @@ export default function AuthPage() {
     async function onVerifyOTP(values: z.infer<typeof otpSchema>) {
         setIsLoading(true)
         try {
-            const data = await auth.verifyOTP(phoneNumber, values.otp)
+            const code = referralStatus.state === 'valid' ? referralCode.trim() : undefined
+            const data = await auth.verifyOTP(phoneNumber, values.otp, code)
             setToken(data.token)
             setUser(data.user)
             toast.success('Authenticated successfully')
+            if (data.referral?.applied) {
+                toast.success(`Referral applied! You were invited by ${data.referral.referrerName}`)
+            } else if (code && data.referral?.error) {
+                toast.info(`Referral not applied: ${data.referral.error}`)
+            }
+            clearStoredReferralCode()
             navigate(redirect)
         } catch (error: any) {
             toast.error(error.message || 'Invalid OTP')
@@ -97,7 +141,7 @@ export default function AuthPage() {
         if (resendCooldown > 0) return
         setIsLoading(true)
         try {
-            await auth.sendOTP(phoneNumber, refCode)
+            await auth.sendOTP(phoneNumber)
             otpForm.setValue('otp', '123456')
             setResendCooldown(30)
             toast.success('OTP resent! Use fixed OTP: 123456')
@@ -136,6 +180,12 @@ export default function AuthPage() {
                                         <CardDescription className="text-slate-400">
                                             Enter any mobile number to continue
                                         </CardDescription>
+                                        {referralStatus.state === 'valid' && (
+                                            <div className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-300">
+                                                <Gift className="h-4 w-4 shrink-0" />
+                                                <span><span className="font-bold">{referralStatus.referrerName}</span> invited you to LensZora</span>
+                                            </div>
+                                        )}
                                     </motion.div>
                                 ) : (
                                     <motion.div
@@ -184,6 +234,42 @@ export default function AuthPage() {
                                                 </p>
                                             )}
                                         </div>
+                                        {showReferral ? (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="referral">Referral Code (optional)</Label>
+                                                <Input
+                                                    id="referral"
+                                                    type="text"
+                                                    placeholder="LZ-XXXXXX"
+                                                    value={referralCode}
+                                                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                                                    className="uppercase tracking-wider bg-slate-800 border-slate-700"
+                                                />
+                                                {referralStatus.state === 'checking' && (
+                                                    <p className="flex items-center gap-1.5 text-sm text-slate-400">
+                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Checking code...
+                                                    </p>
+                                                )}
+                                                {referralStatus.state === 'valid' && (
+                                                    <p className="flex items-center gap-1.5 text-sm text-green-400">
+                                                        <CheckCircle2 className="h-4 w-4" /> Invited by {referralStatus.referrerName}
+                                                    </p>
+                                                )}
+                                                {referralStatus.state === 'invalid' && (
+                                                    <p className="flex items-center gap-1.5 text-sm text-destructive">
+                                                        <XCircle className="h-4 w-4" /> {referralStatus.error}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowReferral(true)}
+                                                className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+                                            >
+                                                <Gift className="h-4 w-4" /> Have a referral code?
+                                            </button>
+                                        )}
                                         <Button type="submit" className="w-full btn-gold" disabled={isLoading}>
                                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             Get OTP

@@ -1,8 +1,18 @@
+import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import HomeEyeTestModal from "@/components/modals/HomeEyeTestModal";
 
-const checkupOptions = [
+type CheckupOption = { title: string; description: string; image: string; link?: string; opensHomeVisit?: boolean };
+
+const checkupOptions: CheckupOption[] = [
+  {
+    title: "Eye Test at Home",
+    description: "Doctor visits your home",
+    image: "/images/sections/schedule_at_home.png",
+    opensHomeVisit: true
+  },
   {
     title: "Visit Nearest Store",
     description: "Walk in for popular Glasses",
@@ -24,6 +34,8 @@ const checkupOptions = [
 ];
 
 const EyeCheckupSection = () => {
+  const [homeVisitOpen, setHomeVisitOpen] = useState(false);
+
   return (
     <section className="py-20 bg-background overflow-hidden">
       <div className="container mx-auto px-4">
@@ -36,7 +48,7 @@ const EyeCheckupSection = () => {
         </div>
 
         {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 lg:gap-8">
           {checkupOptions.map((option, index) => (
             <motion.div
               key={index}
@@ -69,12 +81,23 @@ const EyeCheckupSection = () => {
                 </div>
 
                 {/* Action Button */}
-                <Link
-                  to={option.link}
-                  className="w-14 h-14 rounded-full border border-gray-200 flex items-center justify-center bg-white group-hover:bg-[#DAAB34] group-hover:border-[#DAAB34] transition-all duration-300 shadow-sm"
-                >
-                  <ChevronRight className="w-6 h-6 text-[#1A1A1A] group-hover:text-white group-hover:translate-x-1 transition-all duration-300" />
-                </Link>
+                {option.opensHomeVisit ? (
+                  <button
+                    type="button"
+                    onClick={() => setHomeVisitOpen(true)}
+                    aria-label="Book eye test at home"
+                    className="w-14 h-14 shrink-0 rounded-full border border-gray-200 flex items-center justify-center bg-white group-hover:bg-[#DAAB34] group-hover:border-[#DAAB34] transition-all duration-300 shadow-sm"
+                  >
+                    <ChevronRight className="w-6 h-6 text-[#1A1A1A] group-hover:text-white group-hover:translate-x-1 transition-all duration-300" />
+                  </button>
+                ) : (
+                  <Link
+                    to={option.link || "/store-locator"}
+                    className="w-14 h-14 shrink-0 rounded-full border border-gray-200 flex items-center justify-center bg-white group-hover:bg-[#DAAB34] group-hover:border-[#DAAB34] transition-all duration-300 shadow-sm"
+                  >
+                    <ChevronRight className="w-6 h-6 text-[#1A1A1A] group-hover:text-white group-hover:translate-x-1 transition-all duration-300" />
+                  </Link>
+                )}
               </div>
 
               {/* Bottom Decorative Bar */}
@@ -83,6 +106,8 @@ const EyeCheckupSection = () => {
           ))}
         </div>
       </div>
+
+      <HomeEyeTestModal isOpen={homeVisitOpen} onClose={() => setHomeVisitOpen(false)} />
     </section>
   );
 };

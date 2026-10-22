@@ -312,6 +312,28 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Update category with validation
+// Bulk update navbar visibility/order for main categories
+// Body: { items: [{ id, showInNav, navOrder }] }
+router.put('/nav-settings', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const items = Array.isArray(req.body?.items) ? req.body.items : null
+    if (!items) return res.status(400).json({ error: 'items array is required' })
+
+    const ops = items
+      .filter((it: any) => typeof it?.id === 'string' && /^[0-9a-fA-F]{24}$/.test(it.id))
+      .map((it: any) => ({
+        updateOne: {
+          filter: { _id: it.id },
+          update: { $set: { showInNav: it.showInNav !== false, navOrder: Number(it.navOrder) || 0 } }
+        }
+      }))
+    if (ops.length) await Category.bulkWrite(ops)
+    res.json({ updated: ops.length })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { name, parentId, level, slug, description, allowLensSelection, showFrameDetails, image, icon } = req.body

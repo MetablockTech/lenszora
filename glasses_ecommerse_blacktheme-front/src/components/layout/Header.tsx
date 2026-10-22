@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import LocationBar from "@/components/layout/LocationBar";
 import { Link } from "react-router-dom";
 import { Search, Heart, ShoppingBag, User, ChevronDown, Menu, X, LogOut, MapPin, Gift, Settings, Bookmark, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -199,6 +200,11 @@ const Header = () => {
               <p className="text-xs font-bold text-white truncate mt-0.5">{userIdentifier}</p>
             </div>
 
+            <DropdownMenuItem className="py-2 px-4 focus:bg-white/5 cursor-pointer rounded-none" onClick={() => navigate("/profile")}>
+              <User className="h-4 w-4 mr-2.5 text-gold shrink-0" />
+              <span className="text-white text-xs uppercase tracking-wider">My Profile</span>
+            </DropdownMenuItem>
+
             <DropdownMenuItem className="py-2 px-4 focus:bg-white/5 cursor-pointer rounded-none" onClick={() => navigate("/wishlist")}>
               <Bookmark className="h-4 w-4 mr-2.5 text-gold shrink-0" />
               <span className="text-white text-xs uppercase tracking-wider">My Saved</span>
@@ -231,6 +237,11 @@ const Header = () => {
 
             <DropdownMenuSeparator className="bg-white/5 my-1" />
 
+            <DropdownMenuItem className="py-2 px-4 focus:bg-white/5 cursor-pointer rounded-none" onClick={() => navigate("/my-visits")}>
+              <MapPin className="h-4 w-4 mr-2.5 text-white/60 shrink-0" />
+              <span className="text-white text-xs uppercase tracking-wider">My Store Visits</span>
+            </DropdownMenuItem>
+
             <DropdownMenuItem className="py-2 px-4 focus:bg-white/5 cursor-pointer rounded-none" onClick={() => navigate("/orders")}>
               <ShoppingBag className="h-4 w-4 mr-2.5 text-white/60 shrink-0" />
               <span className="text-white text-xs uppercase tracking-wider">Track Order</span>
@@ -259,6 +270,9 @@ const Header = () => {
       className="sticky top-0 z-50 bg-black py-3 md:py-4 shadow-lg"
     >
       <TopBar />
+
+      {/* Phone: delivery location + nearest stores */}
+      <LocationBar />
 
       <div className="border-b border-white/10 pb-3">
         <div className="container mx-auto px-0">
@@ -482,6 +496,16 @@ const Header = () => {
                 <MapPin className="h-5 w-5 text-gold" />
                 STORES
               </Link>
+              {isLoggedIn && (
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2 transition-colors py-2 border-b text-white hover:text-gold border-white/5 uppercase text-sm font-bold tracking-wider"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <User className="h-5 w-5 text-gold" />
+                  My Profile
+                </Link>
+              )}
               <Link
                 to="/addresses"
                 className="flex items-center gap-2 transition-colors py-2 border-b text-white hover:text-gold border-white/5 uppercase text-sm font-bold tracking-wider"

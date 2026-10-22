@@ -55,7 +55,8 @@ export default function VendorLayout() {
 
     useEffect(() => {
         if (!token || userRole !== 'vendor') {
-            navigate('/vendor/login')
+            // Keep where the vendor was going (e.g. a scanned visit-pass link) so login can return there
+            navigate(`/vendor/login?redirect=${encodeURIComponent(location.pathname + location.search)}`)
             return
         }
 
@@ -95,6 +96,7 @@ export default function VendorLayout() {
         { path: '/vendor/stores', icon: MapPin, label: 'My Stores' },
         { path: '/vendor/bulk-marketplace', icon: ShoppingCart, label: 'Bulk Marketplace' },
         { path: '/vendor/appointments', icon: Calendar, label: 'Appointments' },
+        { path: '/vendor/store-visits', icon: MapPin, label: 'Store Visits' },
     ]
 
     const activeClass = "bg-blue-600 text-white shadow-md hover:bg-blue-600 hover:text-white transition-all duration-200"

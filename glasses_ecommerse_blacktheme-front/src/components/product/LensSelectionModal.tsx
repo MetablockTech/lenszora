@@ -14,9 +14,15 @@ interface LensSelectionModalProps {
     product?: any;
     framePrice?: number;
     initialData?: any;
+    // Editing from cart: jump straight to the manual power form when power was entered manually
+    openPowerForm?: boolean;
+    // Contact lenses: no "Frame Only" choice and no frame wording
+    hideFrameOnly?: boolean;
 }
 
-const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle, product, framePrice = 0, initialData }: LensSelectionModalProps) => {
+const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle, product, framePrice = 0, initialData, openPowerForm = false, hideFrameOnly = false }: LensSelectionModalProps) => {
+    const isFrameOnlyType = (t: { key?: string; _id?: string; name?: string }) => t?.key === 'frame' || t?._id === 'frame' || String(t?.name || '').toLowerCase().includes('frame only');
+    const baseLabel = hideFrameOnly ? 'Product' : 'Frame';
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [lensTypes, setLensTypes] = useState<any[]>([]);
     const [lensPackages, setLensPackages] = useState<any[]>([]);
@@ -92,6 +98,7 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                         setPrescriptionFileName(initialData.prescription.fileName || null);
                     } else {
                         setPowerOption('manual');
+                        if (openPowerForm) setShowPrescriptionForm(true);
                     }
                 } else if (initialData.type?.allowPackages === false) {
                      setPowerOption(null);
@@ -119,6 +126,10 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
             // Push initial modal state if depth is 0
             if (modalHistoryDepthRef.current === 0) {
                 pushModalHistory(initialStep, false);
+                // Opened straight into the power form: Back should return to the power options
+                if (openPowerForm && initialData?.prescription?.method === 'manual' && initialStep === 3) {
+                    pushModalHistory(3, true);
+                }
             }
         }
     }, [isOpen, vendorId, product, initialData]);
@@ -670,7 +681,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                                 </div>
                             ) : lensTypes.length > 0 ? (
                                 <div className="space-y-3">
-                                    {lensTypes.map((type) => {
+                                    {lensTypes.filter((type) => !(hideFrameOnly && isFrameOnlyType(type))).map((type) => {
                                         const badge = getLensTypeBadge(type.name);
                                         const svgKey = getLensTypeSVGKey(type.name);
                                         const bg = getLensTypeBg(type.name);
@@ -720,7 +731,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                                         { key: 'reading', name: 'Reading Power', desc: 'With power for near vision only', svgKey: 'reading', bg: 'radial-gradient(circle at 40% 40%,#fff7ed,#fff0e6)', badge: { text: 'Near Vision', bg: '#ffedd5', color: '#c2410c' } },
                                         { key: 'progressive', name: 'Progressive / Bifocals', desc: 'Two powers in one eye', svgKey: 'progressive', bg: 'radial-gradient(circle at 40% 40%,#f0f0f8,#f5f5f5)', badge: null },
                                         { key: 'frame', name: 'Frame Only', desc: 'With no lenses', svgKey: 'frame', bg: '#f5f5f5', badge: null },
-                                    ].map(t => {
+                                    ].filter(t => !(hideFrameOnly && t.key === 'frame')).map(t => {
                                         const isSelected = selectedType?.key === t.key;
                                         return (
                                             <div
@@ -825,7 +836,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                                                         {/* Pricing */}
                                                         <div className="flex items-center justify-between pt-2 border-t border-dashed border-slate-200 flex-wrap gap-1">
                                                             <div className="text-[.73rem] text-slate-400">
-                                                                {pkg.couponCode ? <>Coupon : <strong className="text-slate-700">{pkg.couponCode}</strong></> : 'Total (Frame + Lens)'}
+                                                                {pkg.couponCode ? <>Coupon : <strong className="text-slate-700">{pkg.couponCode}</strong></> : `Total (${baseLabel} + Lens)`}
                                                             </div>
                                                             <div className="text-right">
                                                                 <div className="text-[.65rem] text-slate-500 mb-0.5 font-medium">₹{framePrice} + ₹{pkg.price}</div>
@@ -1104,7 +1115,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                         {activePackageDetails && (
                             <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent border-t border-slate-100 flex items-center justify-between gap-4">
                                 <div className="flex flex-col">
-                                    <span className="text-[.7rem] text-slate-500 font-bold uppercase tracking-wider">₹{framePrice} Frame + ₹{activePackageDetails.price} Lens</span>
+                                    <span className="text-[.7rem] text-slate-500 font-bold uppercase tracking-wider">₹{framePrice} {baseLabel} + ₹{activePackageDetails.price} Lens</span>
                                     <span className="text-[1.3rem] font-black text-slate-900">₹{framePrice + activePackageDetails.price}</span>
                                 </div>
                                 <button

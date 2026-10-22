@@ -11,14 +11,17 @@ import { requireAuth, requireAdmin } from '../middleware/auth'
 
 const router = express.Router()
 
-// Helper to trigger referral coupon for referrer when referred user places first order
+// Helper to trigger referral coupon for referrer when referred user's first order is paid.
+// Call only after payment is confirmed (Razorpay verified or manual payment approved).
 async function checkAndTriggerReferralReward(userId: string) {
   try {
-    const user = await User.findById(userId)
-    if (!user || user.hasPlacedFirstOrder || !user.referredBy) return
-
-    user.hasPlacedFirstOrder = true
-    await user.save()
+    // Atomic claim so duplicate payment callbacks can't create two coupons
+    const user = await User.findOneAndUpdate(
+      { _id: userId, hasPlacedFirstOrder: { $ne: true }, referredBy: { $ne: null } },
+      { $set: { hasPlacedFirstOrder: true } },
+      { new: true }
+    )
+    if (!user || !user.referredBy) return
 
     const referrer = await User.findById(user.referredBy)
     if (!referrer) return
@@ -174,9 +177,6 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
         }
       })
 
-      // Trigger referral reward for referrer if this is user's first order
-      checkAndTriggerReferralReward(userId).catch(err => console.error('Referral trigger error:', err))
-
       // If a coupon was applied, increment timesUsed
       if (req.body.couponCode) {
         Coupon.findOneAndUpdate({ code: String(req.body.couponCode).trim().toUpperCase() }, { $inc: { timesUsed: 1 } }).catch(() => {})
@@ -261,6 +261,9 @@ router.post('/verify-payment', async (req: Request, res: Response) => {
       for (const item of order.items) {
         await Product.findByIdAndUpdate(item.productId, { $inc: { totalOrders: item.quantity } })
       }
+
+      // Payment confirmed: reward the referrer if this is the user's first paid order
+      checkAndTriggerReferralReward(order.userId.toString()).catch(err => console.error('Referral trigger error:', err))
 
       res.json({
         success: true,
@@ -401,6 +404,9 @@ router.post('/:id/verify-manual-payment', requireAuth, requireAdmin, async (req:
         await Product.findByIdAndUpdate(item.productId, { $inc: { totalOrders: item.quantity } })
       }
       console.log('[BACKEND] Payment approved, new status:', order.paymentStatus)
+
+      // Payment confirmed: reward the referrer if this is the user's first paid order
+      checkAndTriggerReferralReward(order.userId.toString()).catch(err => console.error('Referral trigger error:', err))
     } else if (action === 'reject') {
       console.log('[BACKEND] Rejecting payment...')
       order.paymentStatus = 'failed'

@@ -110,11 +110,11 @@ const AccessoriesAdminPage: React.FC = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 mb-6 shadow-xl">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-xl">
         <div className="flex flex-wrap gap-4 items-end">
           {/* Search */}
           <div className="flex-1 min-w-[200px]">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 block">Search Accessories</label>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">Search Accessories</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <input
@@ -122,22 +122,22 @@ const AccessoriesAdminPage: React.FC = () => {
                 placeholder="Name, SKU, or tag (e.g. spray, cloth, case)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-amber-500 outline-none transition-all text-xs text-white placeholder:text-slate-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-amber-500 outline-none transition-all text-xs text-slate-900 placeholder:text-slate-500"
               />
             </div>
           </div>
 
           {/* Category Filter */}
           <div className="w-full sm:w-60">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 block">Category</label>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">Category</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-amber-500 outline-none transition-all text-xs text-white cursor-pointer"
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-amber-500 outline-none transition-all text-xs text-slate-900 cursor-pointer"
             >
-              <option value="" className="bg-slate-900 text-slate-400">All Accessory Categories</option>
+              <option value="" className="bg-white text-slate-500">All Accessory Categories</option>
               {categoryList.map(c => (
-                <option key={c._id} value={c._id} className="bg-slate-900 text-white">{c.name}</option>
+                <option key={c._id} value={c._id} className="bg-white text-slate-900">{c.name}</option>
               ))}
             </select>
           </div>
@@ -145,7 +145,7 @@ const AccessoriesAdminPage: React.FC = () => {
           {/* Clear Filters */}
           <button
             onClick={handleClearFilters}
-            className="p-2.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-xl transition-all border border-slate-800"
+            className="p-2.5 text-slate-500 hover:text-amber-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-200"
             title="Clear Filters"
           >
             <RotateCcw className="w-4 h-4" />
@@ -154,12 +154,12 @@ const AccessoriesAdminPage: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-slate-400 text-xs font-semibold">Loading accessories...</div>
+        <div className="text-center py-16 text-slate-500 text-xs font-semibold">Loading accessories...</div>
       ) : list.length === 0 ? (
-        <div className="text-center py-16 border border-dashed border-slate-800 rounded-2xl bg-slate-900/60 p-8">
-          <Sparkles className="w-12 h-12 text-amber-400 mx-auto mb-3 opacity-80" />
-          <p className="text-white font-extrabold text-base mb-1">No accessories found</p>
-          <p className="text-xs text-slate-400 mb-6 max-w-md mx-auto">Click "Add New Accessory" to create cleaning kits, sprays, microfiber cloths & hard cases.</p>
+        <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl bg-white p-8">
+          <Sparkles className="w-12 h-12 text-amber-600 mx-auto mb-3 opacity-80" />
+          <p className="text-slate-900 font-extrabold text-base mb-1">No accessories found</p>
+          <p className="text-xs text-slate-500 mb-6 max-w-md mx-auto">Click "Add New Accessory" to create cleaning kits, sprays, microfiber cloths & hard cases.</p>
           <Button
             onClick={() => navigate('/admin/accessories/new')}
             className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-lg shadow-amber-500/20"
@@ -172,26 +172,26 @@ const AccessoriesAdminPage: React.FC = () => {
         <>
           <div className="grid gap-4">
             {paginatedList.map((p) => (
-              <div key={p._id} className="bg-slate-900 rounded-2xl border border-slate-800 p-4 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+              <div key={p._id} className="bg-white rounded-2xl border border-slate-200 p-4 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
                 <div className="flex items-center gap-4">
                   <img
                     src={getImageUrl(p.thumbnail || (p.images && p.images.length ? p.images[0] : null))}
                     alt=""
-                    className="w-20 h-20 object-contain p-1 rounded-xl bg-slate-950 border border-slate-800 shrink-0"
+                    className="w-20 h-20 object-contain p-1 rounded-xl bg-slate-50 border border-slate-200 shrink-0"
                   />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-white text-base">{p.title}</h3>
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${p.status === 'active' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                      <h3 className="font-bold text-slate-900 text-base">{p.title}</h3>
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${p.status === 'active' ? 'bg-emerald-500/20 text-emerald-700 border border-emerald-500/30' : 'bg-slate-100 text-slate-500 border border-slate-300'}`}>
                         {p.status}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 line-clamp-1 max-w-xl">{p.description || 'No description provided'}</p>
+                    <p className="text-xs text-slate-500 line-clamp-1 max-w-xl">{p.description || 'No description provided'}</p>
                     <div className="flex flex-wrap items-center gap-2.5 mt-2.5 text-xs">
-                      <span className="font-extrabold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-md">₹{p.price}</span>
-                      <span className="px-2.5 py-0.5 bg-slate-950 text-slate-300 border border-slate-800 font-semibold rounded-md text-[11px]">{p.category?.name || 'Accessories'}</span>
+                      <span className="font-extrabold text-amber-600 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-md">₹{p.price}</span>
+                      <span className="px-2.5 py-0.5 bg-slate-50 text-slate-600 border border-slate-200 font-semibold rounded-md text-[11px]">{p.category?.name || 'Accessories'}</span>
                       <span className="text-slate-500 font-mono text-[11px]">SKU: {p.sku}</span>
-                      <span className="text-slate-400 text-[11px]">Stock: <strong className="text-white">{p.stock}</strong></span>
+                      <span className="text-slate-500 text-[11px]">Stock: <strong className="text-slate-900">{p.stock}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -199,14 +199,14 @@ const AccessoriesAdminPage: React.FC = () => {
                 <div className="flex items-center gap-2 self-end sm:self-center">
                   <button
                     onClick={() => navigate(`/admin/accessories/${p._id}`)}
-                    className="p-2.5 text-amber-400 hover:bg-amber-500/10 rounded-xl transition-colors border border-amber-500/30"
+                    className="p-2.5 text-amber-600 hover:bg-amber-500/10 rounded-xl transition-colors border border-amber-500/30"
                     title="Edit Accessory"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(p._id)}
-                    className="p-2.5 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors border border-red-500/30"
+                    className="p-2.5 text-red-600 hover:bg-red-500/10 rounded-xl transition-colors border border-red-500/30"
                     title="Delete Accessory"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -218,22 +218,22 @@ const AccessoriesAdminPage: React.FC = () => {
 
           {/* Pagination Controls */}
           {list.length > itemsPerPage && (
-            <div className="flex items-center justify-between px-2 py-4 mt-6 border-t border-slate-800">
-              <div className="text-xs text-slate-400 font-medium">
+            <div className="flex items-center justify-between px-2 py-4 mt-6 border-t border-slate-200">
+              <div className="text-xs text-slate-500 font-medium">
                 Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, list.length)} of {list.length} accessories
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="px-3.5 py-1.5 text-xs font-bold border border-slate-800 rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-40 text-slate-300"
+                  className="px-3.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-40 text-slate-600"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3.5 py-1.5 text-xs font-bold border border-slate-800 rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-40 text-slate-300"
+                  className="px-3.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-40 text-slate-600"
                 >
                   Next
                 </button>

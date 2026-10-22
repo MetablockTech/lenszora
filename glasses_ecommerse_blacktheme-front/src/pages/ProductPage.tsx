@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info, Sparkles, Check, Glasses, Eye, Truck, ShieldCheck, CheckCircle2, PackageCheck, MessageSquare, Gift, Tag, HelpCircle, BadgePercent, Ruler, Headphones, RefreshCw } from "lucide-react";
-import { cn, getImageUrl, calculateProductDiscount } from "@/lib/utils";
+import { cn, getImageUrl, calculateProductDiscount, isFrameOnlyLens, colorSwatchBackground, formatColorName } from "@/lib/utils";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -10,7 +10,8 @@ import ProductReviews from "@/components/product/ProductReviews";
 import { toast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/use-cart";
 import { useWishlist } from "@/context/WishlistContext";
-import { lens, products, pincodes } from "@/lib/api";
+import { lens, products, pincodes, categories as categoriesAPI, stores as storesAPI } from "@/lib/api";
+import StoreVisitModal from "@/components/modals/StoreVisitModal";
 import LensSelectionModal from "@/components/product/LensSelectionModal";
 import ProductSlider from "@/components/sections/ProductSlider";
 
@@ -233,6 +234,52 @@ const ProductPage = () => {
     }
   }, [displayImages.length, selectedImageIndex]);
 
+  // Vendor's active stores: if any, the customer can reserve this product and buy it at the store
+  type VendorStore = { _id: string; name: string; addressLine?: string; city?: string; state?: string; phone?: string; isActive?: boolean };
+  const [vendorStores, setVendorStores] = useState<VendorStore[]>([]);
+  const [showStoreVisit, setShowStoreVisit] = useState(false);
+  const productVendorId = product?.vendorId?._id || product?.vendorId;
+  useEffect(() => {
+    if (!productVendorId) {
+      setVendorStores([]);
+      return;
+    }
+    let cancelled = false;
+    storesAPI.list({ vendorId: String(productVendorId), isActive: true })
+      .then((list: VendorStore[]) => { if (!cancelled) setVendorStores(Array.isArray(list) ? list.filter((s) => s.isActive !== false) : []); })
+      .catch(() => { if (!cancelled) setVendorStores([]); });
+    return () => { cancelled = true; };
+  }, [productVendorId]);
+
+  // Names/slugs of the product's category and all its parents (used to detect contact lenses)
+  const [categoryPath, setCategoryPath] = useState<string[]>([]);
+  useEffect(() => {
+    const cat = product?.category;
+    if (!cat || typeof cat !== 'object') {
+      setCategoryPath([]);
+      return;
+    }
+    const own = [cat.name, cat.slug].filter(Boolean);
+    setCategoryPath(own);
+    if (!cat.parentId) return;
+    let cancelled = false;
+    categoriesAPI.list()
+      .then((all: { _id: string; name?: string; slug?: string; parentId?: string | { _id: string } | null }[]) => {
+        const byId = new Map(all.map((c) => [String(c._id), c]));
+        const path = [...own];
+        let parentId = cat.parentId?._id || cat.parentId;
+        for (let depth = 0; parentId && depth < 5; depth++) {
+          const parent = byId.get(String(parentId));
+          if (!parent) break;
+          path.push(parent.name, parent.slug);
+          parentId = typeof parent.parentId === 'object' ? parent.parentId?._id : parent.parentId;
+        }
+        if (!cancelled) setCategoryPath(path.filter(Boolean));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [product?.category]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -287,7 +334,8 @@ const ProductPage = () => {
     }
     const variantInfo = currentVariant ? { sku: currentVariant.sku, variantValues: currentVariant.variantValues } : null;
     const activeLens = lensData || selectedLens; // Use passed lens or state selected lens
-    const lensInfo = activeLens?.type ? {
+    // Frame Only = no lens on the cart item
+    const lensInfo = activeLens?.type && !isFrameOnlyLens(activeLens.type) ? {
       typeId: activeLens.type._id,
       typeName: activeLens.type.name,
       packageId: activeLens.package?._id,
@@ -331,6 +379,16 @@ const ProductPage = () => {
 
   // Enable lens selection & power selection modal for ALL eyewear/glasses products
   const allowLensSelection = !checkIsAccessory(product);
+
+  // Contact lenses have no frame: hide "Frame Only" and frame wording.
+  // Detected from the product's category or any parent category (e.g. "Color Lenses" under "Contact Lenses").
+  const isContactLens = (() => {
+    if (!product) return false;
+    const text = [...categoryPath, product.title || '', ...(Array.isArray(product.searchTags) ? product.searchTags : [])]
+      .join(' ').toLowerCase().replace(/[-_]/g, ' ');
+    return /contact\s*lens/.test(text);
+  })();
+  const frameWord = isContactLens ? '' : 'Frame ';
 
   const handleBuyNow = () => {
     if (displayStock <= 0) {
@@ -442,334 +500,304 @@ const ProductPage = () => {
     }
   }
 
+  // ---- Detail panel data ----
+  const eyewear = product.eyewearDetails || {};
+  const brandName: string = typeof product.brand === 'object' ? product.brand?.name || '' : product.brand || '';
+  const frameSummary = isContactLens ? '' : [eyewear.frameType, eyewear.frameShape, eyewear.frameColor, eyewear.frameSize].filter(Boolean).join(' · ');
+  const reviewCount: number = product.totalReviews || 0;
+  const faceShapes: string[] = (Array.isArray(eyewear.faceShape) ? eyewear.faceShape : [eyewear.faceShape]).filter(Boolean);
+  const categoryName: string = typeof product.category === 'object' ? product.category?.name || '' : '';
+  const specPills = [
+    eyewear.gender && { key: 'gender', icon: Users, label: String(eyewear.gender), color: 'text-[#DAAB34]' },
+    eyewear.frameShape && { key: 'shape', icon: Scissors, label: String(eyewear.frameShape), color: 'text-orange-400' },
+    faceShapes.length > 0 && { key: 'face', icon: Info, label: `For ${faceShapes.join(' / ')} face`, color: 'text-emerald-400' },
+    categoryName && { key: 'category', icon: Layers, label: categoryName, color: 'text-violet-400' },
+    eyewear.polarized && { key: 'polarized', icon: Zap, label: 'Polarized', color: 'text-yellow-400' },
+    eyewear.uvProtection && { key: 'uv', icon: Shield, label: String(eyewear.uvProtection), color: 'text-green-400' },
+    eyewear.prescriptionAvailable && { key: 'rx', icon: Glasses, label: 'Prescription ready', color: 'text-sky-400' },
+  ].filter(Boolean) as { key: string; icon: typeof Users; label: string; color: string }[];
+
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <Header />
 
       <main>
-        {/* Breadcrumb */}
-        <div style={{ background: 'var(--color-background, #09090b)', borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '.73rem', color: '#6b7280', padding: '7px 32px', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Link to="/" style={{ color: '#6b7280', textDecoration: 'none' }}>Home</Link>
-          <span style={{ margin: '0 4px' }}>›</span>
-          <Link to="/shop" style={{ color: '#6b7280', textDecoration: 'none' }}>Shop</Link>
-          <span style={{ margin: '0 4px' }}>›</span>
-          <span style={{ color: '#e5e7eb', fontWeight: 500 }}>{product.title}</span>
-        </div>
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 pt-4 pb-10 lg:pb-14">
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1.5 text-xs text-gray-500 mb-4 lg:mb-6 min-w-0">
+            <Link to="/" className="hover:text-amber-400 transition-colors shrink-0">Home</Link>
+            <ChevronRight className="w-3 h-3 shrink-0" />
+            <Link to="/shop" className="hover:text-amber-400 transition-colors shrink-0">Shop</Link>
+            <ChevronRight className="w-3 h-3 shrink-0" />
+            <span className="text-gray-200 font-medium truncate">{product.title}</span>
+          </nav>
 
-        {/* Main product grid — thumbnails | image | detail */}
-        <div className="flex flex-col lg:grid lg:grid-cols-[90px_1fr_420px] bg-[#0b0b0d] border-b border-white/10">
+          {/* Main product grid — gallery | detail */}
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_440px] gap-6 lg:gap-10 items-start">
 
-          {/* Thumbnails */}
-          <div className="flex flex-row lg:flex-col gap-3 p-4 lg:py-6 lg:px-3 overflow-x-auto border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0d0d0f] order-2 lg:order-1 no-scrollbar shrink-0 items-center justify-start">
-            {(displayImages || []).map((img: string, i: number) => (
-              <div
-                key={i}
-                onClick={() => setSelectedImageIndex(i)}
-                style={{ minWidth: 72, width: 72, height: 72, border: `2px solid ${selectedImageIndex === i ? '#DAAB34' : 'rgba(255,255,255,0.12)'}`, borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: '#161619', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s', flexShrink: 0 }}
-                className="hover:border-amber-400/60 shadow-md"
-              >
-                <img src={getImageUrl(img)} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
+            {/* Gallery: stays in view while the detail column scrolls */}
+            <div className="lg:sticky lg:top-[180px] flex flex-col-reverse lg:flex-row gap-3 min-w-0">
+              {/* Thumbnails */}
+              <div className="flex lg:flex-col gap-2.5 overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto lg:max-h-[520px] no-scrollbar shrink-0">
+                {(displayImages || []).map((img: string, i: number) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedImageIndex(i)}
+                    className={`w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-[#161619] border-2 transition-all ${selectedImageIndex === i ? 'border-amber-400' : 'border-white/10 hover:border-amber-400/60'}`}
+                  >
+                    <img src={getImageUrl(img)} alt={product.title} className="w-full h-full object-contain p-1" />
+                  </button>
+                ))}
               </div>
-            ))}
-            {(displayImages || []).length === 0 && (
-              <div style={{ width: 72, height: 72, border: '2px solid #DAAB34', borderRadius: 10, background: '#161619', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg viewBox="0 0 76 38" fill="none" width="56" height="28"><rect x="2" y="8" width="30" height="22" rx="11" stroke="#DAAB34" strokeWidth="3" /><rect x="44" y="8" width="30" height="22" rx="11" stroke="#DAAB34" strokeWidth="3" /><line x1="32" y1="19" x2="44" y2="19" stroke="#DAAB34" strokeWidth="2.5" /></svg>
-              </div>
-            )}
-            {hasDiscount && (
-              <div style={{ background: '#ef4444', color: '#fff', fontSize: '.7rem', fontWeight: 800, borderRadius: 6, padding: '4px 8px', textAlign: 'center', marginTop: 4, letterSpacing: '.3px' }}>
-                {discountLabel || `${discount}% OFF`}
-              </div>
-            )}
-          </div>
 
-          {/* Main image */}
-          <div className="flex items-center justify-center p-6 lg:p-10 bg-slate-950/80 border-b lg:border-b-0 lg:border-r border-white/10 relative order-1 lg:order-2 min-h-[380px] lg:min-h-[480px]">
-            <ProductGallery
-              images={displayImages || []}
-              productName={product.title}
-              hideThumbnails
-              currentImage={selectedImageIndex}
-              onImageChange={setSelectedImageIndex}
-            />
-          </div>
-
-          {/* Detail panel */}
-          <div className="flex flex-col gap-[14px] p-6 lg:p-8 bg-[#111] overflow-y-auto order-3">
-
-            {/* Rating row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {[...Array(5)].map((_, i) => (
-                <span key={i} style={{ color: i < Math.round(product.averageRating || 0) ? '#f5a623' : '#444', fontSize: '1rem' }}>★</span>
-              ))}
-              <span style={{ fontWeight: 700, fontSize: '.88rem', color: '#e5e7eb' }}>{(product.averageRating || 0).toFixed(1)}</span>
-              <span style={{ color: '#6b7280', fontSize: '.8rem' }}>{product.totalReviews || 0} reviews</span>
-            </div>
-
-            {/* Product name + sub */}
-            <div>
-              {product.brand && (
-                <div style={{ fontSize: '.73rem', fontWeight: 700, color: '#DAAB34', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: 4 }}>
-                  {typeof product.brand === 'object' ? product.brand.name : product.brand}
-                </div>
-              )}
-              <h1 style={{ fontSize: '1.18rem', fontWeight: 700, lineHeight: 1.35, color: '#f9fafb', margin: 0 }}>{product.title}</h1>
-              <div style={{ fontSize: '.82rem', color: '#9ca3af', marginTop: 2 }}>
-                {[product.eyewearDetails?.frameType, product.eyewearDetails?.frameShape, product.eyewearDetails?.frameColor, product.eyewearDetails?.frameSize].filter(Boolean).join(' · ')}
+              {/* Main image */}
+              <div className="flex-1 min-w-0">
+                <ProductGallery
+                  images={displayImages || []}
+                  productName={product.title}
+                  hideThumbnails
+                  currentImage={selectedImageIndex}
+                  onImageChange={setSelectedImageIndex}
+                />
               </div>
             </div>
 
-            {/* Orders / wishlist */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.78rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px' }}>
-              <span>{product.totalOrders || 0} Orders</span>
-              <span style={{ color: 'rgba(255,255,255,0.1)' }}>|</span>
-              <span>{product.wishlistCount || 0} Wish Listed</span>
-            </div>
+            {/* Detail panel */}
+            <div className="flex flex-col bg-[#111] border border-white/10 rounded-2xl p-5 lg:p-7 min-w-0 divide-y divide-white/[0.07]">
 
-            {/* Specs pills */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {product.eyewearDetails?.gender && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(218,171,52,0.3)', borderRadius: 6, fontSize: '.67rem', fontWeight: 600, color: '#DAAB34', background: 'rgba(218,171,52,0.08)', cursor: 'default', letterSpacing: '.3px' }}>
-                  <Users style={{ width: 11, height: 11 }} />{String(product.eyewearDetails.gender).toUpperCase()}
+              {/* Title block */}
+              <div className="pb-5 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    {brandName && (
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#DAAB34] mb-1">{brandName}</p>
+                    )}
+                    <h1 className="text-xl lg:text-2xl font-bold leading-snug text-white">{product.title}</h1>
+                    {frameSummary && <p className="text-sm text-slate-400 mt-1">{frameSummary}</p>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleWishlist(product._id)}
+                    aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                    className={`shrink-0 h-10 w-10 rounded-full border flex items-center justify-center transition-colors ${isWishlisted ? 'border-red-500/50 bg-red-500/10 text-red-500' : 'border-white/15 text-slate-300 hover:border-white/30 hover:text-white'}`}
+                  >
+                    <Heart className="h-[18px] w-[18px]" fill={isWishlisted ? 'currentColor' : 'none'} />
+                  </button>
                 </div>
-              )}
-              {product.brand && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(96,165,250,0.3)', borderRadius: 6, fontSize: '.67rem', fontWeight: 600, color: '#60a5fa', background: 'rgba(96,165,250,0.08)', letterSpacing: '.3px' }}>
-                  <Award style={{ width: 11, height: 11 }} />{String(typeof product.brand === 'object' ? product.brand.name : product.brand).toUpperCase()}
-                </div>
-              )}
-              {product.eyewearDetails?.frameShape && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(251,146,60,0.3)', borderRadius: 6, fontSize: '.67rem', fontWeight: 600, color: '#fb923c', background: 'rgba(251,146,60,0.08)', letterSpacing: '.3px' }}>
-                  <Scissors style={{ width: 11, height: 11 }} />{String(product.eyewearDetails.frameShape).toUpperCase()}
-                </div>
-              )}
-              {product.eyewearDetails?.faceShape && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(74,222,128,0.3)', borderRadius: 6, fontSize: '.67rem', fontWeight: 600, color: '#4ade80', background: 'rgba(74,222,128,0.08)', letterSpacing: '.3px' }}>
-                  <Info style={{ width: 11, height: 11 }} />FOR {String(Array.isArray(product.eyewearDetails.faceShape) ? product.eyewearDetails.faceShape.join('/') : product.eyewearDetails.faceShape).toUpperCase()} FACE
-                </div>
-              )}
-              {product.category && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(167,139,250,0.3)', borderRadius: 6, fontSize: '.67rem', fontWeight: 600, color: '#a78bfa', background: 'rgba(167,139,250,0.08)', letterSpacing: '.3px' }}>
-                  <Layers style={{ width: 11, height: 11 }} />{String(typeof product.category === 'object' ? product.category.name : product.category).toUpperCase()}
-                </div>
-              )}
-              {product.eyewearDetails?.polarized && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(234,179,8,0.4)', borderRadius: 6, fontSize: '.67rem', fontWeight: 700, color: '#eab308', background: 'rgba(234,179,8,0.1)', letterSpacing: '.3px' }}>
-                  ⚡ POLARIZED
-                </div>
-              )}
-              {product.eyewearDetails?.uvProtection && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(34,197,94,0.4)', borderRadius: 6, fontSize: '.67rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', letterSpacing: '.3px' }}>
-                  <Shield style={{ width: 11, height: 11 }} />{String(product.eyewearDetails.uvProtection).toUpperCase()}
-                </div>
-              )}
-              {product.eyewearDetails?.prescriptionAvailable && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', border: '1.5px solid rgba(56,189,248,0.4)', borderRadius: 6, fontSize: '.67rem', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.1)', letterSpacing: '.3px' }}>
-                  👓 PRESCRIPTION READY
-                </div>
-              )}
-            </div>
 
-            {/* Price */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#DAAB34' }}>₹{displayPrice.toLocaleString()}</span>
-                {hasDiscount && (
-                  <>
-                    <span style={{ fontSize: '1.05rem', color: '#6b7280', textDecoration: 'line-through' }}>₹{originalPrice.toLocaleString()}</span>
-                    <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.14)', padding: '3px 9px', borderRadius: 20 }}>{discountLabel || `${discount}% OFF`}</span>
-                  </>
+                {/* Social proof: only when there is something to show */}
+                {(reviewCount > 0 || (product.totalOrders || 0) > 0) && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                    {reviewCount > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-3.5 w-3.5 fill-[#f5a623] text-[#f5a623]" />
+                        <b className="text-slate-200">{(product.averageRating || 0).toFixed(1)}</b>
+                        <span>({reviewCount} reviews)</span>
+                      </span>
+                    )}
+                    {(product.totalOrders || 0) > 0 && <span>{product.totalOrders} bought</span>}
+                  </div>
                 )}
-              </div>
-              {hasDiscount && originalPrice > displayPrice && (
-                <div style={{ fontSize: '.78rem', color: '#22c55e', fontWeight: 600, marginTop: 4 }}>
-                  🎉 You save ₹{(originalPrice - displayPrice).toLocaleString()}! + Free Luxury Hard Case Included
-                </div>
-              )}
-            </div>
 
-            {/* Special Offers & Bank EMI Card */}
-            <div className="bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/25 rounded-xl p-3.5 space-y-2">
-              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
-                <Tag className="w-3.5 h-3.5" />
-                <span>Active Offers & Savings</span>
-              </div>
-              <div className="space-y-1.5 text-xs text-slate-300">
-                <div className="flex items-start gap-2">
-                  <span className="bg-amber-500/20 text-amber-400 font-bold px-1.5 py-0.5 rounded text-[10px]">COUPON</span>
-                  <span>Use code <strong className="text-white font-mono">LENS10</strong> to get flat 10% OFF at checkout</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.5 rounded text-[10px]">NO-COST EMI</span>
-                  <span>Pay as low as <strong className="text-white">₹{Math.round(displayPrice / 3).toLocaleString()}/month</strong> with 3-month EMI</span>
-                </div>
-              </div>
-            </div>
-
-            <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
-
-            {/* Frame Colour */}
-            {product.colors && product.colors.length > 0 && (
-              <div>
-                <div style={{ fontSize: '.73rem', fontWeight: 600, color: '#6b7280', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: 7 }}>Frame Colour</div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  {product.colors.map((color: string) => (
-                    <div
-                      key={color}
-                      onClick={() => setSelectedColor(color)}
-                      style={{
-                        width: 24, height: 24, borderRadius: '50%', cursor: 'pointer',
-                        backgroundColor: color.toLowerCase(),
-                        border: selectedColor === color ? '2px solid #DAAB34' : '2px solid transparent',
-                        transform: selectedColor === color ? 'scale(1.15)' : 'scale(1)',
-                        transition: 'all .15s',
-                        outline: selectedColor === color ? '1px solid #DAAB34' : 'none',
-                        outlineOffset: 2
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Frame Size from attributes */}
-            {product.attributes && product.attributes.length > 0 && product.attributes.map((attr: any) => (
-              attr.values && attr.values.length > 0 && (
-                <div key={attr.name}>
-                  <div style={{ fontSize: '.73rem', fontWeight: 600, color: '#6b7280', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: 7 }}>{attr.name}</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {attr.values.map((val: string) => (
-                      <button
-                        key={val}
-                        onClick={() => setSelectedAttributes(prev => ({ ...prev, [attr.name]: val }))}
-                        style={{
-                          padding: '6px 13px',
-                          border: selectedAttributes[attr.name] === val ? '1.5px solid #DAAB34' : '1.5px solid rgba(255,255,255,0.15)',
-                          borderRadius: 6, fontSize: '.8rem', fontWeight: 500, cursor: 'pointer',
-                          background: selectedAttributes[attr.name] === val ? '#DAAB34' : 'transparent',
-                          color: selectedAttributes[attr.name] === val ? '#000' : '#e5e7eb',
-                          fontFamily: "'DM Sans', sans-serif",
-                          transition: 'all .15s'
-                        }}
-                      >{val}</button>
+                {specPills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {specPills.map(({ key, icon: Icon, label, color }) => (
+                      <span key={key} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-slate-300">
+                        <Icon className={`h-3 w-3 ${color}`} />
+                        {label}
+                      </span>
                     ))}
                   </div>
-                </div>
-              )
-            ))}
-
-            <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
-
-
-
-            {/* Qty */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: '.73rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px' }}>Qty</span>
-              <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 8, overflow: 'hidden' }}>
-                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ width: 36, height: 36, border: 'none', background: 'transparent', cursor: 'pointer', color: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Minus style={{ width: 13, height: 13 }} /></button>
-                <span style={{ width: 40, textAlign: 'center', fontWeight: 700, fontSize: '.9rem', color: '#f9fafb' }}>{quantity}</span>
-                <button onClick={() => setQuantity(Math.min(displayStock, quantity + 1))} style={{ width: 36, height: 36, border: 'none', background: 'transparent', cursor: 'pointer', color: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus style={{ width: 13, height: 13 }} /></button>
+                )}
               </div>
-            </div>
 
-            <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+              {/* Price + offers */}
+              <div className="py-5 space-y-3">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="text-3xl font-extrabold text-[#DAAB34]">₹{displayPrice.toLocaleString()}</span>
+                  {hasDiscount && (
+                    <>
+                      <span className="text-base text-slate-500 line-through">₹{originalPrice.toLocaleString()}</span>
+                      <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-400">{discountLabel || `${discount}% OFF`}</span>
+                    </>
+                  )}
+                </div>
+                {hasDiscount && originalPrice > displayPrice && (
+                  <p className="text-xs font-semibold text-emerald-400">You save ₹{(originalPrice - displayPrice).toLocaleString()}</p>
+                )}
 
-            {/* Lens Customization Selection Box */}
-            {allowLensSelection && (
-              <div style={{ background: 'rgba(218,171,52,0.06)', border: '1.5px solid rgba(218,171,52,0.25)', borderRadius: 12, padding: 14, marginTop: 10, marginBottom: 12 }}>
-                {selectedLens ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                    <div>
-                      <div style={{ fontSize: '.82rem', fontWeight: 700, color: '#DAAB34', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <Check style={{ width: 14, height: 14 }} /> {selectedLens.type?.name} — {selectedLens.package?.name || 'Selected'}
-                      </div>
-                      <div style={{ fontSize: '.74rem', color: '#9ca3af', marginTop: 2 }}>
-                        {selectedLens.prescription ? (
-                          selectedLens.prescription.method === 'upload' ? '📄 Prescription Slip Uploaded' :
-                          selectedLens.prescription.method === 'later' ? '📲 Submit Power Later via WhatsApp/Call' :
-                          '✍️ Eye Power Values Entered'
-                        ) : selectedLens.package?.price ? `+₹${selectedLens.package.price}` : 'Frame Only (No Lenses)'}
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3 space-y-2 text-xs text-slate-300">
+                  <div className="flex items-center gap-2 text-amber-400 font-bold uppercase tracking-wider text-[11px]">
+                    <Tag className="w-3.5 h-3.5" /> Offers
+                  </div>
+                  <p className="flex items-start gap-2">
+                    <span className="shrink-0 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-400">COUPON</span>
+                    <span>Use <strong className="font-mono text-white">LENS10</strong> for flat 10% off at checkout</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">EMI</span>
+                    <span>No-cost EMI from <strong className="text-white">₹{Math.round(displayPrice / 3).toLocaleString()}/month</strong></span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Options: colour, attributes, quantity */}
+              <div className="py-5 space-y-5">
+                {product.colors && product.colors.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2.5">
+                      {frameWord}Colour
+                      {selectedColor && <span className="ml-2 normal-case tracking-normal text-slate-200">{formatColorName(selectedColor)}</span>}
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {product.colors.map((color: string) => (
+                        <button
+                          key={color}
+                          type="button"
+                          title={formatColorName(color)}
+                          aria-label={formatColorName(color)}
+                          onClick={() => setSelectedColor(color)}
+                          className={`h-8 w-8 rounded-full ring-offset-2 ring-offset-[#111] transition-all ${selectedColor === color ? 'ring-2 ring-[#DAAB34] scale-110' : 'ring-1 ring-white/15 hover:ring-white/40'}`}
+                          style={{ background: colorSwatchBackground(color, product.colorSwatches) }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {product.attributes && product.attributes.length > 0 && product.attributes.map((attr: any) => (
+                  attr.values && attr.values.length > 0 && (
+                    <div key={attr.name}>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2.5">{attr.name}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {attr.values.map((val: string) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setSelectedAttributes(prev => ({ ...prev, [attr.name]: val }))}
+                            className={`rounded-lg border px-3.5 py-1.5 text-sm font-medium transition-colors ${selectedAttributes[attr.name] === val ? 'border-[#DAAB34] bg-[#DAAB34] text-black' : 'border-white/15 text-slate-200 hover:border-white/30'}`}
+                          >
+                            {val}
+                          </button>
+                        ))}
                       </div>
                     </div>
-                    <button
-                      onClick={() => setShowLensModal(true)}
-                      style={{ background: 'transparent', color: '#DAAB34', border: '1px solid rgba(218,171,52,0.4)', borderRadius: 6, padding: '5px 11px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                    >
-                      Change
+                  )
+                ))}
+
+                <div className="flex items-center gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Qty</p>
+                  <div className="flex items-center rounded-lg border border-white/15">
+                    <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="h-9 w-9 flex items-center justify-center text-slate-200 hover:text-white">
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="w-9 text-center text-sm font-bold text-white">{quantity}</span>
+                    <button type="button" aria-label="Increase quantity" onClick={() => setQuantity(Math.min(displayStock, quantity + 1))} className="h-9 w-9 flex items-center justify-center text-slate-200 hover:text-white">
+                      <Plus className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                ) : (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <div style={{ fontSize: '.84rem', fontWeight: 700, color: '#DAAB34', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Glasses style={{ width: 16, height: 16 }} /> Select Lenses & Eye Power
+                  {displayStock > 0 && displayStock <= 5 && <span className="text-xs font-semibold text-orange-400">Only {displayStock} left</span>}
+                  {displayStock <= 0 && <span className="text-xs font-semibold text-red-400">Out of stock</span>}
+                </div>
+              </div>
+
+              {/* Lens / power + purchase actions */}
+              <div className="pt-5 space-y-3">
+                {allowLensSelection && (
+                  selectedLens ? (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#DAAB34]/30 bg-[#DAAB34]/[0.06] p-3.5">
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-1.5 text-sm font-bold text-[#DAAB34]">
+                          <Check className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{selectedLens.type?.name}{selectedLens.package?.name ? ` — ${selectedLens.package.name}` : ''}</span>
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {selectedLens.prescription ? (
+                            selectedLens.prescription.method === 'upload' ? 'Prescription uploaded' :
+                            selectedLens.prescription.method === 'later' ? 'Power to be shared after order' :
+                            'Eye power added'
+                          ) : selectedLens.package?.price ? `+₹${selectedLens.package.price}` : isContactLens ? 'No power selected' : 'Frame only (no lenses)'}
+                        </p>
                       </div>
-                      <span style={{ fontSize: '.68rem', background: '#DAAB34', color: '#000', fontWeight: 800, padding: '2px 7px', borderRadius: 4, textTransform: 'uppercase' }}>
-                        Step 1
-                      </span>
+                      <button type="button" onClick={() => setShowLensModal(true)} className="shrink-0 rounded-lg border border-[#DAAB34]/40 px-3 py-1.5 text-xs font-bold text-[#DAAB34] hover:bg-[#DAAB34]/10">
+                        Change
+                      </button>
                     </div>
-                    <p style={{ fontSize: '.76rem', color: '#9ca3af', marginBottom: 10, lineHeight: 1.3 }}>
-                      Choose <strong>With Power</strong> (Prescription / Zero Power) or <strong>Frame Only</strong> before ordering.
-                    </p>
+                  ) : (
                     <button
+                      type="button"
                       onClick={() => setShowLensModal(true)}
-                      style={{ width: '100%', background: 'rgba(218,171,52,0.14)', color: '#DAAB34', border: '1.5px solid #DAAB34', borderRadius: 8, padding: '10px 0', fontSize: '.84rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all .15s' }}
+                      className="w-full flex items-center gap-3 rounded-xl border border-[#DAAB34]/40 bg-[#DAAB34]/[0.06] p-3.5 text-left transition-colors hover:bg-[#DAAB34]/10"
                     >
-                      <Sparkles style={{ width: 15, height: 15 }} /> Select Lenses & Add Power →
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#DAAB34]/15">
+                        {isContactLens ? <Sparkles className="h-5 w-5 text-[#DAAB34]" /> : <Glasses className="h-5 w-5 text-[#DAAB34]" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-[#DAAB34]">{isContactLens ? 'Add Your Power' : 'Select Lenses & Add Power'}</span>
+                        <span className="block text-xs text-slate-400 mt-0.5">
+                          {isContactLens ? 'Prescription or zero power, before you order' : 'With power, zero power or frame only'}
+                        </span>
+                      </span>
+                      <ChevronRight className="h-5 w-5 shrink-0 text-[#DAAB34]" />
                     </button>
+                  )
+                )}
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (allowLensSelection && !selectedLens) {
+                        setIsBuyNowFlow(false);
+                        setShowLensModal(true);
+                      } else {
+                        handleAddToCart();
+                      }
+                    }}
+                    disabled={displayStock <= 0}
+                    className="flex h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] text-sm font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-40"
+                  >
+                    <ShoppingCart className="h-4 w-4" /> Add to Cart
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBuyNow}
+                    disabled={displayStock <= 0}
+                    className="flex h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#DAAB34] to-[#F5C542] text-sm font-extrabold text-black shadow-[0_4px_14px_rgba(218,171,52,0.3)] transition-opacity hover:opacity-90 disabled:opacity-40"
+                  >
+                    <Zap className="h-4 w-4 fill-black" /> Buy Now
+                  </button>
+                </div>
+
+                {/* Buy at store: reserve online, show the visit pass at the vendor's store */}
+                {vendorStores.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowStoreVisit(true)}
+                    disabled={displayStock <= 0}
+                    className="w-full flex h-11 items-center justify-center gap-2 rounded-xl border border-[#DAAB34]/40 text-sm font-bold text-[#DAAB34] transition-colors hover:bg-[#DAAB34]/10 disabled:opacity-40"
+                  >
+                    <Store className="h-4 w-4" />
+                    Buy at Store · {vendorStores.length === 1 ? vendorStores[0].city || vendorStores[0].name : `${vendorStores.length} stores`}
+                  </button>
+                )}
+
+                {/* Vendor info */}
+                {vendorData && (
+                  <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-[#1a1a1a]">
+                      {vendorData.logo ? <img src={getImageUrl(vendorData.logo)} alt={vendorData.name} className="h-full w-full object-contain" /> : <Store className="h-5 w-5 text-slate-500" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] uppercase tracking-wider text-slate-500">Sold by</p>
+                      <p className="text-sm font-bold text-white truncate">{vendorData.name}</p>
+                      {vendorData.location && <p className="text-xs text-slate-400 truncate">{vendorData.location}</p>}
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-
-            {/* Action Buttons: BUY NOW + ADD TO CART + WISHLIST */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10 }}>
-              <button
-                onClick={handleBuyNow}
-                disabled={displayStock <= 0}
-                style={{ background: 'linear-gradient(135deg, #DAAB34 0%, #F5C542 100%)', color: '#000', border: 'none', borderRadius: 10, padding: '14px 0', fontFamily: "'DM Sans',sans-serif", fontSize: '.92rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: displayStock <= 0 ? 0.4 : 1, boxShadow: '0 4px 14px rgba(218,171,52,0.3)' }}
-              >
-                <Zap style={{ width: 17, height: 17, fill: '#000' }} /> BUY NOW
-              </button>
-              <button
-                onClick={() => {
-                  if (allowLensSelection && !selectedLens) {
-                    setIsBuyNowFlow(false);
-                    setShowLensModal(true);
-                  } else {
-                    handleAddToCart();
-                  }
-                }}
-                disabled={displayStock <= 0}
-                style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '14px 0', fontFamily: "'DM Sans',sans-serif", fontSize: '.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: displayStock <= 0 ? 0.4 : 1 }}
-              >
-                <ShoppingCart style={{ width: 16, height: 16 }} /> Add to Cart
-              </button>
-              <button
-                onClick={() => toggleWishlist(product._id)}
-                style={{ background: 'transparent', color: isWishlisted ? '#ef4444' : '#e5e7eb', border: `1.5px solid ${isWishlisted ? '#ef4444' : 'rgba(255,255,255,0.2)'}`, borderRadius: 10, padding: '12px 14px', fontFamily: "'DM Sans',sans-serif", fontSize: '.88rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Heart style={{ width: 18, height: 18, fill: isWishlisted ? '#ef4444' : 'none' }} />
-              </button>
             </div>
-
-            {/* Vendor info */}
-            {vendorData && (
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.15)', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                    {vendorData.logo ? <img src={getImageUrl(vendorData.logo)} alt={vendorData.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Store style={{ width: 24, height: 24, color: '#6b7280' }} />}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '.88rem', color: '#f9fafb' }}>{vendorData.name}</div>
-                    <div style={{ fontSize: '.73rem', color: '#6b7280' }}>
-                      {vendorData.totalProducts} products · {vendorData.totalReviews} reviews
-                      {vendorData.location ? ` · 📍 ${vendorData.location}` : ''}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -794,8 +822,8 @@ const ProductPage = () => {
                   <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-110 transition-transform">
                     <Glasses className="w-6 h-6" />
                   </div>
-                  <h4 className="text-sm font-bold text-slate-200">Premium Frame</h4>
-                  <p className="text-[11px] text-slate-400 mt-1">Handcrafted with precision alignment</p>
+                  <h4 className="text-sm font-bold text-slate-200">{isContactLens ? 'Sealed Lens Pack' : 'Premium Frame'}</h4>
+                  <p className="text-[11px] text-slate-400 mt-1">{isContactLens ? 'Sterile, factory-sealed blister packs' : 'Handcrafted with precision alignment'}</p>
                 </div>
 
                 <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex flex-col items-center text-center group hover:border-amber-400/50 transition-all">
@@ -864,7 +892,7 @@ const ProductPage = () => {
                   <Headphones className="w-7 h-7" />
                 </div>
                 <div>
-                  <h4 className="text-lg font-bold text-white">Confused About Eyewear Power or Frame Size?</h4>
+                  <h4 className="text-lg font-bold text-white">{isContactLens ? 'Confused About Your Lens Power?' : 'Confused About Eyewear Power or Frame Size?'}</h4>
                   <p className="text-xs text-slate-300 mt-1">Our certified optical advisors are available to assist you in picking the right lens & frame.</p>
                 </div>
               </div>
@@ -920,6 +948,15 @@ const ProductPage = () => {
       </main>
 
       <Footer />
+      <StoreVisitModal
+        isOpen={showStoreVisit}
+        onClose={() => setShowStoreVisit(false)}
+        productId={product._id}
+        productTitle={product.title}
+        stores={vendorStores}
+        variantSku={currentVariant?.sku}
+        color={selectedColor || undefined}
+      />
       <LensSelectionModal
         isOpen={showLensModal}
         onClose={() => {
@@ -927,6 +964,7 @@ const ProductPage = () => {
         }}
         product={product}
         framePrice={basePrice}
+        hideFrameOnly={isContactLens}
         onSelect={(data) => {
           setSelectedLens(data);
           handleAddToCart(data, true);

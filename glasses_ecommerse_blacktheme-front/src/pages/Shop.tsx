@@ -1078,124 +1078,95 @@ const Shop = () => {
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
-                    {productList.map((product, index) => (
-                      <Link key={product._id} to={`/product/${product._id}`}>
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true }}
-                          transition={{ delay: index * 0.1 }}
-                          className="group/card bg-white/5 rounded px-2 py-3 border border-primary/5 hover:border-[#DAAB34]/40 transition-all duration-300 h-full flex flex-col cursor-pointer relative"
-                        >
-                          {/* Product Image Area */}
-                          <div className="relative aspect-[16/10] overflow-hidden bg-transparent mb-3 px-4">
-                            {/* Sale / Discount Badge */}
-                            {(() => {
-                              const calc = calculateProductDiscount(product);
-                              if (calc.hasDiscount) {
-                                return (
-                                  <div className="absolute top-1 left-1 z-20 bg-red-600/90 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-lg flex items-center gap-1 backdrop-blur-sm">
-                                    <span>🔥</span> {calc.discountLabel}
-                                  </div>
-                                );
-                              } else if ((product as any).isSale) {
-                                return (
-                                  <div className="absolute top-1 left-1 z-20 bg-red-600/90 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-lg flex items-center gap-1 backdrop-blur-sm">
-                                    <span>🔥</span> SALE
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
+                    {productList.map((product, index) => {
+                      const calc = calculateProductDiscount(product);
+                      const brandName = product.brand ? (typeof product.brand === 'string' ? product.brand : product.brand.name) : 'LensZora';
+                      return (
+                        <Link key={product._id} to={`/product/${product._id}`} className="block">
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: Math.min(index, 8) * 0.05 }}
+                            className="group/card h-full flex flex-col overflow-hidden rounded-xl bg-white/[0.04] border border-white/10 hover:border-[#DAAB34]/50 hover:shadow-[0_8px_30px_rgba(218,171,52,0.12)] transition-all duration-300"
+                          >
+                            {/* Product Image: fills the whole top of the card, edge to edge */}
+                            <div className="relative aspect-[4/3] overflow-hidden bg-[#0d0d0f]">
+                              <img
+                                src={getProductImage(product)}
+                                alt={product.title}
+                                loading="lazy"
+                                className="absolute inset-0 w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-700"
+                              />
 
-                            {/* Wishlist Button */}
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                toggleWishlist(product._id);
-                              }}
-                              className="absolute top-0 right-0 z-20 w-8 h-8 flex items-center justify-center transition-all duration-300"
-                            >
-                              <Heart className={cn("h-4 w-4", isInWishlist(product._id) ? "fill-[#DAAB34] text-[#DAAB34]" : "text-slate-400 hover:text-[#DAAB34]")} />
-                            </button>
-
-                            <img
-                              src={getProductImage(product)}
-                              alt={product.title}
-                              className="w-full h-full object-contain group-hover/card:scale-105 transition-transform duration-700"
-                            />
-
-                            {/* Rating Badge (Real Data or NEW) */}
-                            <div className="absolute bottom-0 left-0 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm">
-                              {product.averageRating && product.averageRating > 0 ? (
-                                <>
-                                  <span className="text-[10px] font-bold text-slate-900">{product.averageRating.toFixed(1)}</span>
-                                  <Star className="w-2.5 h-2.5 fill-[#DAAB34] text-[#DAAB34]" />
-                                  <div className="w-[1px] h-2.5 bg-slate-300 mx-0.5"></div>
-                                  <span className="text-[9px] text-slate-500 font-medium">{product.totalReviews}</span>
-                                </>
-                              ) : (
-                                <span className="text-[9px] font-black text-[#DAAB34] px-1 uppercase tracking-tighter">NEW</span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Product Info */}
-                          <div className="px-1 flex-grow flex flex-col">
-                            <h3 className="text-sm font-bold text-slate-100 mb-0.5 line-clamp-1 group-hover/card:text-[#DAAB34] transition-colors leading-tight">
-                              {product.title}
-                            </h3>
-
-                            {/* Metadata Subtitle */}
-                            <div className="flex items-center gap-1 mb-2">
-                              <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">
-                                Size: {product.eyewearDetails?.frameSize || 'Medium'}
-                              </span>
-                              <span className="text-slate-600">•</span>
-                              <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">
-                                {product.brand ? (typeof product.brand === 'string' ? product.brand : product.brand.name) : 'LensZora'}
-                              </span>
-                            </div>
-
-                            <div className="mt-auto flex items-center justify-between">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {(() => {
-                                  const calc = calculateProductDiscount(product);
-                                  return calc.hasDiscount ? (
-                                    <>
-                                      <span className="text-sm font-black text-slate-100">
-                                        ₹{calc.sellingPrice.toLocaleString()}
-                                      </span>
-                                      <span className="text-[10px] text-slate-500 line-through">
-                                        ₹{calc.mrpPrice.toLocaleString()}
-                                      </span>
-                                      <span className="text-[10px] font-bold text-[#26a69a]">
-                                        ({calc.discountLabel})
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span className="text-sm font-black text-slate-100">
-                                      ₹{calc.sellingPrice.toLocaleString()}
-                                    </span>
-                                  );
-                                })()}
-                              </div>
-
-                              {/* Small Color Circles (Visual Decor) */}
-                              <div className="flex -space-x-1">
-                                <div className="w-2 h-2 rounded-full bg-slate-700 border border-slate-900 shadow-sm"></div>
-                                <div className="w-2 h-2 rounded-full bg-slate-500 border border-slate-900 shadow-sm"></div>
-                                <div className="w-3 h-3 rounded-full bg-slate-800 border border-slate-900 shadow-sm flex items-center justify-center overflow-hidden">
-                                  <span className="text-[5px] font-bold">+2</span>
+                              {/* Sale / Discount Badge */}
+                              {(calc.hasDiscount || (product as any).isSale) && (
+                                <div className="absolute top-2 left-2 z-20 bg-red-600/90 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                                  <span>🔥</span> {calc.hasDiscount ? calc.discountLabel : 'SALE'}
                                 </div>
+                              )}
+
+                              {/* Wishlist Button */}
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleWishlist(product._id);
+                                }}
+                                aria-label="Toggle wishlist"
+                                className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-black/50 backdrop-blur flex items-center justify-center transition-colors hover:bg-black/70"
+                              >
+                                <Heart className={cn("h-4 w-4", isInWishlist(product._id) ? "fill-[#DAAB34] text-[#DAAB34]" : "text-white/80")} />
+                              </button>
+
+                              {/* Rating Badge (Real Data or NEW) */}
+                              <div className="absolute bottom-2 left-2 z-20 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                                {product.averageRating && product.averageRating > 0 ? (
+                                  <>
+                                    <span className="text-[10px] font-bold text-slate-900">{product.averageRating.toFixed(1)}</span>
+                                    <Star className="w-2.5 h-2.5 fill-[#DAAB34] text-[#DAAB34]" />
+                                    <div className="w-[1px] h-2.5 bg-slate-300 mx-0.5"></div>
+                                    <span className="text-[9px] text-slate-500 font-medium">{product.totalReviews}</span>
+                                  </>
+                                ) : (
+                                  <span className="text-[9px] font-black text-[#DAAB34] px-1 uppercase tracking-tighter">NEW</span>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      </Link>
-                    ))}
+
+                            {/* Product Info */}
+                            <div className="flex-1 flex flex-col p-2.5 sm:p-3">
+                              <h3 className="text-[13px] sm:text-sm font-bold text-slate-100 line-clamp-1 group-hover/card:text-[#DAAB34] transition-colors leading-tight">
+                                {product.title}
+                              </h3>
+
+                              {/* Metadata Subtitle */}
+                              <p className="mt-1 text-[10px] text-slate-400 font-medium uppercase tracking-tight truncate">
+                                Size: {product.eyewearDetails?.frameSize || 'Medium'} <span className="text-slate-600">•</span> {brandName}
+                              </p>
+
+                              {/* Price: always a single line so every card in a row is the same height */}
+                              <div className="mt-2 flex items-baseline gap-1.5 whitespace-nowrap overflow-hidden">
+                                <span className="text-sm sm:text-base font-black text-slate-100">
+                                  ₹{calc.sellingPrice.toLocaleString()}
+                                </span>
+                                {calc.hasDiscount && (
+                                  <>
+                                    <span className="text-[10px] sm:text-xs text-slate-500 line-through">
+                                      ₹{calc.mrpPrice.toLocaleString()}
+                                    </span>
+                                    <span className="hidden sm:inline text-[10px] sm:text-xs font-bold text-[#26a69a]">
+                                      ({calc.discountLabel})
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 </>
               )}

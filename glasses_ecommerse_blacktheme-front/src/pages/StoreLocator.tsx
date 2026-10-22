@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, Phone, Clock, Navigation, Star, Gift, Maximize2, ExternalLink, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Search, MapPin, Phone, Clock, Navigation, Star, Gift, Maximize2, ExternalLink, ChevronRight, CheckCircle2, Home } from "lucide-react";
 import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
 import { useNavigate } from "react-router-dom";
 import { stores as storesApi } from "@/lib/api";
@@ -8,6 +8,7 @@ import { getImageUrl } from "@/lib/utils";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import AppointmentModal from "@/components/modals/AppointmentModal";
+import HomeEyeTestModal from "@/components/modals/HomeEyeTestModal";
 
 interface Store {
   _id: string;
@@ -69,13 +70,37 @@ const StoreLocator = () => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [isHomeVisitOpen, setIsHomeVisitOpen] = useState(false);
   const [bookingStore, setBookingStore] = useState<Store | null>(null);
   const storeRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const { isLoaded } = useJsApiLoader({
+  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    googleMapsApiKey: mapsApiKey
   });
+
+  // The JS map needs a valid key with billing enabled. If Google rejects it (e.g. BillingNotEnabledMapError)
+  // fall back to a keyless embedded map instead of Google's "can't load Google Maps correctly" box.
+  const [mapFailed, setMapFailed] = useState(!mapsApiKey);
+  const mapSectionRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const w = window as unknown as { gm_authFailure?: () => void };
+    w.gm_authFailure = () => setMapFailed(true);
+    return () => { delete w.gm_authFailure; };
+  }, []);
+  useEffect(() => {
+    if (!isLoaded || mapFailed) return;
+    // Google shows its error box (with a ".dismissButton") or watermarks when the key/billing is rejected
+    const timer = setTimeout(() => {
+      const section = mapSectionRef.current;
+      if (!section) return;
+      if (section.querySelector('.gm-err-container, .dismissButton') || section.textContent?.includes("can't load Google Maps")) {
+        setMapFailed(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [isLoaded, mapFailed]);
 
   // Haversine Distance Formula (Returns KM)
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -109,8 +134,10 @@ const StoreLocator = () => {
     const fetchStores = async () => {
       try {
         const data = await storesApi.list({ isActive: true });
-        setStores(data);
-        if (data.length > 0) setSelectedStore(data[0]);
+        // Older/imported stores may be missing optional fields; normalise so rendering never crashes
+        const list: Store[] = (Array.isArray(data) ? data : []).map((s: Store) => ({ ...s, services: Array.isArray(s.services) ? s.services : [] }));
+        setStores(list);
+        if (list.length > 0) setSelectedStore(list[0]);
       } catch (error) {
         console.error("Failed to fetch stores:", error);
       } finally {
@@ -158,14 +185,19 @@ const StoreLocator = () => {
     }
   }, [filteredStores]);
 
-  // Sync marker click with list scroll
+  // Sync marker click with list scroll. Skip the automatic first selection on page load,
+  // otherwise scrollIntoView also scrolls the window and hides the page heading under the header.
+  const initialSelectionDone = useRef(false);
   useEffect(() => {
-    if (selectedStore && storeRefs.current[selectedStore._id]) {
-        storeRefs.current[selectedStore._id]?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-        });
+    if (!selectedStore) return;
+    if (!initialSelectionDone.current) {
+      initialSelectionDone.current = true;
+      return;
     }
+    storeRefs.current[selectedStore._id]?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
   }, [selectedStore]);
 
   useEffect(() => {
@@ -205,7 +237,7 @@ const StoreLocator = () => {
       <Header />
 
       {/* ─── TOP BAR ─── */}
-      <div className="bg-[#0A0A0B] border-b border-white/5 py-3 lg:py-4 px-4 lg:px-8 sticky top-0 z-[40] flex flex-col md:flex-row items-stretch md:items-center gap-3 lg:gap-6 shadow-2xl backdrop-blur-md">
+      <div className="bg-[#0A0A0B] border-b border-white/5 py-3 lg:py-4 px-4 lg:px-8 relative z-[40] flex flex-col md:flex-row items-stretch md:items-center gap-3 lg:gap-6 shadow-2xl backdrop-blur-md">
         <div className="hidden lg:block shrink-0">
           <h1 className="font-playfair text-2xl font-bold text-white leading-tight">Find a Store</h1>
           <p className="text-[11px] text-[#DAAB34] uppercase tracking-widest font-bold">Lenzora Outlets</p>
@@ -254,6 +286,21 @@ const StoreLocator = () => {
         {/* ─── LEFT PANEL ─── */}
         <section className="overflow-y-auto bg-[#0A0A0B] custom-scrollbar border-r border-white/5 flex-1 order-last lg:order-first">
           <div className="px-4 lg:px-8 pb-10 pt-4 lg:pt-8 space-y-6">
+            {/* Eye test at home */}
+            <button
+              type="button"
+              onClick={() => setIsHomeVisitOpen(true)}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[#DAAB34]/30 bg-gradient-to-r from-[#DAAB34]/15 to-transparent hover:border-[#DAAB34]/60 transition-colors text-left"
+            >
+              <div className="w-11 h-11 rounded-full bg-[#DAAB34]/15 border border-[#DAAB34]/30 flex items-center justify-center shrink-0">
+                <Home className="w-5 h-5 text-[#DAAB34]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white">Can't visit a store? Get an Eye Test at Home</p>
+                <p className="text-[11px] text-white/50 mt-0.5">A certified optometrist visits your home at a time you choose.</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[#DAAB34] shrink-0" />
+            </button>
             <div className="flex items-center justify-between text-xs text-white/40 font-bold uppercase tracking-widest px-1">
               <span>{filteredStores.length} Stores Found</span>
               <div className="flex gap-4">
@@ -370,14 +417,16 @@ const StoreLocator = () => {
                     </div>
                   </div>
 
-                  <div className="bg-white/[0.03] py-2.5 px-4 flex items-center justify-center gap-4 border-t border-white/5 overflow-hidden">
-                    {store.services.map((svc, i) => (
-                      <div key={i} className="flex items-center gap-4">
-                        <span className="text-[11px] font-semibold text-white/40 whitespace-nowrap">{svc}</span>
-                        {i < store.services.length - 1 && <div className="w-1 h-1 rounded-full bg-white/10" />}
-                      </div>
-                    ))}
-                  </div>
+                  {(store.services?.length ?? 0) > 0 && (
+                    <div className="bg-white/[0.03] py-2.5 px-4 flex items-center justify-center gap-4 border-t border-white/5 overflow-hidden">
+                      {store.services.map((svc, i) => (
+                        <div key={i} className="flex items-center gap-4">
+                          <span className="text-[11px] font-semibold text-white/40 whitespace-nowrap">{svc}</span>
+                          {i < store.services.length - 1 && <div className="w-1 h-1 rounded-full bg-white/10" />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               ))
             )}
@@ -385,8 +434,22 @@ const StoreLocator = () => {
         </section>
 
         {/* ─── RIGHT PANEL (INTERACTIVE MAP) ─── */}
-        <section className="relative bg-[#050505] overflow-hidden group h-[40vh] lg:h-auto shrink-0 order-first lg:order-last border-b lg:border-b-0 border-white/10">
-          {isLoaded ? (
+        <section ref={mapSectionRef} className="relative bg-[#050505] overflow-hidden group h-[40vh] lg:h-auto shrink-0 order-first lg:order-last border-b lg:border-b-0 border-white/10">
+          {(mapFailed || loadError) ? (
+            <iframe
+              title={selectedStore ? `Map: ${selectedStore.name}` : 'Store map'}
+              className="h-full w-full border-0 grayscale-[30%]"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                selectedStore?.location?.coordinates?.[1]
+                  ? `${selectedStore.location.coordinates[1]},${selectedStore.location.coordinates[0]}`
+                  : selectedStore
+                    ? `${selectedStore.name} ${selectedStore.addressLine || ''} ${selectedStore.city || ''}`
+                    : userLocation ? `${userLocation.lat},${userLocation.lng}` : 'Jaipur, Rajasthan'
+              )}&z=14&output=embed`}
+            />
+          ) : isLoaded ? (
             <GoogleMap
               mapContainerStyle={mapContainerStyle}
               center={selectedStore?.location?.coordinates?.[1] ? { lat: selectedStore.location.coordinates[1], lng: selectedStore.location.coordinates[0] } : (userLocation || { lat: 26.9124, lng: 75.7873 })}
@@ -457,6 +520,9 @@ const StoreLocator = () => {
       </main>
 
       <Footer />
+
+      <HomeEyeTestModal isOpen={isHomeVisitOpen} onClose={() => setIsHomeVisitOpen(false)} />
+
 
       {bookingStore && (
         <AppointmentModal

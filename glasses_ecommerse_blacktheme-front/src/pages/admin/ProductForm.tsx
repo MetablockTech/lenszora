@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/components/ui/use-toast'
 import { Loader2, Plus, Save, Trash2, X, ImageIcon, Sparkles, Layers, Check, Zap, Shield, Eye, Waves, Sun, Droplets, Award, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { categories, brands, products, vendors, getUser, eyewearAttributes as eyewearAttributesAPI, lens } from '@/lib/api'
-import { getToken, getImageUrl, cn } from '@/lib/utils'
+import { getToken, getImageUrl, cn, colorSwatchBackground, formatColorName } from '@/lib/utils'
 import { generateUniqueSKU, generateVariantSKU } from '@/lib/generateSKU'
 const productSchema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -35,6 +35,7 @@ const productSchema = z.object({
     isSale: z.boolean().default(false),
     isBulk: z.boolean().default(false),
     colors: z.array(z.string()).default([]),
+    colorSwatches: z.record(z.array(z.string())).default({}),
     attributes: z.array(z.object({
         name: z.string().min(1, 'Name required'),
         values: z.array(z.string()).min(1, 'At least one value required')
@@ -116,6 +117,8 @@ type ProductFormValues = z.infer<typeof productSchema>
 
 const UNITS = ['kg', 'pc', 'gms', 'ltrs', 'pair', 'oz', 'lb']
 
+const PRESET_COLORS = ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Purple']
+
 const ProductForm = () => {
     const { id } = useParams()
     const navigate = useNavigate()
@@ -148,6 +151,11 @@ const ProductForm = () => {
 
     const [activeLensTab, setActiveLensTab] = useState<string | null>(null)
     const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({})
+    // Custom / two-tone frame colour builder
+    const [customColorName, setCustomColorName] = useState('')
+    const [customColor1, setCustomColor1] = useState('#e53935')
+    const [customColor2, setCustomColor2] = useState('#1e63d6')
+    const [customTwoTone, setCustomTwoTone] = useState(true)
     const [toDeleteUrls, setToDeleteUrls] = useState<string[]>([])
 
     const form = useForm<ProductFormValues>({
@@ -173,6 +181,7 @@ const ProductForm = () => {
             isSale: false,
             isBulk: false,
             colors: [],
+            colorSwatches: {},
             attributes: [],
             hasVariants: false,
             variants: [],
@@ -317,6 +326,7 @@ const ProductForm = () => {
                     vendorId: (product.vendorId?._id || product.vendorId) || '',
                     searchTags: product.searchTags || [],
                     colors: product.colors || [],
+                    colorSwatches: product.colorSwatches || {},
                     attributes: (product.attributes || []).map((attr: any) => ({
                         ...attr,
                         name: attr.name || 'New Attribute',
@@ -663,22 +673,22 @@ const ProductForm = () => {
                         description: "Please check all fields for required information.",
                         variant: "destructive",
                     })
-                })} className="bg-slate-900 p-8 rounded-lg shadow-lg space-y-8 border border-slate-700">
+                })} className="bg-white p-8 rounded-lg shadow-lg space-y-8 border border-slate-300">
 
                     {/* Basic Info */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-white border-b border-slate-600 pb-2">Basic Information</h3>
+                        <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-600 pb-2">Basic Information</h3>
                         <FormField
                             control={form.control}
                             name="title"
                             render={({ field }) => (
                                 <FormItem>
                                     <div className="flex justify-between items-center">
-                                        <FormLabel className="text-slate-300 font-bold uppercase text-[10px] tracking-wider">Product Name (EN) *</FormLabel>
+                                        <FormLabel className="text-slate-600 font-bold uppercase text-[10px] tracking-wider">Product Name (EN) *</FormLabel>
                                         <FormMessage className="text-[9px] uppercase font-bold" />
                                     </div>
                                     <FormControl>
-                                        <Input placeholder="Enter product name" {...field} className="bg-slate-800/50 border-slate-700 text-slate-200 h-10" />
+                                        <Input placeholder="Enter product name" {...field} className="bg-slate-100 border-slate-300 text-slate-700 h-10" />
                                     </FormControl>
                                 </FormItem>
                             )}
@@ -690,11 +700,11 @@ const ProductForm = () => {
                             render={({ field }) => (
                                 <FormItem>
                                     <div className="flex justify-between items-center">
-                                        <FormLabel className="text-slate-300 font-bold uppercase text-[10px] tracking-wider">Description (EN) *</FormLabel>
+                                        <FormLabel className="text-slate-600 font-bold uppercase text-[10px] tracking-wider">Description (EN) *</FormLabel>
                                         <FormMessage className="text-[9px] uppercase font-bold" />
                                     </div>
                                     <FormControl>
-                                        <Textarea placeholder="Enter product description" className="min-h-[100px] bg-slate-800/50 border-slate-700 text-slate-200" {...field} />
+                                        <Textarea placeholder="Enter product description" className="min-h-[100px] bg-slate-100 border-slate-300 text-slate-700" {...field} />
                                     </FormControl>
                                 </FormItem>
                             )}
@@ -704,13 +714,13 @@ const ProductForm = () => {
                     {/* General Setup Section */}
                     <div className="space-y-4 mt-8">
                         <div className="flex items-center gap-2 border-b border-slate-600 pb-2 mb-4">
-                            <Zap className="h-4 w-4 text-indigo-400" />
-                            <h3 className="text-lg font-semibold text-white">General Setup</h3>
+                            <Zap className="h-4 w-4 text-indigo-600" />
+                            <h3 className="text-lg font-semibold text-slate-900">General Setup</h3>
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-950/20 p-4 rounded-xl border border-slate-800/40">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                                 <FormItem className="space-y-1.5">
-                                    <FormLabel className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Main Category *</FormLabel>
+                                    <FormLabel className="text-slate-500 font-bold uppercase text-[9px] tracking-widest">Main Category *</FormLabel>
                                     <Select
                                         value={selectedMain || ""}
                                         onValueChange={(val) => {
@@ -722,10 +732,10 @@ const ProductForm = () => {
                                             form.setValue('category', val, { shouldValidate: true })
                                         }}
                                     >
-                                        <SelectTrigger className="bg-slate-900 border-slate-800 text-slate-200 h-9">
+                                        <SelectTrigger className="bg-white border-slate-200 text-slate-700 h-9">
                                             <SelectValue placeholder="Select Main" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                        <SelectContent className="bg-white border-slate-300 text-slate-700">
                                             {mainCats.map((cat) => (
                                                 <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
                                             ))}
@@ -745,10 +755,10 @@ const ProductForm = () => {
                                             form.setValue('category', val || selectedMain, { shouldValidate: true })
                                         }}
                                     >
-                                        <SelectTrigger className="bg-slate-900 border-slate-800 text-slate-200 h-9">
+                                        <SelectTrigger className="bg-white border-slate-200 text-slate-700 h-9">
                                             <SelectValue placeholder="Select Sub" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                        <SelectContent className="bg-white border-slate-300 text-slate-700">
                                             {subCats.map((cat) => (
                                                 <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
                                             ))}
@@ -766,10 +776,10 @@ const ProductForm = () => {
                                             form.setValue('category', val === 'none' ? selectedSub : val, { shouldValidate: true })
                                         }}
                                     >
-                                        <SelectTrigger className="bg-slate-900 border-slate-800 text-slate-200 h-9">
+                                        <SelectTrigger className="bg-white border-slate-200 text-slate-700 h-9">
                                             <SelectValue placeholder="Deep Level" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                        <SelectContent className="bg-white border-slate-300 text-slate-700">
                                             {subSubCats.map((cat) => (
                                                 <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
                                             ))}
@@ -785,16 +795,16 @@ const ProductForm = () => {
                                     render={({ field }) => (
                                         <FormItem className="space-y-1.5">
                                             <div className="flex justify-between items-center">
-                                                <FormLabel className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Brand *</FormLabel>
+                                                <FormLabel className="text-slate-500 font-bold uppercase text-[9px] tracking-widest">Brand *</FormLabel>
                                                 <FormMessage className="text-[8px] font-black uppercase text-red-500" />
                                             </div>
                                             <Select onValueChange={field.onChange} value={field.value || ""}>
                                                 <FormControl>
-                                                    <SelectTrigger className="bg-slate-900 border-slate-800 text-slate-200 h-9">
+                                                    <SelectTrigger className="bg-white border-slate-200 text-slate-700 h-9">
                                                         <SelectValue placeholder="Choose Brand" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                                <SelectContent className="bg-white border-slate-300 text-slate-700">
                                                     {brs.map((brand) => (
                                                         <SelectItem key={brand._id} value={brand._id}>{brand.name}</SelectItem>
                                                     ))}
@@ -810,16 +820,16 @@ const ProductForm = () => {
                                     render={({ field }) => (
                                         <FormItem className="space-y-1.5">
                                             <div className="flex justify-between items-center">
-                                                <FormLabel className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">System SKU *</FormLabel>
+                                                <FormLabel className="text-slate-500 font-bold uppercase text-[9px] tracking-widest">System SKU *</FormLabel>
                                                 <FormMessage className="text-[8px] font-black uppercase text-red-500" />
                                             </div>
                                             <FormControl>
                                                 <div className="relative">
-                                                    <Input {...field} className="bg-slate-900 border-slate-800 text-slate-200 h-9 font-mono text-[11px] pr-16" />
+                                                    <Input {...field} className="bg-white border-slate-200 text-slate-700 h-9 font-mono text-[11px] pr-16" />
                                                     <Button
                                                         type="button" variant="ghost" size="sm"
                                                         onClick={() => form.setValue('sku', generateUniqueSKU(), { shouldValidate: true })}
-                                                        className="absolute right-0 top-0 h-9 text-[8px] font-black uppercase text-indigo-400 hover:text-indigo-300 px-2"
+                                                        className="absolute right-0 top-0 h-9 text-[8px] font-black uppercase text-indigo-600 hover:text-indigo-700 px-2"
                                                     >Auto</Button>
                                                 </div>
                                             </FormControl>
@@ -835,16 +845,16 @@ const ProductForm = () => {
                                     render={({ field }) => (
                                         <FormItem className="space-y-1.5 lg:col-span-2">
                                             <div className="flex justify-between items-center">
-                                                <FormLabel className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Assign Vendor</FormLabel>
+                                                <FormLabel className="text-slate-500 font-bold uppercase text-[9px] tracking-widest">Assign Vendor</FormLabel>
                                                 <FormMessage className="text-[8px] font-black uppercase text-red-500" />
                                             </div>
                                             <Select onValueChange={(val) => field.onChange(val === 'admin_inhouse' ? '' : val)} value={field.value || "admin_inhouse"}>
                                                 <FormControl>
-                                                    <SelectTrigger className="bg-slate-900 border-slate-800 text-slate-200 h-9">
+                                                    <SelectTrigger className="bg-white border-slate-200 text-slate-700 h-9">
                                                         <SelectValue placeholder="Select Business Account" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                                <SelectContent className="bg-white border-slate-300 text-slate-700">
                                                     <SelectItem value="admin_inhouse">In-House / Admin (Store Owner)</SelectItem>
                                                     {allVendors.map((v) => (
                                                         <SelectItem key={v._id} value={v._id}>{v.businessName}</SelectItem>
@@ -857,7 +867,7 @@ const ProductForm = () => {
                             )}
                         </div>
 
-                        <div className="flex flex-wrap gap-8 p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                        <div className="flex flex-wrap gap-8 p-4 bg-slate-100 rounded-lg border border-slate-300">
 
                             <FormField
                                 control={form.control}
@@ -871,8 +881,8 @@ const ProductForm = () => {
                                             />
                                         </FormControl>
                                         <div className="space-y-1 leading-none">
-                                            <FormLabel className="text-slate-200 cursor-pointer">Featured Product</FormLabel>
-                                            <p className="text-[11px] text-slate-400">Show on homepage featured section</p>
+                                            <FormLabel className="text-slate-700 cursor-pointer">Featured Product</FormLabel>
+                                            <p className="text-[11px] text-slate-500">Show on homepage featured section</p>
                                         </div>
                                     </FormItem>
                                 )}
@@ -890,10 +900,10 @@ const ProductForm = () => {
                                             />
                                         </FormControl>
                                         <div className="space-y-1 leading-none">
-                                            <FormLabel className="text-red-400 font-bold cursor-pointer flex items-center gap-1">
+                                            <FormLabel className="text-red-600 font-bold cursor-pointer flex items-center gap-1">
                                                 🔥 Mark as On Sale / Hot Deal
                                             </FormLabel>
-                                            <p className="text-[11px] text-slate-400">Show in the SALE section on Homepage & Header</p>
+                                            <p className="text-[11px] text-slate-500">Show in the SALE section on Homepage & Header</p>
                                         </div>
                                     </FormItem>
                                 )}
@@ -910,14 +920,14 @@ const ProductForm = () => {
                                         <FormLabel>SKU *</FormLabel>
                                         <FormControl>
                                             <div className="flex gap-2">
-                                                <Input placeholder="PROD-001" {...field} className="bg-slate-800/50 border-slate-700 text-slate-200" />
+                                                <Input placeholder="PROD-001" {...field} className="bg-slate-100 border-slate-300 text-slate-700" />
                                                 <Button
                                                     type="button"
                                                     variant="outline"
                                                     size="icon"
                                                     onClick={() => form.setValue('sku', generateUniqueSKU())}
                                                     title="Generate unique SKU"
-                                                    className="border-slate-700 bg-slate-800/50 hover:bg-slate-800 text-white"
+                                                    className="border-slate-300 bg-slate-100 hover:bg-slate-100 text-slate-900"
                                                 >
                                                     <Sparkles className="h-4 w-4" />
                                                 </Button>
@@ -935,7 +945,7 @@ const ProductForm = () => {
                                     <FormItem>
                                         <FormLabel>Unit *</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="pc, kg, box" {...field} className="bg-slate-800/50 border-slate-700 text-slate-200" />
+                                            <Input placeholder="pc, kg, box" {...field} className="bg-slate-100 border-slate-300 text-slate-700" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -955,11 +965,11 @@ const ProductForm = () => {
                                                     value={tagInput}
                                                     onChange={(e) => setTagInput(e.target.value)}
                                                     onKeyDown={handleAddTag}
-                                                    className="bg-slate-800/50 border-slate-700 text-slate-200"
+                                                    className="bg-slate-100 border-slate-300 text-slate-700"
                                                 />
                                                 <div className="flex flex-wrap gap-2">
                                                     {field.value.map((tag, index) => (
-                                                        <div key={index} className="bg-slate-800 px-2 py-1 rounded-md flex items-center gap-1 text-sm text-slate-200 border border-slate-700">
+                                                        <div key={index} className="bg-slate-100 px-2 py-1 rounded-md flex items-center gap-1 text-sm text-slate-700 border border-slate-300">
                                                             {tag}
                                                             <button type="button" onClick={() => removeTag(tag)} className="text-slate-500 hover:text-red-500">
                                                                 <X className="h-3 w-3" />
@@ -979,11 +989,11 @@ const ProductForm = () => {
 
                     {/* Frame Details Section */}
                     {showFrameDetails() && (
-                        <div className="space-y-6 mt-10 p-6 rounded-xl bg-slate-900/40 border border-slate-800 shadow-inner">
-                            <div className="flex items-center gap-2 border-b border-slate-700 pb-2 mb-6">
+                        <div className="space-y-6 mt-10 p-6 rounded-xl bg-white border border-slate-200 shadow-inner">
+                            <div className="flex items-center gap-2 border-b border-slate-300 pb-2 mb-6">
                                 <div className="w-2 h-8 bg-blue-500 rounded-full" />
-                                <h3 className="text-xl font-bold text-white font-playfair tracking-wide uppercase">1. Frame Details</h3>
-                                <div className="h-[1px] flex-1 bg-slate-700 ml-4" />
+                                <h3 className="text-xl font-bold text-slate-900 font-playfair tracking-wide uppercase">1. Frame Details</h3>
+                                <div className="h-[1px] flex-1 bg-slate-200 ml-4" />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <FormField
@@ -991,10 +1001,10 @@ const ProductForm = () => {
                                     name="eyewearDetails.frameType"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Frame Type</FormLabel>
+                                            <FormLabel className="text-slate-600">Frame Type</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ""}>
-                                                <FormControl><SelectTrigger className="bg-slate-800/50 border-slate-700"><SelectValue placeholder="e.g. Full Rim" /></SelectTrigger></FormControl>
-                                                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                                <FormControl><SelectTrigger className="bg-slate-100 border-slate-300"><SelectValue placeholder="e.g. Full Rim" /></SelectTrigger></FormControl>
+                                                <SelectContent className="bg-white border-slate-300 text-slate-700">
                                                     {dynamicAttributes.filter(a => a.type === 'frameType').map(s => (
                                                         <SelectItem key={s._id} value={s.name}>{s.name}</SelectItem>
                                                     ))}
@@ -1013,10 +1023,10 @@ const ProductForm = () => {
                                     name="eyewearDetails.frameShape"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Frame Shape</FormLabel>
+                                            <FormLabel className="text-slate-600">Frame Shape</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ""}>
-                                                <FormControl><SelectTrigger className="bg-slate-800/50 border-slate-700"><SelectValue placeholder="Shape" /></SelectTrigger></FormControl>
-                                                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                                <FormControl><SelectTrigger className="bg-slate-100 border-slate-300"><SelectValue placeholder="Shape" /></SelectTrigger></FormControl>
+                                                <SelectContent className="bg-white border-slate-300 text-slate-700">
                                                     {dynamicAttributes.filter(a => a.type === 'frameShape').map(s => (
                                                         <SelectItem key={s._id} value={s.name}>{s.name}</SelectItem>
                                                     ))}
@@ -1035,10 +1045,10 @@ const ProductForm = () => {
                                     name="eyewearDetails.frameMaterial"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Frame Material</FormLabel>
+                                            <FormLabel className="text-slate-600">Frame Material</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ""}>
-                                                <FormControl><SelectTrigger className="bg-slate-800/50 border-slate-700"><SelectValue placeholder="Material" /></SelectTrigger></FormControl>
-                                                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                                <FormControl><SelectTrigger className="bg-slate-100 border-slate-300"><SelectValue placeholder="Material" /></SelectTrigger></FormControl>
+                                                <SelectContent className="bg-white border-slate-300 text-slate-700">
                                                     {dynamicAttributes.filter(a => a.type === 'frameMaterial').map(s => (
                                                         <SelectItem key={s._id} value={s.name}>{s.name}</SelectItem>
                                                     ))}
@@ -1057,8 +1067,8 @@ const ProductForm = () => {
                                     name="eyewearDetails.frameWidth"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Frame Width</FormLabel>
-                                            <FormControl><Input placeholder="e.g. 142 mm" {...field} className="bg-slate-800/50 border-slate-700 text-slate-200" /></FormControl>
+                                            <FormLabel className="text-slate-600">Frame Width</FormLabel>
+                                            <FormControl><Input placeholder="e.g. 142 mm" {...field} className="bg-slate-100 border-slate-300 text-slate-700" /></FormControl>
                                         </FormItem>
                                     )}
                                 />
@@ -1067,8 +1077,8 @@ const ProductForm = () => {
                                     name="eyewearDetails.frameDimensions"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Frame Dimensions</FormLabel>
-                                            <FormControl><Input placeholder="e.g. 53-23-147" {...field} className="bg-slate-800/50 border-slate-700 text-slate-200" /></FormControl>
+                                            <FormLabel className="text-slate-600">Frame Dimensions</FormLabel>
+                                            <FormControl><Input placeholder="e.g. 53-23-147" {...field} className="bg-slate-100 border-slate-300 text-slate-700" /></FormControl>
                                         </FormItem>
                                     )}
                                 />
@@ -1077,8 +1087,8 @@ const ProductForm = () => {
                                     name="eyewearDetails.weight"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Weight</FormLabel>
-                                            <FormControl><Input placeholder="e.g. 33 gm" {...field} className="bg-slate-800/50 border-slate-700 text-slate-200" /></FormControl>
+                                            <FormLabel className="text-slate-600">Weight</FormLabel>
+                                            <FormControl><Input placeholder="e.g. 33 gm" {...field} className="bg-slate-100 border-slate-300 text-slate-700" /></FormControl>
                                         </FormItem>
                                     )}
                                 />
@@ -1087,10 +1097,10 @@ const ProductForm = () => {
                                     name="eyewearDetails.weightGroup"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Weight Group</FormLabel>
+                                            <FormLabel className="text-slate-600">Weight Group</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ""}>
-                                                <FormControl><SelectTrigger className="bg-slate-800/50 border-slate-700"><SelectValue placeholder="e.g. Average" /></SelectTrigger></FormControl>
-                                                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                                <FormControl><SelectTrigger className="bg-slate-100 border-slate-300"><SelectValue placeholder="e.g. Average" /></SelectTrigger></FormControl>
+                                                <SelectContent className="bg-white border-slate-300 text-slate-700">
                                                     <SelectItem value="Feather Light">Feather Light</SelectItem>
                                                     <SelectItem value="Light">Light</SelectItem>
                                                     <SelectItem value="Average">Average</SelectItem>
@@ -1105,8 +1115,8 @@ const ProductForm = () => {
                                     name="eyewearDetails.countryOfOrigin"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Country of Origin</FormLabel>
-                                            <FormControl><Input placeholder="e.g. China" {...field} className="bg-slate-800/50 border-slate-700 text-slate-200" /></FormControl>
+                                            <FormLabel className="text-slate-600">Country of Origin</FormLabel>
+                                            <FormControl><Input placeholder="e.g. China" {...field} className="bg-slate-100 border-slate-300 text-slate-700" /></FormControl>
                                         </FormItem>
                                     )}
                                 />
@@ -1115,8 +1125,8 @@ const ProductForm = () => {
                                     name="eyewearDetails.modelNo"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Model No.</FormLabel>
-                                            <FormControl><Input placeholder="e.g. VC S15801" {...field} className="bg-slate-800/50 border-slate-700 text-slate-200" /></FormControl>
+                                            <FormLabel className="text-slate-600">Model No.</FormLabel>
+                                            <FormControl><Input placeholder="e.g. VC S15801" {...field} className="bg-slate-100 border-slate-300 text-slate-700" /></FormControl>
                                         </FormItem>
                                     )}
                                 />
@@ -1125,10 +1135,10 @@ const ProductForm = () => {
                                     name="eyewearDetails.gender"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Target Gender</FormLabel>
+                                            <FormLabel className="text-slate-600">Target Gender</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ""}>
-                                                <FormControl><SelectTrigger className="bg-slate-800/50 border-slate-700"><SelectValue placeholder="Gender" /></SelectTrigger></FormControl>
-                                                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                                <FormControl><SelectTrigger className="bg-slate-100 border-slate-300"><SelectValue placeholder="Gender" /></SelectTrigger></FormControl>
+                                                <SelectContent className="bg-white border-slate-300 text-slate-700">
                                                     <SelectItem value="Men">Men</SelectItem>
                                                     <SelectItem value="Women">Women</SelectItem>
                                                     <SelectItem value="Unisex">Unisex</SelectItem>
@@ -1148,7 +1158,7 @@ const ProductForm = () => {
                                     render={({ field }) => (
                                         <FormItem className="space-y-3">
                                             <div>
-                                                <FormLabel className="text-slate-300">Suitable Face Shapes</FormLabel>
+                                                <FormLabel className="text-slate-600">Suitable Face Shapes</FormLabel>
                                                 <p className="text-[11px] text-slate-500 italic mt-1">Select all face shapes this frame is recommended for.</p>
                                             </div>
                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -1164,7 +1174,7 @@ const ProductForm = () => {
                                                         }}
                                                         className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${field.value?.includes(shape)
                                                             ? 'bg-blue-500/10 border-blue-500 text-blue-200 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
-                                                            : 'bg-slate-800/20 border-slate-700 text-slate-400 hover:border-slate-600'
+                                                            : 'bg-slate-100 border-slate-300 text-slate-500 hover:border-slate-300'
                                                             }`}
                                                     >
                                                         <div className={`h-4 w-4 rounded-sm border shrink-0 flex items-center justify-center transition-all ${field.value?.includes(shape)
@@ -1182,12 +1192,12 @@ const ProductForm = () => {
                                 />
 
 
-                                <div className="grid grid-cols-1 md:grid-cols-1 gap-6 pt-4 border-t border-slate-800/50">
+                                <div className="grid grid-cols-1 md:grid-cols-1 gap-6 pt-4 border-t border-slate-200">
                                     <FormField
                                         control={form.control}
                                         name="eyewearDetails.prescriptionAvailable"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-4 rounded-lg border border-slate-700 bg-slate-800/10 mt-6">
+                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-4 rounded-lg border border-slate-300 bg-slate-100 mt-6">
                                                 <FormControl>
                                                     <Checkbox
                                                         checked={field.value}
@@ -1195,7 +1205,7 @@ const ProductForm = () => {
                                                     />
                                                 </FormControl>
                                                 <div className="space-y-1 leading-none">
-                                                    <FormLabel className="text-slate-300">Prescription Ready</FormLabel>
+                                                    <FormLabel className="text-slate-600">Prescription Ready</FormLabel>
                                                 </div>
                                             </FormItem>
                                         )}
@@ -1207,14 +1217,14 @@ const ProductForm = () => {
                                     name="eyewearDetails.features"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-slate-300">Additional Features</FormLabel>
+                                            <FormLabel className="text-slate-600">Additional Features</FormLabel>
                                             <p className="text-[11px] text-slate-500 italic mb-2">Separate features with commas (e.g. Flexible Temples, Anti-Scratch)</p>
                                             <FormControl>
                                                 <Input
                                                     placeholder="e.g. Super Light, Anti-Fog"
                                                     value={field.value?.join(',') || ""}
                                                     onChange={(e) => field.onChange(e.target.value.split(','))}
-                                                    className="bg-slate-800/50 border-slate-700 text-slate-200"
+                                                    className="bg-slate-100 border-slate-300 text-slate-700"
                                                 />
                                             </FormControl>
                                         </FormItem>
@@ -1225,17 +1235,17 @@ const ProductForm = () => {
                     )}
 
                     {/* Pricing & Inventory Section */}
-                    <div className="space-y-4 mt-8 bg-slate-900/40 p-6 rounded-xl border border-slate-800 shadow-inner">
-                        <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2 mb-4">Pricing & Inventory</h3>
+                    <div className="space-y-4 mt-8 bg-white p-6 rounded-xl border border-slate-200 shadow-inner">
+                        <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-300 pb-2 mb-4">Pricing & Inventory</h3>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <FormField
                                 control={form.control}
                                 name="price"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-slate-300">Unit Price (₹) *</FormLabel>
+                                        <FormLabel className="text-slate-600">Unit Price (₹) *</FormLabel>
                                         <FormControl>
-                                            <Input type="number" min="0" step="any" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="bg-slate-800/50 border-slate-700 text-slate-200" />
+                                            <Input type="number" min="0" step="any" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="bg-slate-100 border-slate-300 text-slate-700" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -1247,14 +1257,14 @@ const ProductForm = () => {
                                 name="discountType"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-slate-300">Discount Type</FormLabel>
+                                        <FormLabel className="text-slate-600">Discount Type</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value || 'flat'}>
                                             <FormControl>
-                                                <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200">
+                                                <SelectTrigger className="bg-slate-100 border-slate-300 text-slate-700">
                                                     <SelectValue placeholder="Select Type" />
                                                 </SelectTrigger>
                                             </FormControl>
-                                            <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                            <SelectContent className="bg-white border-slate-300 text-slate-700">
                                                 <SelectItem value="flat">Flat Discount (₹)</SelectItem>
                                                 <SelectItem value="percent">Percentage Discount (%)</SelectItem>
                                             </SelectContent>
@@ -1269,7 +1279,7 @@ const ProductForm = () => {
                                 name="discountAmount"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-slate-300">
+                                        <FormLabel className="text-slate-600">
                                             {form.watch('discountType') === 'percent' ? 'Discount Percentage (%)' : 'Discount Amount (₹)'}
                                         </FormLabel>
                                         <FormControl>
@@ -1281,7 +1291,7 @@ const ProductForm = () => {
                                                 {...field}
                                                 onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                                                 placeholder={form.watch('discountType') === 'percent' ? 'e.g. 10' : 'e.g. 200'}
-                                                className="bg-slate-800/50 border-slate-700 text-slate-200"
+                                                className="bg-slate-100 border-slate-300 text-slate-700"
                                             />
                                         </FormControl>
                                         <FormMessage />
@@ -1294,9 +1304,9 @@ const ProductForm = () => {
                                 name="stock"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-slate-300">Current Stock *</FormLabel>
+                                        <FormLabel className="text-slate-600">Current Stock *</FormLabel>
                                         <FormControl>
-                                            <Input type="number" min="0" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} className="bg-slate-800/50 border-slate-700 text-slate-200" />
+                                            <Input type="number" min="0" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} className="bg-slate-100 border-slate-300 text-slate-700" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -1318,10 +1328,10 @@ const ProductForm = () => {
 
                             return (p > 0 && dAmt > 0) ? (
                                 <div className="mt-3 p-3 bg-blue-950/40 border border-blue-800/50 rounded-lg flex flex-wrap items-center justify-between gap-2 text-xs">
-                                    <span className="text-blue-300 font-medium">
-                                        Discount Off: <strong className="text-white">₹{calculatedDiscount.toFixed(2)}</strong> {dType === 'percent' ? `(${dAmt}% OFF)` : '(Flat)'}
+                                    <span className="text-blue-700 font-medium">
+                                        Discount Off: <strong className="text-slate-900">₹{calculatedDiscount.toFixed(2)}</strong> {dType === 'percent' ? `(${dAmt}% OFF)` : '(Flat)'}
                                     </span>
-                                    <span className="text-emerald-400 font-bold text-sm">
+                                    <span className="text-emerald-600 font-bold text-sm">
                                         Effective Final Price: ₹{finalPrice.toFixed(2)}
                                     </span>
                                 </div>
@@ -1334,10 +1344,10 @@ const ProductForm = () => {
                             render={({ field }) => (
                                 <FormItem>
                                     <div className="flex items-center gap-3 mt-4">
-                                        <FormLabel className="text-slate-300">Product Status:</FormLabel>
+                                        <FormLabel className="text-slate-600">Product Status:</FormLabel>
                                         <FormControl>
                                             <div className="flex items-center gap-2">
-                                                <span className={field.value === 'active' ? 'text-green-500 font-medium text-sm' : 'text-slate-400 text-sm'}>
+                                                <span className={field.value === 'active' ? 'text-green-500 font-medium text-sm' : 'text-slate-500 text-sm'}>
                                                     {field.value === 'active' ? 'Active' : 'Inactive'}
                                                 </span>
                                                 <Checkbox
@@ -1356,15 +1366,15 @@ const ProductForm = () => {
 
                     {/* Lens Selection Settings - Ultra Compact & Filtered UI */}
                     {showLensOptions() && (
-                        <div className="space-y-4 mt-4 p-3 rounded-xl bg-white/[0.02] border border-slate-800/60 shadow-inner">
+                        <div className="space-y-4 mt-4 p-3 rounded-xl bg-white/[0.02] border border-slate-200 shadow-inner">
                             {/* Compact Header */}
                             <div className="flex items-center justify-between gap-4 px-1">
                                 <div className="flex items-center gap-2">
                                     <div className="bg-blue-600 p-1 rounded-md shadow-md">
-                                        <Zap className="h-3.5 w-3.5 text-white" />
+                                        <Zap className="h-3.5 w-3.5 text-slate-900" />
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-bold text-white leading-tight">Lens Setup</h3>
+                                        <h3 className="text-sm font-bold text-slate-900 leading-tight">Lens Setup</h3>
                                         <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest opacity-60">Configuration</p>
                                     </div>
                                 </div>
@@ -1373,7 +1383,7 @@ const ProductForm = () => {
                                     "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[8px] font-black uppercase tracking-[0.1em] transition-all",
                                     form.watch('lensSettings.allowLensSelection')
                                         ? "bg-teal-500/10 border-teal-500/20 text-teal-500"
-                                        : "bg-slate-800 border-slate-700 text-slate-500"
+                                        : "bg-slate-100 border-slate-300 text-slate-500"
                                 )}>
                                     <div className={cn("w-1 h-1 rounded-full", form.watch('lensSettings.allowLensSelection') ? "bg-teal-500 animate-pulse" : "bg-slate-500")} />
                                     <span>{form.watch('lensSettings.allowLensSelection') ? "Active" : "Disabled"}</span>
@@ -1381,7 +1391,7 @@ const ProductForm = () => {
                             </div>
 
                             {/* Ultra Sleek Tab Bar - Only show categories allowing packages */}
-                            <div className="flex items-center gap-1 p-0.5 bg-slate-950/60 border border-slate-800/40 rounded-lg overflow-x-auto no-scrollbar">
+                            <div className="flex items-center gap-1 p-0.5 bg-slate-50 border border-slate-200 rounded-lg overflow-x-auto no-scrollbar">
                                 {vendorLensTypes
                                     .filter(t => t.allowPackages !== false)
                                     .map((type) => {
@@ -1418,10 +1428,10 @@ const ProductForm = () => {
                                                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap text-[9px] font-bold uppercase",
                                                     isActive
                                                         ? "bg-blue-600 text-white shadow-sm font-black"
-                                                        : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/40"
+                                                        : "text-slate-500 hover:text-slate-600 hover:bg-slate-100"
                                                 )}
                                             >
-                                                {isEnabled && <Check className="w-2.5 h-2.5 text-teal-400" />}
+                                                {isEnabled && <Check className="w-2.5 h-2.5 text-teal-600" />}
                                                 {type.name}
                                             </button>
                                         );
@@ -1453,13 +1463,13 @@ const ProductForm = () => {
 
                                     return (
                                         <div key={type._id} className="animate-in fade-in duration-300">
-                                            <div className="bg-slate-900/40 rounded-2xl border border-slate-800/60 overflow-hidden mb-6">
-                                                <div className="bg-slate-800/10 h-12 px-6 flex items-center justify-between border-b border-slate-800/40">
+                                            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-6">
+                                                <div className="bg-slate-100 h-12 px-6 flex items-center justify-between border-b border-slate-200">
                                                     <div className="flex items-center gap-3">
                                                         {type.imageUrl ? (
                                                             <img src={getImageUrl(type.imageUrl)} className="w-6 h-6 object-contain opacity-80" />
                                                         ) : <Layers className="h-4 w-4 text-indigo-500/50" />}
-                                                        <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-widest">{type.name}</h4>
+                                                        <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-widest">{type.name}</h4>
                                                     </div>
                                                     {isEnabled && (
                                                         <button
@@ -1474,7 +1484,7 @@ const ProductForm = () => {
                                                 {isEnabled ? (
                                                     <div className="p-6 space-y-6">
                                                         <div className="flex items-center justify-between border-b border-indigo-500/10 pb-4">
-                                                            <h5 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Packages</h5>
+                                                            <h5 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em]">Packages</h5>
                                                             <Button
                                                                 type="button" variant="outline" size="sm"
                                                                 onClick={() => {
@@ -1484,13 +1494,13 @@ const ProductForm = () => {
                                                                         { name: 'New Package', price: 0, warranty: '6 Months', detailedFeatures: [] }
                                                                     ]);
                                                                 }}
-                                                                className="h-8 text-[9px] font-black uppercase border-slate-700 bg-slate-900/50 hover:bg-slate-800 transition-all hover:scale-105"
+                                                                className="h-8 text-[9px] font-black uppercase border-slate-300 bg-white hover:bg-slate-100 transition-all hover:scale-105"
                                                             >+ Add Package</Button>
                                                         </div>
 
                                                         <div className="space-y-8">
                                                             {(form.watch(`lensSettings.lensTypes.${fieldIndex}.packages`) || []).map((pkg: any, pkgIdx: number) => (
-                                                                <div key={pkgIdx} className="bg-slate-950/40 rounded-xl border border-white/[0.03] p-5 relative group/pkg shadow-xl">
+                                                                <div key={pkgIdx} className="bg-slate-50 rounded-xl border border-white/[0.03] p-5 relative group/pkg shadow-xl">
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
@@ -1504,12 +1514,12 @@ const ProductForm = () => {
                                                                         <div className="col-span-12 lg:col-span-4 space-y-4">
                                                                             <div className="space-y-2">
                                                                                 <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest ml-1">Package Icon</label>
-                                                                                <div className="relative group/pimg h-28 bg-slate-900 rounded-xl border border-dashed border-slate-700 flex items-center justify-center overflow-hidden transition-all hover:border-indigo-500/50">
+                                                                                <div className="relative group/pimg h-28 bg-white rounded-xl border border-dashed border-slate-300 flex items-center justify-center overflow-hidden transition-all hover:border-indigo-500/50">
                                                                                     {pkg.imageUrl ? (
                                                                                         <>
                                                                                             <img src={getImageUrl(pkg.imageUrl)} className="w-full h-full object-contain p-2" />
-                                                                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/pimg:opacity-100 transition-opacity flex items-center justify-center">
-                                                                                                <p className="text-[8px] font-black text-white uppercase tracking-widest">Change Image</p>
+                                                                                            <div className="absolute inset-0 bg-white opacity-0 group-hover/pimg:opacity-100 transition-opacity flex items-center justify-center">
+                                                                                                <p className="text-[8px] font-black text-slate-900 uppercase tracking-widest">Change Image</p>
                                                                                             </div>
                                                                                         </>
                                                                                     ) : (
@@ -1531,7 +1541,7 @@ const ProductForm = () => {
                                                                                 render={({ field }) => (
                                                                                     <FormItem className="space-y-1">
                                                                                         <FormLabel className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Package Title</FormLabel>
-                                                                                        <FormControl><Input placeholder="e.g. Premium Anti-Glare" {...field} className="h-9 text-[11px] bg-slate-900 border-slate-800 font-bold" /></FormControl>
+                                                                                        <FormControl><Input placeholder="e.g. Premium Anti-Glare" {...field} className="h-9 text-[11px] bg-white border-slate-200 font-bold" /></FormControl>
                                                                                     </FormItem>
                                                                                 )}
                                                                             />
@@ -1544,7 +1554,7 @@ const ProductForm = () => {
                                                                                     render={({ field }) => (
                                                                                         <FormItem className="space-y-1">
                                                                                             <FormLabel className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Lens Price (₹)</FormLabel>
-                                                                                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} className="h-10 text-[13px] bg-slate-950 border-slate-800 font-black text-indigo-400" /></FormControl>
+                                                                                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} className="h-10 text-[13px] bg-slate-50 border-slate-200 font-black text-indigo-600" /></FormControl>
                                                                                         </FormItem>
                                                                                     )}
                                                                                 />
@@ -1553,7 +1563,7 @@ const ProductForm = () => {
                                                                                     render={({ field }) => (
                                                                                         <FormItem className="space-y-1">
                                                                                             <FormLabel className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Warranty Period</FormLabel>
-                                                                                            <FormControl><Input placeholder="6 Months" {...field} className="h-10 text-[11px] bg-slate-900 border-slate-800" /></FormControl>
+                                                                                            <FormControl><Input placeholder="6 Months" {...field} className="h-10 text-[11px] bg-white border-slate-200" /></FormControl>
                                                                                         </FormItem>
                                                                                     )}
                                                                                 />
@@ -1569,12 +1579,12 @@ const ProductForm = () => {
                                                                                             feats.push({ title: 'Technical Feature', description: '', icon: 'Zap' });
                                                                                             form.setValue(`lensSettings.lensTypes.${fieldIndex}.packages.${pkgIdx}.detailedFeatures`, feats);
                                                                                         }}
-                                                                                        className="h-5 px-2 text-[8px] font-black text-indigo-400 hover:text-white uppercase"
+                                                                                        className="h-5 px-2 text-[8px] font-black text-indigo-600 hover:text-slate-900 uppercase"
                                                                                     >+ Add Feature</Button>
                                                                                 </div>
                                                                                 <div className="grid grid-cols-1 gap-3">
                                                                                     {(form.watch(`lensSettings.lensTypes.${fieldIndex}.packages.${pkgIdx}.detailedFeatures`) || []).map((feat: any, featIdx: number) => (
-                                                                                        <div key={featIdx} className="p-4 rounded-xl bg-slate-950/40 border border-slate-800/40 space-y-4 group/feat relative">
+                                                                                        <div key={featIdx} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-4 group/feat relative">
                                                                                             <button
                                                                                                 type="button"
                                                                                                 onClick={() => {
@@ -1591,10 +1601,10 @@ const ProductForm = () => {
                                                                                                         value={feat.icon || 'Zap'}
                                                                                                         onValueChange={(val) => form.setValue(`lensSettings.lensTypes.${fieldIndex}.packages.${pkgIdx}.detailedFeatures.${featIdx}.icon`, val)}
                                                                                                     >
-                                                                                                        <SelectTrigger className="h-8 bg-slate-900 border-slate-800 text-[10px]">
+                                                                                                        <SelectTrigger className="h-8 bg-white border-slate-200 text-[10px]">
                                                                                                             <SelectValue />
                                                                                                         </SelectTrigger>
-                                                                                                        <SelectContent className="bg-slate-950 border-slate-800">
+                                                                                                        <SelectContent className="bg-slate-50 border-slate-200">
                                                                                                             {['Zap', 'Shield', 'Sun', 'Sparkles', 'Eye', 'Waves', 'Droplets', 'Award', 'ShieldCheck', 'ShieldAlert'].map(id => (
                                                                                                                 <SelectItem key={id} value={id} className="text-[10px]">{id}</SelectItem>
                                                                                                             ))}
@@ -1611,13 +1621,13 @@ const ProductForm = () => {
                                                                                                             form.setValue(`lensSettings.lensTypes.${fieldIndex}.packages.${pkgIdx}.detailedFeatures`, feats);
                                                                                                         }}
                                                                                                         placeholder="e.g. Blue Light Filter"
-                                                                                                        className="h-8 text-[11px] bg-slate-900 border-slate-800"
+                                                                                                        className="h-8 text-[11px] bg-white border-slate-200"
                                                                                                     />
                                                                                                 </div>
                                                                                             </div>
 
                                                                                             <div className="flex gap-4">
-                                                                                                <div className="w-16 h-16 shrink-0 relative group/fimg bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+                                                                                                <div className="w-16 h-16 shrink-0 relative group/fimg bg-white rounded-lg border border-slate-200 overflow-hidden">
                                                                                                     {feat.image ? (
                                                                                                         <img src={getImageUrl(feat.image)} className="w-full h-full object-cover" />
                                                                                                     ) : (
@@ -1638,7 +1648,7 @@ const ProductForm = () => {
                                                                                                         value={feat.description || ''}
                                                                                                         onChange={e => form.setValue(`lensSettings.lensTypes.${fieldIndex}.packages.${pkgIdx}.detailedFeatures.${featIdx}.description`, e.target.value)}
                                                                                                         placeholder="Detailed technical benefit..."
-                                                                                                        className="h-16 text-[10px] bg-slate-900 border-slate-800 resize-none"
+                                                                                                        className="h-16 text-[10px] bg-white border-slate-200 resize-none"
                                                                                                     />
                                                                                                 </div>
                                                                                             </div>
@@ -1653,11 +1663,11 @@ const ProductForm = () => {
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="p-12 flex flex-col items-center justify-center text-center bg-slate-950/20">
-                                                        <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-dashed border-slate-700 flex items-center justify-center mb-6 opacity-40">
-                                                            <Plus className="h-6 w-6 text-indigo-400" />
+                                                    <div className="p-12 flex flex-col items-center justify-center text-center bg-slate-50">
+                                                        <div className="w-16 h-16 rounded-3xl bg-white border border-dashed border-slate-300 flex items-center justify-center mb-6 opacity-40">
+                                                            <Plus className="h-6 w-6 text-indigo-600" />
                                                         </div>
-                                                        <h5 className="text-[13px] font-black text-slate-200 uppercase tracking-[0.4em] mb-2">{type.name}</h5>
+                                                        <h5 className="text-[13px] font-black text-slate-700 uppercase tracking-[0.4em] mb-2">{type.name}</h5>
                                                         <p className="text-[10px] text-slate-500 uppercase font-bold mb-8 tracking-widest max-w-[240px] leading-relaxed">Activate this category to configure storefront lens packages</p>
                                                         <Button
                                                             type="button" size="sm" onClick={activateCategory}
@@ -1673,10 +1683,10 @@ const ProductForm = () => {
                     )}
 
                     {/* Variations Section - Ultra Compact */}
-                    <div className="space-y-4 mt-6 p-4 rounded-xl bg-slate-900/40 border border-slate-800/60">
-                        <div className="flex items-center gap-2 border-b border-slate-800/40 pb-2 mb-3">
-                            <Layers className="h-3 w-3 text-indigo-400" />
-                            <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Configurable Variants</h3>
+                    <div className="space-y-4 mt-6 p-4 rounded-xl bg-white border border-slate-200">
+                        <div className="flex items-center gap-2 border-b border-slate-200 pb-2 mb-3">
+                            <Layers className="h-3 w-3 text-indigo-600" />
+                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Configurable Variants</h3>
                         </div>
 
                         <FormField
@@ -1686,25 +1696,98 @@ const ProductForm = () => {
                                 <FormItem className="space-y-2">
                                     <FormLabel className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Available Colors</FormLabel>
                                     <FormControl>
-                                        <div className="flex flex-wrap gap-x-4 gap-y-2 px-1">
-                                            {['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Purple'].map((color) => (
-                                                <div key={color} className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        checked={field.value.includes(color)}
-                                                        onCheckedChange={(checked) => {
-                                                            if (checked) {
-                                                                field.onChange([...field.value, color])
-                                                            } else {
-                                                                field.onChange(field.value.filter((c) => c !== color))
-                                                            }
-                                                        }}
-                                                        className="h-3.5 w-3.5 border-slate-700"
-                                                    />
-                                                    <label className="text-[11px] font-medium text-slate-300 leading-tight">
-                                                        {color}
-                                                    </label>
+                                        <div className="space-y-3">
+                                            <div className="flex flex-wrap gap-x-4 gap-y-2 px-1">
+                                                {PRESET_COLORS.map((color) => (
+                                                    <div key={color} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            checked={field.value.includes(color)}
+                                                            onCheckedChange={(checked) => {
+                                                                if (checked) {
+                                                                    field.onChange([...field.value, color])
+                                                                } else {
+                                                                    field.onChange(field.value.filter((c) => c !== color))
+                                                                }
+                                                            }}
+                                                            className="h-3.5 w-3.5 border-slate-300"
+                                                        />
+                                                        <span className="h-3 w-3 rounded-full border border-slate-200" style={{ background: colorSwatchBackground(color) }} />
+                                                        <label className="text-[11px] font-medium text-slate-600 leading-tight">
+                                                            {color}
+                                                        </label>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Custom / two-tone colours already on this product */}
+                                            {field.value.filter((c) => !PRESET_COLORS.includes(c)).length > 0 && (
+                                                <div className="flex flex-wrap gap-2 px-1">
+                                                    {field.value.filter((c) => !PRESET_COLORS.includes(c)).map((color) => (
+                                                        <span key={color} className="inline-flex items-center gap-1.5 pl-1.5 pr-1 py-0.5 rounded-full bg-white border border-slate-300 text-[11px] text-slate-700">
+                                                            <span className="h-3.5 w-3.5 rounded-full border border-slate-200" style={{ background: colorSwatchBackground(color, form.watch('colorSwatches')) }} />
+                                                            {formatColorName(color)}
+                                                            <button
+                                                                type="button"
+                                                                aria-label={`Remove ${color}`}
+                                                                className="text-slate-500 hover:text-red-600"
+                                                                onClick={() => {
+                                                                    field.onChange(field.value.filter((c) => c !== color))
+                                                                    const { [color]: _removed, ...rest } = form.getValues('colorSwatches') || {}
+                                                                    form.setValue('colorSwatches', rest)
+                                                                }}
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            )}
+
+                                            {/* Add custom colour (single or two-tone like Red/Blue) */}
+                                            <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                                                <Input
+                                                    value={customColorName}
+                                                    onChange={(e) => setCustomColorName(e.target.value)}
+                                                    placeholder={customTwoTone ? 'Name, e.g. Red/Blue' : 'Name, e.g. Tortoise'}
+                                                    className="h-7 w-40 text-[10px] bg-white border-slate-200"
+                                                />
+                                                <input type="color" value={customColor1} onChange={(e) => setCustomColor1(e.target.value)} className="h-7 w-8 rounded bg-transparent border border-slate-300 cursor-pointer" title="Colour 1" />
+                                                {customTwoTone && (
+                                                    <input type="color" value={customColor2} onChange={(e) => setCustomColor2(e.target.value)} className="h-7 w-8 rounded bg-transparent border border-slate-300 cursor-pointer" title="Colour 2" />
+                                                )}
+                                                <label className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer">
+                                                    <Checkbox checked={customTwoTone} onCheckedChange={(v) => setCustomTwoTone(v === true)} className="h-3.5 w-3.5 border-slate-300" />
+                                                    Two-tone
+                                                </label>
+                                                <span
+                                                    className="h-5 w-5 rounded-full border border-slate-200"
+                                                    style={{ background: customTwoTone ? `linear-gradient(135deg, ${customColor1} 0% 50%, ${customColor2} 50% 100%)` : customColor1 }}
+                                                />
+                                                <Button
+                                                    type="button" variant="ghost" size="sm"
+                                                    className="h-7 px-2 text-[9px] font-black text-indigo-600 hover:text-slate-900 uppercase"
+                                                    onClick={() => {
+                                                        const name = customColorName.trim().replace(/\s*\/\s*/g, '/')
+                                                        if (!name) {
+                                                            toast({ title: 'Enter a colour name, e.g. Red/Blue', variant: 'destructive' })
+                                                            return
+                                                        }
+                                                        if (field.value.some((c) => c.toLowerCase() === name.toLowerCase())) {
+                                                            toast({ title: `"${name}" is already added`, variant: 'destructive' })
+                                                            return
+                                                        }
+                                                        field.onChange([...field.value, name])
+                                                        form.setValue('colorSwatches', {
+                                                            ...(form.getValues('colorSwatches') || {}),
+                                                            [name]: customTwoTone ? [customColor1, customColor2] : [customColor1],
+                                                        })
+                                                        setCustomColorName('')
+                                                    }}
+                                                >
+                                                    <Plus className="h-3 w-3 mr-1" />
+                                                    Add Colour
+                                                </Button>
+                                            </div>
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -1717,7 +1800,7 @@ const ProductForm = () => {
                                 <FormLabel className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Custom Attributes</FormLabel>
                                 <Button
                                     type="button" variant="ghost" size="sm"
-                                    className="h-6 px-2 text-[9px] font-black text-indigo-400 hover:text-white uppercase"
+                                    className="h-6 px-2 text-[9px] font-black text-indigo-600 hover:text-slate-900 uppercase"
                                     onClick={() => appendAttribute({ name: '', values: [] })}
                                 >
                                     <Plus className="h-3 w-3 mr-1" />
@@ -1727,14 +1810,14 @@ const ProductForm = () => {
 
                             <div className="space-y-2">
                                 {attributeFields.map((field, index) => (
-                                    <div key={field.id} className="flex gap-2 items-start bg-slate-950/20 p-2 rounded-lg border border-slate-800/40 relative group">
+                                    <div key={field.id} className="flex gap-2 items-start bg-slate-50 p-2 rounded-lg border border-slate-200 relative group">
                                         <FormField
                                             control={form.control}
                                             name={`attributes.${index}.name`}
                                             render={({ field }) => (
                                                 <FormItem className="flex-1 space-y-1">
                                                     <FormControl>
-                                                        <Input placeholder="Size/Material" {...field} className="h-7 text-[10px] bg-slate-900 border-slate-800/60" />
+                                                        <Input placeholder="Size/Material" {...field} className="h-7 text-[10px] bg-white border-slate-200" />
                                                     </FormControl>
                                                 </FormItem>
                                             )}
@@ -1749,7 +1832,7 @@ const ProductForm = () => {
                                                             placeholder="Small, Medium, Large"
                                                             value={field.value.join(',')}
                                                             onChange={(e) => field.onChange(e.target.value.split(','))}
-                                                            className="h-7 text-[10px] bg-slate-900 border-slate-800/60"
+                                                            className="h-7 text-[10px] bg-white border-slate-200"
                                                         />
                                                     </FormControl>
                                                 </FormItem>
@@ -1765,10 +1848,10 @@ const ProductForm = () => {
                         </div>
 
                         {/* Variant Management - Ultra Compact */}
-                        <div className="mt-6 pt-4 border-t border-slate-800/60">
+                        <div className="mt-6 pt-4 border-t border-slate-200">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
-                                    <h4 className="text-xs font-black text-white uppercase tracking-widest">Variation Inventory</h4>
+                                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Variation Inventory</h4>
                                     <p className="text-[9px] text-slate-500 font-medium italic mt-0.5">Automated SKU generation based on attributes</p>
                                 </div>
                                 <Button
@@ -1822,27 +1905,27 @@ const ProductForm = () => {
                                         }
 
                                         return (
-                                            <div key={colorName} className="p-3 rounded-xl bg-slate-950/20 border border-slate-800/60 space-y-4">
-                                                <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
+                                            <div key={colorName} className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-4">
+                                                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-2.5 h-2.5 rounded-full ring-1 ring-slate-700 ring-offset-1 ring-offset-slate-900 shadow-inner" style={{ backgroundColor: colorName.toLowerCase() }} />
-                                                        <h5 className="text-[11px] font-black text-white uppercase tracking-tight">{colorName} <span className="text-[9px] text-slate-500 font-normal ml-1">({variants.length} SKU)</span></h5>
+                                                        <h5 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{colorName} <span className="text-[9px] text-slate-500 font-normal ml-1">({variants.length} SKU)</span></h5>
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    <h6 className="text-[8px] font-black uppercase text-indigo-400 opacity-60 tracking-[0.15em]">Color Lookbook</h6>
-                                                    <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-slate-900/30 border border-slate-800/40">
+                                                    <h6 className="text-[8px] font-black uppercase text-indigo-600 opacity-60 tracking-[0.15em]">Color Lookbook</h6>
+                                                    <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-white border border-slate-200">
                                                         {sharedImages.map((img, imgIndex) => (
                                                             <div key={imgIndex} className="relative group/img animate-in zoom-in-95 duration-200">
-                                                                <img src={getImageUrl(img)} className="h-16 w-16 object-cover rounded-md border border-slate-700 shadow-sm" />
+                                                                <img src={getImageUrl(img)} className="h-16 w-16 object-cover rounded-md border border-slate-300 shadow-sm" />
                                                                 <button
                                                                     type="button" onClick={() => removeColorImage(imgIndex)}
                                                                     className="absolute -top-1 -right-1 bg-red-600 text-white p-0.5 rounded-full shadow-lg opacity-0 group-hover/img:opacity-100 transition-all"
                                                                 ><X className="h-2.5 w-2.5" /></button>
                                                             </div>
                                                         ))}
-                                                        <div className="flex items-center justify-center h-16 w-16 border border-dashed border-slate-700 rounded-md hover:border-indigo-500 hover:bg-slate-800/50 transition-all relative">
+                                                        <div className="flex items-center justify-center h-16 w-16 border border-dashed border-slate-300 rounded-md hover:border-indigo-500 hover:bg-slate-100 transition-all relative">
                                                             <input type="file" accept="image/*" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleColorImageUpload} disabled={uploading} />
                                                             <Plus className="h-4 w-4 text-slate-600" />
                                                         </div>
@@ -1858,9 +1941,9 @@ const ProductForm = () => {
                                                             .join(' | ') || 'Default'
 
                                                         return (
-                                                            <div key={index} className="grid grid-cols-12 gap-2 items-center p-2 rounded-md bg-slate-900/40 border border-slate-800/30 hover:border-slate-700 transition-colors">
+                                                            <div key={index} className="grid grid-cols-12 gap-2 items-center p-2 rounded-md bg-white border border-slate-200 hover:border-slate-300 transition-colors">
                                                                 <div className="col-span-4">
-                                                                    <span className="text-[10px] font-black text-slate-300 block leading-none">{vSpecs}</span>
+                                                                    <span className="text-[10px] font-black text-slate-600 block leading-none">{vSpecs}</span>
                                                                     <span className="text-[8px] text-slate-600 block mt-0.5 uppercase tracking-tighter">{v.sku}</span>
                                                                 </div>
                                                                 <div className="col-span-3">
@@ -1869,7 +1952,7 @@ const ProductForm = () => {
                                                                         render={({ field }) => (
                                                                             <FormItem className="space-y-0.5">
                                                                                 <FormLabel className="text-[7px] font-black uppercase text-slate-600 tracking-widest pl-1">Price</FormLabel>
-                                                                                <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} className="h-6 text-[10px] bg-slate-950 border-slate-800" /></FormControl>
+                                                                                <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} className="h-6 text-[10px] bg-slate-50 border-slate-200" /></FormControl>
                                                                             </FormItem>
                                                                         )}
                                                                     />
@@ -1880,7 +1963,7 @@ const ProductForm = () => {
                                                                         render={({ field }) => (
                                                                             <FormItem className="space-y-0.5">
                                                                                 <FormLabel className="text-[7px] font-black uppercase text-slate-600 tracking-widest pl-1">Stock</FormLabel>
-                                                                                <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} className="h-6 text-[10px] bg-slate-950 border-slate-800" /></FormControl>
+                                                                                <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} className="h-6 text-[10px] bg-slate-50 border-slate-200" /></FormControl>
                                                                             </FormItem>
                                                                         )}
                                                                     />
@@ -1904,10 +1987,10 @@ const ProductForm = () => {
                     </div>
 
                     {/* Media Section - Compact */}
-                    <div className="space-y-4 mt-6 p-4 rounded-xl bg-slate-900/40 border border-slate-800/60">
-                        <div className="flex items-center gap-2 border-b border-slate-800/40 pb-2 mb-3">
-                            <ImageIcon className="h-3 w-3 text-indigo-400" />
-                            <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Product Media</h3>
+                    <div className="space-y-4 mt-6 p-4 rounded-xl bg-white border border-slate-200">
+                        <div className="flex items-center gap-2 border-b border-slate-200 pb-2 mb-3">
+                            <ImageIcon className="h-3 w-3 text-indigo-600" />
+                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Product Media</h3>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1918,16 +2001,16 @@ const ProductForm = () => {
                                     <FormItem className="space-y-2">
                                         <FormLabel className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Primary Thumbnail *</FormLabel>
                                         <FormControl>
-                                            <div className="flex items-center gap-4 p-2 rounded-lg bg-slate-950/20 border border-slate-800/40">
+                                            <div className="flex items-center gap-4 p-2 rounded-lg bg-slate-50 border border-slate-200">
                                                 {field.value && (
-                                                    <img src={getImageUrl(field.value)} className="h-20 w-20 object-cover rounded-md border border-slate-700 shadow-inner" />
+                                                    <img src={getImageUrl(field.value)} className="h-20 w-20 object-cover rounded-md border border-slate-300 shadow-inner" />
                                                 )}
                                                 <div className="relative flex-1">
                                                     <Input
                                                         type="file" accept="image/*"
                                                         onChange={(e) => handleImageUpload(e, 'thumbnail')}
                                                         disabled={uploading}
-                                                        className="h-8 text-[10px] bg-slate-900 border-slate-800 cursor-pointer text-slate-400"
+                                                        className="h-8 text-[10px] bg-white border-slate-200 cursor-pointer text-slate-500"
                                                     />
                                                     <p className="text-[8px] text-slate-600 mt-1 uppercase font-bold italic">Recommended: 1000x1000 PNG/JPG</p>
                                                 </div>
@@ -1945,10 +2028,10 @@ const ProductForm = () => {
                                     <FormItem className="space-y-2">
                                         <FormLabel className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Gallery Collection</FormLabel>
                                         <FormControl>
-                                            <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-slate-950/20 border border-slate-800/40">
+                                            <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
                                                 {field.value.map((img, index) => (
                                                     <div key={index} className="relative group/gal">
-                                                        <img src={getImageUrl(img)} className="h-16 w-16 object-cover rounded-md border border-slate-800" />
+                                                        <img src={getImageUrl(img)} className="h-16 w-16 object-cover rounded-md border border-slate-200" />
                                                         <button
                                                             type="button"
                                                             onClick={() => {
@@ -1959,7 +2042,7 @@ const ProductForm = () => {
                                                         ><X className="h-2.5 w-2.5" /></button>
                                                     </div>
                                                 ))}
-                                                <div className="flex items-center justify-center h-16 w-16 border-2 border-dashed border-slate-800 rounded-md hover:border-indigo-500 hover:bg-indigo-500/5 transition-all relative">
+                                                <div className="flex items-center justify-center h-16 w-16 border-2 border-dashed border-slate-200 rounded-md hover:border-indigo-500 hover:bg-indigo-500/5 transition-all relative">
                                                     <input type="file" accept="image/*" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'images')} disabled={uploading} />
                                                     <Plus className="h-4 w-4 text-slate-600" />
                                                 </div>
@@ -1972,10 +2055,10 @@ const ProductForm = () => {
                     </div>
 
                     {/* Return Policy Section - Compact */}
-                    <div className="space-y-4 mt-6 p-4 rounded-xl bg-slate-900/40 border border-slate-800/60">
-                        <div className="flex items-center gap-2 border-b border-slate-800/40 pb-2 mb-3">
-                            <ShieldCheck className="h-3 w-3 text-teal-400" />
-                            <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Customer Policies</h3>
+                    <div className="space-y-4 mt-6 p-4 rounded-xl bg-white border border-slate-200">
+                        <div className="flex items-center gap-2 border-b border-slate-200 pb-2 mb-3">
+                            <ShieldCheck className="h-3 w-3 text-teal-600" />
+                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Customer Policies</h3>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1983,9 +2066,9 @@ const ProductForm = () => {
                                 control={form.control}
                                 name="returnPolicy.allowReturns"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center space-x-2 p-2 rounded-md border border-slate-800/40 bg-slate-950/20">
+                                    <FormItem className="flex flex-row items-center space-x-2 p-2 rounded-md border border-slate-200 bg-slate-50">
                                         <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="h-3.5 w-3.5" /></FormControl>
-                                        <FormLabel className="text-[10px] font-black uppercase text-slate-400 m-0">Returnable</FormLabel>
+                                        <FormLabel className="text-[10px] font-black uppercase text-slate-500 m-0">Returnable</FormLabel>
                                     </FormItem>
                                 )}
                             />
@@ -1993,9 +2076,9 @@ const ProductForm = () => {
                                 control={form.control}
                                 name="returnPolicy.allowRefunds"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center space-x-2 p-2 rounded-md border border-slate-800/40 bg-slate-950/20">
+                                    <FormItem className="flex flex-row items-center space-x-2 p-2 rounded-md border border-slate-200 bg-slate-50">
                                         <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="h-3.5 w-3.5" /></FormControl>
-                                        <FormLabel className="text-[10px] font-black uppercase text-slate-400 m-0">Refundable</FormLabel>
+                                        <FormLabel className="text-[10px] font-black uppercase text-slate-500 m-0">Refundable</FormLabel>
                                     </FormItem>
                                 )}
                             />
@@ -2004,7 +2087,7 @@ const ProductForm = () => {
                                 name="returnPolicy.returnPeriodDays"
                                 render={({ field }) => (
                                     <FormItem className="space-y-1">
-                                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} placeholder="Days (e.g. 7)" className="h-7 text-[10px] bg-slate-900 border-slate-800" /></FormControl>
+                                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} placeholder="Days (e.g. 7)" className="h-7 text-[10px] bg-white border-slate-200" /></FormControl>
                                     </FormItem>
                                 )}
                             />
@@ -2017,7 +2100,7 @@ const ProductForm = () => {
                                 <FormItem className="space-y-1 mt-2">
                                     <FormLabel className="text-[8px] font-black uppercase text-slate-600 tracking-[0.2em] ml-1">Custom Policy Overrides</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Specific terms for this product..." {...field} className="h-16 text-[10px] bg-slate-900 border-slate-800 min-h-[50px]" />
+                                        <Textarea placeholder="Specific terms for this product..." {...field} className="h-16 text-[10px] bg-white border-slate-200 min-h-[50px]" />
                                     </FormControl>
                                 </FormItem>
                             )}
@@ -2032,8 +2115,8 @@ const ProductForm = () => {
                                     <ShieldAlert className="h-5 w-5 text-red-500" />
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-black text-white uppercase tracking-widest">⚠️ Missing Information Required</h4>
-                                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-tight opacity-80">Please fill the following columns to save your changes</p>
+                                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">⚠️ Missing Information Required</h4>
+                                    <p className="text-[10px] text-red-600 font-bold uppercase tracking-tight opacity-80">Please fill the following columns to save your changes</p>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3 px-1">
@@ -2068,7 +2151,7 @@ const ProductForm = () => {
                     {/* Action Bar - Sleek & Premium */}
                     <div className="flex items-center justify-between gap-4 mt-10 mb-10 p-5 rounded-2xl bg-indigo-600/5 border border-indigo-500/10 shadow-[0_0_50px_rgba(79,70,229,0.05)]">
                         <div className="hidden md:block">
-                            <p className="text-[10px] font-black text-indigo-400/60 uppercase tracking-[0.3em]">
+                            <p className="text-[10px] font-black text-indigo-600/60 uppercase tracking-[0.3em]">
                                 {form.formState.isValid ? 'Validation Complete' : 'Review Errors Above'}
                             </p>
                         </div>
@@ -2076,7 +2159,7 @@ const ProductForm = () => {
                             <Button
                                 type="button" variant="ghost"
                                 onClick={() => navigate(`${pathPrefix}/products`)}
-                                className="text-slate-500 hover:text-white text-[10px] font-black uppercase tracking-widest h-10 px-6"
+                                className="text-slate-500 hover:text-slate-900 text-[10px] font-black uppercase tracking-widest h-10 px-6"
                             >Discard</Button>
                             <Button
                                 type="submit" disabled={loading || uploading}
