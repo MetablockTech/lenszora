@@ -54,18 +54,15 @@ const SubBanners = ({ bannerType }: SubBannersProps) => {
           {banners.map((banner) => {
             const link = banner.buttonLink || "/shop";
             const isExternal = /^https?:\/\//.test(link);
-            const src = getImageUrl(banner.image);
-            // Fixed, short frame so any photo size stays a compact strip. The whole image is shown
-            // (object-contain) over a blurred copy of itself, so nothing is cropped and no bars appear.
-            const frameRatio = banners.length === 1 ? "aspect-[5/2] md:aspect-[5/1]" : "aspect-[2/1] md:aspect-[5/2]";
+            // Every sub banner uses a 5:2 frame (phone and desktop) and the image fills it edge to edge.
+            // Upload 5:2 images (e.g. 1500 × 600 px) so nothing important gets cropped.
             const card = (
-              <div className={`group relative ${frameRatio} overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 transition-colors hover:border-amber-400/50`}>
-                <img src={src} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-50" />
+              <div className="group relative aspect-[5/2] overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 transition-colors hover:border-amber-400/50">
                 <img
-                  src={src}
+                  src={getImageUrl(banner.image)}
                   alt={banner.title || "Offer"}
                   loading="lazy"
-                  className="relative h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                 />
               </div>
             );
