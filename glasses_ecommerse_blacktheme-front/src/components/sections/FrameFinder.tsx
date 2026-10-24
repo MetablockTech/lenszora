@@ -3,12 +3,11 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { eyewearAttributes, products as productsAPI } from "@/lib/api";
-import { getImageUrl } from "@/lib/utils";
+import { type FrameType, type Shape, normalizeShape as normalize, slugifyShape as slugify, getShapeImage } from "@/lib/frameShapes";
 
 // Guided frame finder: 1) who is it for (men / women / kids)  2) frame shape  3) shop results
 
 type Gender = "men" | "women" | "kids";
-type FrameType = "eyeglasses" | "sunglasses";
 
 const GENDERS: { key: Gender; label: string; image: string }[] = [
   { key: "men", label: "Men", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&auto=format&fit=crop&q=80" },
@@ -16,49 +15,6 @@ const GENDERS: { key: Gender; label: string; image: string }[] = [
   { key: "kids", label: "Kids", image: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=800&auto=format&fit=crop&q=80" },
 ];
 
-// Fallback photos per shape when the admin hasn't uploaded one
-const EYEGLASSES_SHAPE_IMAGES: Record<string, string> = {
-  aviator: "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80",
-  wayfarer: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
-  rectangle: "https://images.unsplash.com/photo-1589782182703-2aaa69037b5b?w=600&auto=format&fit=crop&q=80",
-  oval: "https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80",
-  round: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80",
-  "cat-eye": "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
-  cateye: "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
-  square: "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80",
-  geometric: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
-  clubmaster: "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
-  browline: "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
-  hexagonal: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
-};
-const SUNGLASSES_SHAPE_IMAGES: Record<string, string> = {
-  aviator: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
-  wayfarer: "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
-  rectangle: "https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80",
-  oval: "https://images.unsplash.com/photo-1589782182703-2aaa69037b5b?w=600&auto=format&fit=crop&q=80",
-  round: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80",
-  "cat-eye": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
-  cateye: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
-  square: "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80",
-  geometric: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
-  clubmaster: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
-  browline: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
-  hexagonal: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
-};
-const DEFAULT_SHAPE_IMAGE: Record<FrameType, string> = {
-  eyeglasses: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=600&auto=format&fit=crop&q=80",
-  sunglasses: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80",
-};
-
-interface Shape {
-  _id: string;
-  name: string;
-  image?: string;
-}
-
-// "Cat Eye", "cat-eye", "Cateye" -> "cateye" so admin shape names match product data
-const normalize = (s?: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-const slugify = (s: string) => s.toLowerCase().trim().replace(/\s+/g, "-");
 
 const FrameFinder = () => {
   const [shapes, setShapes] = useState<Shape[]>([]);
@@ -95,12 +51,7 @@ const FrameFinder = () => {
     return () => { cancelled = true; };
   }, [gender, frameType]);
 
-  const shapeImage = (shape: Shape) => {
-    const map = frameType === "sunglasses" ? SUNGLASSES_SHAPE_IMAGES : EYEGLASSES_SHAPE_IMAGES;
-    const mapped = map[slugify(shape.name)] || map[shape.name.toLowerCase().trim()];
-    if (frameType === "sunglasses") return mapped || (shape.image ? getImageUrl(shape.image) : DEFAULT_SHAPE_IMAGE.sunglasses);
-    return shape.image ? getImageUrl(shape.image) : mapped || DEFAULT_SHAPE_IMAGE.eyeglasses;
-  };
+  const shapeImage = (shape: Shape) => getShapeImage(shape, frameType);
 
   // Shapes that actually have products; if counting found none at all, show every shape
   const visibleShapes = useMemo(() => {

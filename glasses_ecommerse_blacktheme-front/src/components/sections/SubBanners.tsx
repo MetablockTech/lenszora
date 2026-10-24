@@ -54,13 +54,18 @@ const SubBanners = ({ bannerType }: SubBannersProps) => {
           {banners.map((banner) => {
             const link = banner.buttonLink || "/shop";
             const isExternal = /^https?:\/\//.test(link);
+            const src = getImageUrl(banner.image);
+            // Fixed, short frame so any photo size stays a compact strip. The whole image is shown
+            // (object-contain) over a blurred copy of itself, so nothing is cropped and no bars appear.
+            const frameRatio = banners.length === 1 ? "aspect-[5/2] md:aspect-[5/1]" : "aspect-[2/1] md:aspect-[5/2]";
             const card = (
-              <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 transition-colors hover:border-amber-400/50">
+              <div className={`group relative ${frameRatio} overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 transition-colors hover:border-amber-400/50`}>
+                <img src={src} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-50" />
                 <img
-                  src={getImageUrl(banner.image)}
+                  src={src}
                   alt={banner.title || "Offer"}
                   loading="lazy"
-                  className="block h-auto w-full transition-transform duration-500 group-hover:scale-[1.02]"
+                  className="relative h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
                 />
               </div>
             );

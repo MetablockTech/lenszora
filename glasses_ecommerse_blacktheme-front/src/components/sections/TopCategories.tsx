@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { categories as categoriesAPI, settings, API_URL } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
+import ShapePickerDialog from "@/components/modals/ShapePickerDialog";
+import type { FrameType } from "@/lib/frameShapes";
 
 interface NavItem {
   id: string;
@@ -135,8 +137,24 @@ const NAVIGATION_GROUPS: NavGroup[] = [
   }
 ];
 
+// Eyeglasses / sunglasses cards open a frame-shape picker before the shop; other cards link straight through
+function frameTypeForHref(href: string): FrameType | null {
+  const category = (new URLSearchParams(href.split("?")[1] || "").get("category") || "").toLowerCase();
+  if (category.includes("sunglass")) return "sunglasses";
+  if (category.includes("eyeglass")) return "eyeglasses";
+  return null;
+}
+
+function pickerTitle(item: NavItem, group: NavGroup) {
+  const label = item.label.trim();
+  if (/^(men|women)$/i.test(label)) return `${label}'s ${group.title}`;
+  if (/^kids$/i.test(label)) return `Kids' ${group.title}`;
+  return `${group.title} · ${label}`;
+}
+
 const TopCategories = () => {
   const [navGroups, setNavGroups] = useState<NavGroup[]>(NAVIGATION_GROUPS);
+  const [picker, setPicker] = useState<{ href: string; title: string; frameType: FrameType } | null>(null);
   const [dbCategories, setDbCategories] = useState<any[]>([]);
 
   useEffect(() => {
@@ -217,6 +235,13 @@ const TopCategories = () => {
                     <Link
                       key={item.id}
                       to={item.href}
+                      onClick={(e) => {
+                        const frameType = frameTypeForHref(item.href);
+                        // Ctrl/Cmd-click still opens the shop in a new tab
+                        if (!frameType || e.metaKey || e.ctrlKey || e.shiftKey) return;
+                        e.preventDefault();
+                        setPicker({ href: item.href, title: pickerTitle(item, group), frameType });
+                      }}
                       className="group flex flex-col items-center select-none"
                     >
                       {/* Image Container Card - Seamless fluid curve, no harsh box border */}
@@ -254,6 +279,16 @@ const TopCategories = () => {
           ))}
         </div>
       </div>
+
+      {picker && (
+        <ShapePickerDialog
+          open={!!picker}
+          onOpenChange={(open) => { if (!open) setPicker(null); }}
+          title={picker.title}
+          href={picker.href}
+          frameType={picker.frameType}
+        />
+      )}
     </section>
   );
 };
