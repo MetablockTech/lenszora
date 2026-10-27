@@ -15,6 +15,13 @@ import StoreVisitModal from "@/components/modals/StoreVisitModal";
 import LensSelectionModal from "@/components/product/LensSelectionModal";
 import ProductSlider from "@/components/sections/ProductSlider";
 
+// The live categories API can take several seconds; share one request across product pages
+let categoriesPromise: Promise<{ _id: string; name?: string; slug?: string; parentId?: string | { _id: string } | null }[]> | null = null;
+const loadCategories = () => {
+  categoriesPromise ||= categoriesAPI.list().catch((e: unknown) => { categoriesPromise = null; throw e; });
+  return categoriesPromise;
+};
+
 const ProductPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -263,7 +270,7 @@ const ProductPage = () => {
     setCategoryPath(own);
     if (!cat.parentId) return;
     let cancelled = false;
-    categoriesAPI.list()
+    loadCategories()
       .then((all: { _id: string; name?: string; slug?: string; parentId?: string | { _id: string } | null }[]) => {
         const byId = new Map(all.map((c) => [String(c._id), c]));
         const path = [...own];
@@ -965,6 +972,7 @@ const ProductPage = () => {
         product={product}
         framePrice={basePrice}
         hideFrameOnly={isContactLens}
+        contactLensMode={isContactLens}
         onSelect={(data) => {
           setSelectedLens(data);
           handleAddToCart(data, true);

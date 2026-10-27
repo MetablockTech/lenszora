@@ -1458,6 +1458,9 @@ const Checkout = () => {
         <LensSelectionModal
           isOpen={true}
           openPowerForm
+          // Contact lens power types use "cl-" ids; keep the edit flow on contact-lens options
+          contactLensMode={String(cart[editingIndex].lens?.typeId || cart[editingIndex].lens?.type?._id || '').startsWith('cl-')}
+          hideFrameOnly={String(cart[editingIndex].lens?.typeId || cart[editingIndex].lens?.type?._id || '').startsWith('cl-')}
           onClose={() => setEditingIndex(null)}
           product={{ 
              vendorId: cart[editingIndex].vendorId,

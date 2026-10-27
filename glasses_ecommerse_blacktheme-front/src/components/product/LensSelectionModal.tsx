@@ -18,9 +18,19 @@ interface LensSelectionModalProps {
     openPowerForm?: boolean;
     // Contact lenses: no "Frame Only" choice and no frame wording
     hideFrameOnly?: boolean;
+    // Contact lenses: offer contact-lens power types (distance / toric / multi-focal / zero) instead of spectacle lens types
+    contactLensMode?: boolean;
 }
 
-const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle, product, framePrice = 0, initialData, openPowerForm = false, hideFrameOnly = false }: LensSelectionModalProps) => {
+// Power types for contact lenses. No lens packages: choosing a type goes straight to power entry.
+const CONTACT_LENS_TYPES = [
+    { _id: 'cl-distance', key: 'cl-distance', name: 'Distance Power', description: 'Spherical lenses for near- or far-sightedness (− / + power)', allowPackages: false, badge: { text: 'Most common', bg: '#fff3cd', color: '#92400a' } },
+    { _id: 'cl-toric', key: 'cl-toric', name: 'Toric / Cylindrical', description: 'For astigmatism: power with cylinder (CYL) and axis', allowPackages: false, badge: null },
+    { _id: 'cl-multifocal', key: 'cl-multifocal', name: 'Multi-focal', description: 'Distance and reading power in one lens (ADD power)', allowPackages: false, badge: null },
+    { _id: 'cl-zero', key: 'cl-zero', name: 'Zero Power', description: 'No prescription, e.g. colour / cosmetic lenses', allowPackages: false, skipPowerEntry: true, badge: null },
+];
+
+const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle, product, framePrice = 0, initialData, openPowerForm = false, hideFrameOnly = false, contactLensMode = false }: LensSelectionModalProps) => {
     const isFrameOnlyType = (t: { key?: string; _id?: string; name?: string }) => t?.key === 'frame' || t?._id === 'frame' || String(t?.name || '').toLowerCase().includes('frame only');
     const baseLabel = hideFrameOnly ? 'Product' : 'Frame';
     const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -43,6 +53,7 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     const modalHistoryDepthRef = useRef<number>(0);
     const isPoppingHistoryRef = useRef<boolean>(false);
     const isClosingModalRef = useRef<boolean>(false);
+    const lensRequestRef = useRef<number>(0);
 
     const pushModalHistory = (targetStep: number, isFormOpen: boolean = false) => {
         if (isPoppingHistoryRef.current || isClosingModalRef.current) return;
@@ -134,6 +145,14 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
         }
     }, [isOpen, vendorId, product, initialData]);
 
+    // The product page may only learn it's a contact lens after the modal opened: swap the power types then
+    useEffect(() => {
+        if (!isOpen) return;
+        fetchLensData();
+        if (step === 1) setSelectedType(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [contactLensMode]);
+
     // Handle browser back button (popstate)
     useEffect(() => {
         if (!isOpen) return;
@@ -201,6 +220,14 @@ const DEFAULT_FALLBACK_PACKAGES = [
 ];
 
     async function fetchLensData() {
+        // A newer call (e.g. after switching to contact-lens mode) wins over a slower earlier one
+        const requestId = ++lensRequestRef.current;
+        if (contactLensMode) {
+            setLensTypes(CONTACT_LENS_TYPES);
+            setLensPackages([]);
+            setLoading(false);
+            return;
+        }
         try {
             setLoading(true);
             const productLensTypes = product?.lensSettings?.lensTypes || [];
@@ -250,11 +277,11 @@ const DEFAULT_FALLBACK_PACKAGES = [
                 });
 
                 if (enabledTypes.length > 0) {
-                    setLensTypes(enabledTypes);
-                    setLensPackages(allProductPackages.length > 0 ? allProductPackages : DEFAULT_FALLBACK_PACKAGES);
+                    if (requestId === lensRequestRef.current) setLensTypes(enabledTypes);
+                    if (requestId === lensRequestRef.current) setLensPackages(allProductPackages.length > 0 ? allProductPackages : DEFAULT_FALLBACK_PACKAGES);
                 } else {
-                    setLensTypes(DEFAULT_FALLBACK_TYPES);
-                    setLensPackages(DEFAULT_FALLBACK_PACKAGES);
+                    if (requestId === lensRequestRef.current) setLensTypes(DEFAULT_FALLBACK_TYPES);
+                    if (requestId === lensRequestRef.current) setLensPackages(DEFAULT_FALLBACK_PACKAGES);
                 }
             } else {
                 let types: any[] = [];
@@ -271,19 +298,19 @@ const DEFAULT_FALLBACK_PACKAGES = [
                 }
 
                 if (types.length > 0) {
-                    setLensTypes(types);
-                    setLensPackages(packages.length > 0 ? packages : DEFAULT_FALLBACK_PACKAGES);
+                    if (requestId === lensRequestRef.current) setLensTypes(types);
+                    if (requestId === lensRequestRef.current) setLensPackages(packages.length > 0 ? packages : DEFAULT_FALLBACK_PACKAGES);
                 } else {
-                    setLensTypes(DEFAULT_FALLBACK_TYPES);
-                    setLensPackages(DEFAULT_FALLBACK_PACKAGES);
+                    if (requestId === lensRequestRef.current) setLensTypes(DEFAULT_FALLBACK_TYPES);
+                    if (requestId === lensRequestRef.current) setLensPackages(DEFAULT_FALLBACK_PACKAGES);
                 }
             }
         } catch (error) {
             console.error("Failed to fetch lens data, using default fallbacks:", error);
-            setLensTypes(DEFAULT_FALLBACK_TYPES);
-            setLensPackages(DEFAULT_FALLBACK_PACKAGES);
+            if (requestId === lensRequestRef.current) setLensTypes(DEFAULT_FALLBACK_TYPES);
+            if (requestId === lensRequestRef.current) setLensPackages(DEFAULT_FALLBACK_PACKAGES);
         } finally {
-            setLoading(false);
+            if (requestId === lensRequestRef.current) setLoading(false);
         }
     }
 
@@ -297,7 +324,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
     const getStepTitle = () => {
         if (step === 2) return "Choose Lens Package";
         if (step === 3) return "Eye Power";
-        return "Select Lens Type";
+        return contactLensMode ? "Contact Lens Power" : "Select Lens Type";
     };
 
     const canContinue = () => {
@@ -323,7 +350,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
             if (powerOption === 'manual') return "Enter Power Values →";
             return "Select Power Option";
         }
-        if (isFrameOnly && step === 1) return "Confirm – Frame Only";
+        if (isFrameOnly && step === 1) return contactLensMode ? "Confirm – Zero Power" : "Confirm – Frame Only";
         return "Continue";
     };
 
@@ -393,6 +420,10 @@ const DEFAULT_FALLBACK_PACKAGES = [
                     prescription: null
                 });
             } else {
+                // Toric contact lenses need cylinder/axis: open the power form with those fields shown
+                if (type.key === 'cl-toric') {
+                    setPrescription((prev) => (prev ? { ...prev, hasCylindrical: true } : { hasCylindrical: true }));
+                }
                 // If it's a prescription lens but has no "Packages", we go directly to Step 3
                 setStep(3);
                 pushModalHistory(3, false);
@@ -637,7 +668,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
 
                         const steps = [
                             { n: 1, label: "Power Type" },
-                            { n: 2, label: "Lenses" },
+                            ...(contactLensMode ? [] : [{ n: 2, label: "Lenses" }]),
                             ...(!isPowerEntrySkipped ? [{ n: 3, label: "Add Power" }] : [])
                         ];
 
@@ -682,7 +713,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                             ) : lensTypes.length > 0 ? (
                                 <div className="space-y-3">
                                     {lensTypes.filter((type) => !(hideFrameOnly && isFrameOnlyType(type))).map((type) => {
-                                        const badge = getLensTypeBadge(type.name);
+                                        const badge = 'badge' in type ? type.badge : getLensTypeBadge(type.name);
                                         const svgKey = getLensTypeSVGKey(type.name);
                                         const bg = getLensTypeBg(type.name);
                                         const isSelected = selectedType?._id === type._id;
