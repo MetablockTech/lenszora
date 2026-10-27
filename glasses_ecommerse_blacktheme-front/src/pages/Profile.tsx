@@ -75,6 +75,26 @@ const formatPower = (key: EyeKey, value?: number) => {
 const inputClass = "w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary";
 const cardClass = "border border-border/30 rounded-xl p-6 bg-card shadow-md";
 
+// Scale a profile photo down to at most 800px on its longest side (JPEG) so any size can be uploaded.
+// Files the browser can't decode (e.g. some HEIC) are sent as they are.
+const shrinkPhoto = async (file: File): Promise<File> => {
+    if (file.size <= 500 * 1024 && file.type !== "image/heic") return file;
+    try {
+        const bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, 800 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        bitmap.close();
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+        if (!blob) return file;
+        return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+    } catch {
+        return file;
+    }
+};
+
 const Profile = () => {
     const navigate = useNavigate();
     const { wishlistItems } = useWishlist();
@@ -201,14 +221,11 @@ const Profile = () => {
         const file = e.target.files?.[0];
         e.target.value = "";
         if (!file || !profile) return;
-        if (file.size > 5 * 1024 * 1024) {
-            toast({ title: "Error", description: "Photo must be smaller than 5MB", variant: "destructive" });
-            return;
-        }
         try {
             setUploadingPhoto(true);
             const token = getToken();
-            const res = await products.uploadImage(file, "avatars", undefined, `user-${profile._id}`, token);
+            // No size limit for the customer: big photos are scaled down here before upload
+            const res = await products.uploadImage(await shrinkPhoto(file), "avatars", undefined, `user-${profile._id}`, token);
             await saveProfile({ avatar: res.url }, "Profile photo updated");
         } catch (error) {
             toast({

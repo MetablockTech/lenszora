@@ -54,10 +54,10 @@ const SubBanners = ({ bannerType }: SubBannersProps) => {
           {banners.map((banner) => {
             const link = banner.buttonLink || "/shop";
             const isExternal = /^https?:\/\//.test(link);
-            // Short strip: 4:1 on desktop, 3:1 on phones; the image fills it edge to edge.
-            // Upload 4:1 images (e.g. 1600 × 400 px) and keep text in the centre; phones trim a little from the sides.
+            // Short strip: 6:1 on desktop, 4:1 on phones; the image fills it edge to edge.
+            // Upload 6:1 images (e.g. 1800 × 300 px) and keep text in the centre; phones trim some of the sides.
             const card = (
-              <div className="group relative aspect-[3/1] md:aspect-[4/1] overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 transition-colors hover:border-amber-400/50">
+              <div className="group relative aspect-[4/1] md:aspect-[6/1] overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 transition-colors hover:border-amber-400/50">
                 <img
                   src={getImageUrl(banner.image)}
                   alt={banner.title || "Offer"}
