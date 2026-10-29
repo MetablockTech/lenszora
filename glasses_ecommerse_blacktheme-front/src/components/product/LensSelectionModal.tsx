@@ -27,7 +27,16 @@ const CONTACT_LENS_TYPES = [
     { _id: 'cl-distance', key: 'cl-distance', name: 'Distance Power', description: 'Spherical lenses for near- or far-sightedness (− / + power)', allowPackages: false, badge: { text: 'Most common', bg: '#fff3cd', color: '#92400a' } },
     { _id: 'cl-toric', key: 'cl-toric', name: 'Toric / Cylindrical', description: 'For astigmatism: power with cylinder (CYL) and axis', allowPackages: false, badge: null },
     { _id: 'cl-multifocal', key: 'cl-multifocal', name: 'Multi-focal', description: 'Distance and reading power in one lens (ADD power)', allowPackages: false, badge: null },
+    { _id: 'cl-all', key: 'cl-all', name: 'All Powers', description: 'Not sure of your lens type? Enter any power: SPH, CYL, axis and ADD', allowPackages: false, badge: null },
     { _id: 'cl-zero', key: 'cl-zero', name: 'Zero Power', description: 'No prescription, e.g. colour / cosmetic lenses', allowPackages: false, skipPowerEntry: true, badge: null },
+];
+
+// How often the contact lenses are replaced; asked before the power type
+const WEAR_DURATIONS = [
+    { key: 'monthly', label: 'Monthly', code: '1M', match: /month/ },
+    { key: 'daily', label: 'Dailies', code: '1D', match: /dail|\b1\s*day|one\s*day/ },
+    { key: 'biweekly', label: 'Bi-Weekly', code: '2W', match: /bi\s*-?\s*weekly|fortnight|2\s*weeks?/ },
+    { key: 'yearly', label: 'Yearly', code: '1Y', match: /year|annual/ },
 ];
 
 const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle, product, framePrice = 0, initialData, openPowerForm = false, hideFrameOnly = false, contactLensMode = false }: LensSelectionModalProps) => {
@@ -48,6 +57,15 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     const [uploadingPrescription, setUploadingPrescription] = useState(false);
     const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
     const [activePackageDetails, setActivePackageDetails] = useState<any>(null);
+    const [wearDuration, setWearDuration] = useState<string | null>(null);
+    const [durationMissing, setDurationMissing] = useState(false);
+
+    // Duration already picked for this cart item, else read from the product's title / category (e.g. "Monthly Disposable")
+    const getDefaultDuration = (): string | null => {
+        if (initialData?.type?.wearDuration) return initialData.type.wearDuration;
+        const text = [product?.title, product?.category?.name, product?.category?.slug].filter(Boolean).join(' ').toLowerCase().replace(/[-_]/g, ' ');
+        return WEAR_DURATIONS.find((d) => d.match.test(text))?.label || null;
+    };
 
     // Navigation & History Depth refs for seamless 1-step back support
     const modalHistoryDepthRef = useRef<number>(0);
@@ -92,6 +110,8 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     useEffect(() => {
         if (isOpen && (product || vendorId)) {
             fetchLensData();
+            setWearDuration(getDefaultDuration());
+            setDurationMissing(false);
             
             let initialStep: 1 | 2 | 3 = 1;
             if (initialData) {
@@ -392,7 +412,13 @@ const DEFAULT_FALLBACK_PACKAGES = [
         }
     }
 
-    const handleTypeSelect = (type: any) => {
+    const handleTypeSelect = (rawType: any) => {
+        // Contact lenses: the chosen duration travels with the type, so cart and order show e.g. "Toric / Cylindrical · Monthly"
+        if (contactLensMode && !wearDuration) {
+            setDurationMissing(true);
+            return;
+        }
+        const type = contactLensMode ? { ...rawType, wearDuration, name: `${rawType.name} · ${wearDuration}` } : rawType;
         setSelectedType(type);
         setSelectedPackage(null);
 
@@ -421,7 +447,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                 });
             } else {
                 // Toric contact lenses need cylinder/axis: open the power form with those fields shown
-                if (type.key === 'cl-toric') {
+                if (type.key === 'cl-toric' || type.key === 'cl-all') {
                     setPrescription((prev) => (prev ? { ...prev, hasCylindrical: true } : { hasCylindrical: true }));
                 }
                 // If it's a prescription lens but has no "Packages", we go directly to Step 3
@@ -702,6 +728,31 @@ const DEFAULT_FALLBACK_PACKAGES = [
                     {/* STEP 1: Power Type */}
                     {step === 1 && (
                         <div>
+                            {contactLensMode && (
+                                <div className="mb-6">
+                                    <h2 className="text-[.95rem] font-bold text-slate-900 mb-3">How often will you replace them?</h2>
+                                    <div className={`grid grid-cols-4 gap-2 rounded-xl ${durationMissing && !wearDuration ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
+                                        {WEAR_DURATIONS.map((d) => {
+                                            const active = wearDuration === d.label;
+                                            return (
+                                                <button
+                                                    key={d.key}
+                                                    type="button"
+                                                    onClick={() => { setWearDuration(d.label); setDurationMissing(false); setSelectedType(null); }}
+                                                    className={`flex flex-col items-center gap-1.5 rounded-xl border-[1.5px] bg-white px-1 py-3 transition-all ${active ? 'shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}
+                                                    style={{ borderColor: active ? '#00b9a8' : undefined, background: active ? '#f0fdfa' : undefined }}
+                                                >
+                                                    <span className={`flex h-8 w-9 items-center justify-center rounded-md border-[1.5px] text-[.7rem] font-extrabold ${active ? 'border-teal-600 text-teal-700' : 'border-slate-500 text-slate-700'}`}>{d.code}</span>
+                                                    <span className={`text-[.8rem] sm:text-[.85rem] font-bold ${active ? 'text-teal-700' : 'text-slate-700'}`}>{d.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {durationMissing && !wearDuration && (
+                                        <p className="mt-2 text-[.8rem] font-semibold text-red-600">Please choose how often you replace your lenses first.</p>
+                                    )}
+                                </div>
+                            )}
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-[.95rem] font-bold text-slate-900">Select your Power Type:</h2>
                             </div>
