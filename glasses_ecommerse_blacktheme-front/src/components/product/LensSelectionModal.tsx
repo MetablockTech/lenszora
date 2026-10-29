@@ -20,6 +20,8 @@ interface LensSelectionModalProps {
     hideFrameOnly?: boolean;
     // Contact lenses: offer contact-lens power types (distance / toric / multi-focal / zero) instead of spectacle lens types
     contactLensMode?: boolean;
+    // The page doesn't know yet whether this is a contact lens: show a loading state instead of the spectacle types
+    typesPending?: boolean;
 }
 
 // Power types for contact lenses. No lens packages: choosing a type goes straight to power entry.
@@ -39,7 +41,7 @@ const WEAR_DURATIONS = [
     { key: 'yearly', label: 'Yearly', code: '1Y', match: /year|annual/ },
 ];
 
-const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle, product, framePrice = 0, initialData, openPowerForm = false, hideFrameOnly = false, contactLensMode = false }: LensSelectionModalProps) => {
+const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle, product, framePrice = 0, initialData, openPowerForm = false, hideFrameOnly = false, contactLensMode = false, typesPending = false }: LensSelectionModalProps) => {
     const isFrameOnlyType = (t: { key?: string; _id?: string; name?: string }) => t?.key === 'frame' || t?._id === 'frame' || String(t?.name || '').toLowerCase().includes('frame only');
     const baseLabel = hideFrameOnly ? 'Product' : 'Frame';
     const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -757,7 +759,7 @@ const DEFAULT_FALLBACK_PACKAGES = [
                                 <h2 className="text-[.95rem] font-bold text-slate-900">Select your Power Type:</h2>
                             </div>
 
-                            {loading ? (
+                            {loading || typesPending ? (
                                 <div className="space-y-3">
                                     {[1, 2, 3].map(i => <div key={i} className="h-20 bg-slate-100 rounded-xl animate-pulse" />)}
                                 </div>

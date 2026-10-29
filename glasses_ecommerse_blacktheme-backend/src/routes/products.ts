@@ -302,7 +302,8 @@ router.get('/vendor/me', requireAuth, requireVendorOrAdmin, async (req: AuthRequ
 router.get('/:id', async (req, res) => {
   try {
     const p = await Product.findById(req.params.id)
-      .populate('category')
+      // Include the parent chain (sub → main) so the product page can tell e.g. contact lenses apart right away
+      .populate({ path: 'category', populate: { path: 'parentId', select: 'name slug parentId', populate: { path: 'parentId', select: 'name slug parentId' } } })
       .populate('brand')
       .populate('vendorId')
       .populate('lensSettings.lensTypes.lensTypeId')

@@ -16,9 +16,23 @@ import LensSelectionModal from "@/components/product/LensSelectionModal";
 import ProductSlider from "@/components/sections/ProductSlider";
 
 // The live categories API can take several seconds; share one request across product pages
-let categoriesPromise: Promise<{ _id: string; name?: string; slug?: string; parentId?: string | { _id: string } | null }[]> | null = null;
+// and keep a slim copy (id, name, slug, parent) for the browser session
+type CategoryLite = { _id: string; name?: string; slug?: string; parentId?: string | { _id: string } | null };
+const CATEGORIES_CACHE_KEY = 'lz_category_tree_v1';
+let categoriesPromise: Promise<CategoryLite[]> | null = null;
 const loadCategories = () => {
-  categoriesPromise ||= categoriesAPI.list().catch((e: unknown) => { categoriesPromise = null; throw e; });
+  if (categoriesPromise) return categoriesPromise;
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(CATEGORIES_CACHE_KEY) || 'null');
+    if (Array.isArray(cached) && cached.length > 0) return (categoriesPromise = Promise.resolve(cached));
+  } catch { /* storage unavailable */ }
+  categoriesPromise = categoriesAPI.list()
+    .then((all: CategoryLite[]) => {
+      const slim = all.map((c) => ({ _id: c._id, name: c.name, slug: c.slug, parentId: typeof c.parentId === 'object' ? c.parentId?._id || null : c.parentId }));
+      try { sessionStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(slim)); } catch { /* storage full or blocked */ }
+      return slim;
+    })
+    .catch((e: unknown) => { categoriesPromise = null; throw e; });
   return categoriesPromise;
 };
 
@@ -260,21 +274,35 @@ const ProductPage = () => {
 
   // Names/slugs of the product's category and all its parents (used to detect contact lenses)
   const [categoryPath, setCategoryPath] = useState<string[]>([]);
+  // False while the parent categories are still loading, i.e. we don't yet know if this is a contact lens
+  const [categoryPathReady, setCategoryPathReady] = useState(false);
   useEffect(() => {
     const cat = product?.category;
     if (!cat || typeof cat !== 'object') {
       setCategoryPath([]);
+      setCategoryPathReady(!!product);
       return;
     }
-    const own = [cat.name, cat.slug].filter(Boolean);
+    // The product API sends the parent chain populated (category → parent → grandparent); use it when complete
+    let own = [cat.name, cat.slug];
+    let node = cat;
+    while (node?.parentId && typeof node.parentId === 'object' && node.parentId.name) {
+      node = node.parentId;
+      own = [...own, node.name, node.slug];
+    }
+    own = own.filter(Boolean);
     setCategoryPath(own);
-    if (!cat.parentId) return;
+    if (!node?.parentId) {
+      setCategoryPathReady(true);
+      return;
+    }
+    setCategoryPathReady(false);
     let cancelled = false;
     loadCategories()
-      .then((all: { _id: string; name?: string; slug?: string; parentId?: string | { _id: string } | null }[]) => {
+      .then((all: CategoryLite[]) => {
         const byId = new Map(all.map((c) => [String(c._id), c]));
         const path = [...own];
-        let parentId = cat.parentId?._id || cat.parentId;
+        let parentId = node.parentId?._id || node.parentId;
         for (let depth = 0; parentId && depth < 5; depth++) {
           const parent = byId.get(String(parentId));
           if (!parent) break;
@@ -283,9 +311,10 @@ const ProductPage = () => {
         }
         if (!cancelled) setCategoryPath(path.filter(Boolean));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setCategoryPathReady(true); });
     return () => { cancelled = true; };
-  }, [product?.category]);
+  }, [product, product?.category]);
 
   if (loading) {
     return (
@@ -973,6 +1002,7 @@ const ProductPage = () => {
         framePrice={basePrice}
         hideFrameOnly={isContactLens}
         contactLensMode={isContactLens}
+        typesPending={!isContactLens && !categoryPathReady}
         onSelect={(data) => {
           setSelectedLens(data);
           handleAddToCart(data, true);
