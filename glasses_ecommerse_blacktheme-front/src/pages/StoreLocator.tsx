@@ -328,7 +328,7 @@ const StoreLocator = () => {
                     }`}
                 >
                   <div className="flex p-4 gap-4">
-                    <div className="relative w-[140px] md:w-[160px] self-stretch bg-[#0C1B3A] rounded-xl overflow-hidden grow-0 shrink-0 shadow-inner">
+                    <div className="relative w-[120px] md:w-[160px] aspect-square self-start bg-[#0C1B3A] rounded-xl overflow-hidden grow-0 shrink-0 shadow-inner">
                       {store.images?.[0] ? (
                         <img src={getImageUrl(store.images[0])} alt={store.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                       ) : (

@@ -23,6 +23,7 @@ const Index = () => {
         <SubBanners bannerType="Hero Sub Banner" />
         <TopCategories />
         <OfferBanner />
+        <SubBanners bannerType="Footer Sub Banner" />
         <FrameFinder />
         <TrendingBanners />
         <BrandHorizontalSlider />
@@ -36,7 +37,6 @@ const Index = () => {
         <Testimonials />
         <FAQSection />
         <TrustSection />
-        <SubBanners bannerType="Footer Sub Banner" />
       </main>
       <Footer />
     </div>

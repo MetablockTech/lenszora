@@ -138,7 +138,7 @@ const BrandHorizontalSlider = () => {
   }
 
   if (loading) {
-    return <div className="w-full h-[320px] sm:h-[400px] bg-slate-900 animate-pulse my-4 sm:my-6"></div>;
+    return <div className="w-full h-[260px] sm:h-[320px] md:h-[380px] lg:h-[420px] bg-slate-900 animate-pulse my-4 sm:my-6"></div>;
   }
 
   return (
@@ -150,7 +150,7 @@ const BrandHorizontalSlider = () => {
             {slides.map((slide) => (
               <div
                 key={slide._id}
-                className="embla__slide flex-[0_0_100%] min-w-0 relative h-[340px] sm:h-[400px] md:h-[480px] lg:h-[540px] group/slide"
+                className="embla__slide flex-[0_0_100%] min-w-0 relative h-[260px] sm:h-[320px] md:h-[380px] lg:h-[420px] group/slide"
               >
                 {/* Full Width Edge-to-Edge Background Banner Image */}
                 <img

@@ -47,7 +47,7 @@ const OfferBanner = () => {
         <img 
           src={imageUrl} 
           alt={activeBanner.title || "Offer Banner"}
-          className="w-full h-auto block rounded-2xl transition-transform duration-500 group-hover:scale-[1.005]"
+          className="w-full aspect-[2/1] md:aspect-[4/1] object-cover object-center block rounded-2xl transition-transform duration-500 group-hover:scale-[1.005]"
         />
       ) : (
         /* Fallback Offer Banner Card */

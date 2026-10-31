@@ -141,7 +141,7 @@ const TrendingBanners = () => {
         <div className="h-8 bg-slate-800 animate-pulse rounded w-64 mb-6"></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-[380px] bg-slate-900 animate-pulse rounded-[2rem]"></div>
+            <div key={i} className="h-[300px] sm:h-[320px] md:h-[340px] bg-slate-900 animate-pulse rounded-[2rem]"></div>
           ))}
         </div>
       </div>
@@ -185,11 +185,11 @@ const TrendingBanners = () => {
             {items.map((item) => (
               <div
                 key={item._id}
-                className="embla__slide flex-[0_0_82%] sm:flex-[0_0_46%] md:flex-[0_0_32%] lg:flex-[0_0_24%] min-w-0"
+                className="embla__slide flex-[0_0_68%] sm:flex-[0_0_38%] md:flex-[0_0_28%] lg:flex-[0_0_20%] min-w-0"
               >
                 <Link
                   to={item.link}
-                  className="group relative block h-[380px] sm:h-[400px] md:h-[420px] rounded-[2rem] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] bg-slate-950 border border-slate-800"
+                  className="group relative block h-[300px] sm:h-[320px] md:h-[340px] rounded-[2rem] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] bg-slate-950 border border-slate-800"
                 >
                   {/* Background Image */}
                   <img

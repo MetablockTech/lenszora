@@ -1,9 +1,16 @@
-import { Link, useLocation } from "react-router-dom";
-import { Home, MapPin, Eye, ShoppingBag, Sparkles, Scan } from "lucide-react";
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Home, MapPin, Eye, ShoppingBag, Sparkles, Scan, Store, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
+import HomeEyeTestModal from "@/components/modals/HomeEyeTestModal";
 
 const MobileBottomNav = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  // Eye Test asks where: at a store or at home
+  const [eyeTestChoiceOpen, setEyeTestChoiceOpen] = useState(false);
+  const [homeTestOpen, setHomeTestOpen] = useState(false);
 
   // Hide on admin routes or vendor routes
   if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/vendor')) {
@@ -62,6 +69,20 @@ const MobileBottomNav = () => {
           const Icon = item.icon;
           const active = item.isActive;
 
+          if (item.id === "eyetest") {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setEyeTestChoiceOpen(true)}
+                className="relative flex-1 flex flex-col items-center justify-center h-full py-1 transition-all duration-200 group text-center select-none text-slate-400 hover:text-slate-200"
+              >
+                <Icon className="h-5 w-5 mb-1 transition-transform group-active:scale-90 text-slate-400" />
+                <span className="text-[10px] leading-tight tracking-tight uppercase font-medium truncate max-w-[56px]">{item.label}</span>
+              </button>
+            );
+          }
+
           return (
             <Link
               key={item.id}
@@ -84,6 +105,39 @@ const MobileBottomNav = () => {
           );
         })}
       </nav>
+
+      <Drawer open={eyeTestChoiceOpen} onOpenChange={setEyeTestChoiceOpen}>
+        <DrawerContent className="border-white/10 bg-[#111112] text-white">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="font-playfair text-xl text-white">Book an Eye Test</DrawerTitle>
+            <DrawerDescription className="text-slate-400">Where would you like your eye test?</DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-3 px-4 pb-8">
+            {[
+              { key: "store", icon: Store, title: "At a Store", desc: "Free eye test at your nearest LensZora store", onClick: () => { setEyeTestChoiceOpen(false); navigate("/store-locator"); } },
+              { key: "home", icon: Home, title: "At Home", desc: "A certified optometrist visits your home", onClick: () => { setEyeTestChoiceOpen(false); setHomeTestOpen(true); } },
+            ].map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={opt.onClick}
+                className="flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-colors hover:border-amber-400/50"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-400">
+                  <opt.icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold text-white">{opt.title}</span>
+                  <span className="block text-xs text-slate-400">{opt.desc}</span>
+                </span>
+                <ChevronRight className="h-5 w-5 text-amber-400" />
+              </button>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <HomeEyeTestModal isOpen={homeTestOpen} onClose={() => setHomeTestOpen(false)} />
     </div>
   );
 };
