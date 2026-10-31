@@ -222,24 +222,9 @@ const DEFAULT_FALLBACK_TYPES = [
     { _id: 'frame', key: 'frame', name: 'Frame Only', description: 'With no lenses', allowPackages: false, skipPowerEntry: true }
 ];
 
-const DEFAULT_FALLBACK_PACKAGES = [
-    // Packages for 'with' (With Power)
-    { _id: 'pkg-with-1', lensTypeId: 'with', name: 'Standard Anti-Glare Lens', price: 499, originalPrice: 999, description: 'Anti-reflective coating, Scratch resistant', warranty: '6 Months' },
-    { _id: 'pkg-with-2', lensTypeId: 'with', name: 'Blu Cut Screen Protect Lens', price: 999, originalPrice: 1999, description: 'Blue light filter, UV400 Protection, Anti-glare', warranty: '1 Year' },
-    { _id: 'pkg-with-3', lensTypeId: 'with', name: 'Ultra Thin HD Anti-Reflective Lens', price: 1499, originalPrice: 2999, description: 'Super hydrophobic, Ultra lightweight 1.61 index', warranty: '1 Year' },
-
-    // Packages for 'zero' (Zero Power)
-    { _id: 'pkg-zero-1', lensTypeId: 'zero', name: 'Blu Cut Computer Screen Glasses', price: 499, originalPrice: 999, description: 'Blocks harmful digital screen blue light', warranty: '6 Months' },
-    { _id: 'pkg-zero-2', lensTypeId: 'zero', name: 'Premium Anti-Glare Zero Power Lens', price: 899, originalPrice: 1499, description: 'Dust & smudge resistant, Zero distortion view', warranty: '1 Year' },
-
-    // Packages for 'reading' (Reading Power)
-    { _id: 'pkg-reading-1', lensTypeId: 'reading', name: 'Standard Reading Lens', price: 399, originalPrice: 799, description: 'Near vision reading clarity', warranty: '6 Months' },
-    { _id: 'pkg-reading-2', lensTypeId: 'reading', name: 'Anti-Glare Reading Lens', price: 799, originalPrice: 1299, description: 'Anti-reflective near vision reading lens', warranty: '1 Year' },
-
-    // Packages for 'progressive' (Progressive / Bifocal)
-    { _id: 'pkg-prog-1', lensTypeId: 'progressive', name: 'Standard Bifocal Lens (Kryptok)', price: 1299, originalPrice: 2499, description: 'Distance & near vision dual segment', warranty: '6 Months' },
-    { _id: 'pkg-prog-2', lensTypeId: 'progressive', name: 'No-Line Seamless Progressive Lens', price: 2499, originalPrice: 4999, description: 'Smooth transition, wide corridor digital progressive', warranty: '1 Year' }
-];
+// Admin types never include "Frame Only"; offer it next to them (hidden for contact lenses)
+const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(types: T[]) =>
+    types.some((t) => isFrameOnlyType(t)) ? types : [...types, DEFAULT_FALLBACK_TYPES[DEFAULT_FALLBACK_TYPES.length - 1]];
 
     async function fetchLensData() {
         // A newer call (e.g. after switching to contact-lens mode) wins over a slower earlier one
@@ -299,38 +284,45 @@ const DEFAULT_FALLBACK_PACKAGES = [
                 });
 
                 if (enabledTypes.length > 0) {
-                    if (requestId === lensRequestRef.current) setLensTypes(enabledTypes);
-                    if (requestId === lensRequestRef.current) setLensPackages(allProductPackages.length > 0 ? allProductPackages : DEFAULT_FALLBACK_PACKAGES);
+                    if (requestId === lensRequestRef.current) setLensTypes(withFrameOnly(enabledTypes));
+                    if (requestId === lensRequestRef.current) setLensPackages(allProductPackages);
                 } else {
                     if (requestId === lensRequestRef.current) setLensTypes(DEFAULT_FALLBACK_TYPES);
-                    if (requestId === lensRequestRef.current) setLensPackages(DEFAULT_FALLBACK_PACKAGES);
+                    if (requestId === lensRequestRef.current) setLensPackages([]);
                 }
             } else {
                 let types: any[] = [];
                 let packages: any[] = [];
                 try {
-                    const data = await lens.getPublic(vendorId);
-                    types = (data.types || []).map((t: any) => ({
-                        ...t,
-                        skipPowerEntry: t.skipPowerEntry === true
-                    }));
-                    packages = data.packages || [];
+                    // Platform lens types (Admin → Lens) plus the vendor's own ones
+                    const [globalData, vendorData] = await Promise.all([
+                        lens.getPublic(),
+                        vendorId ? lens.getPublic(vendorId).catch(() => null) : Promise.resolve(null),
+                    ]);
+                    const seen = new Set<string>();
+                    types = [...(vendorData?.types || []), ...(globalData?.types || [])]
+                        .filter((t: { _id: string }) => !seen.has(String(t._id)) && seen.add(String(t._id)))
+                        .map((t: any) => ({
+                            ...t,
+                            skipPowerEntry: t.skipPowerEntry === true
+                        }));
+                    packages = [...(vendorData?.packages || []), ...(globalData?.packages || [])];
                 } catch (e) {
                     console.warn("Public lens fetch error, using fallback defaults", e);
                 }
 
                 if (types.length > 0) {
-                    if (requestId === lensRequestRef.current) setLensTypes(types);
-                    if (requestId === lensRequestRef.current) setLensPackages(packages.length > 0 ? packages : DEFAULT_FALLBACK_PACKAGES);
+                    if (requestId === lensRequestRef.current) setLensTypes(withFrameOnly(types));
+                    if (requestId === lensRequestRef.current) setLensPackages(packages);
                 } else {
                     if (requestId === lensRequestRef.current) setLensTypes(DEFAULT_FALLBACK_TYPES);
-                    if (requestId === lensRequestRef.current) setLensPackages(DEFAULT_FALLBACK_PACKAGES);
+                    if (requestId === lensRequestRef.current) setLensPackages([]);
                 }
             }
         } catch (error) {
             console.error("Failed to fetch lens data, using default fallbacks:", error);
             if (requestId === lensRequestRef.current) setLensTypes(DEFAULT_FALLBACK_TYPES);
-            if (requestId === lensRequestRef.current) setLensPackages(DEFAULT_FALLBACK_PACKAGES);
+            if (requestId === lensRequestRef.current) setLensPackages([]);
         } finally {
             if (requestId === lensRequestRef.current) setLoading(false);
         }
