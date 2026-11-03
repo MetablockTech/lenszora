@@ -52,6 +52,7 @@ import HomepageCategoriesPage from "./pages/admin/HomepageCategories";
 import AdminStores from "./pages/admin/Stores";
 import AppointmentsPage from "./pages/admin/Appointments";
 import StoreLocator from "./pages/StoreLocator";
+import BookEyeTest from "./pages/BookEyeTest";
 import MyStoreVisits from "./pages/MyStoreVisits";
 import VendorStoreVisits from "./pages/vendor/StoreVisits";
 import AdminStoreVisits from "./pages/admin/StoreVisits";
@@ -115,6 +116,7 @@ const AppContent = () => {
         <Route path="/" element={<Index />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/store-locator" element={<StoreLocator />} />
+        <Route path="/eye-test" element={<BookEyeTest />} />
       <Route path="/brands" element={<BrandsPage />} />
       <Route path="/category/:slug" element={<CategoryPage />} />
       <Route path="/product/:id" element={<ProductPage />} />

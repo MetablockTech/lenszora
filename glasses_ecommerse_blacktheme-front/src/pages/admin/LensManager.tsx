@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Check, X, Trash2, Package, Layers, Image as ImageIcon, ShieldCheck, ShieldAlert } from 'lucide-react';
-import { lens, API_URL, products } from '@/lib/api';
+import { lens, API_URL, products, settings } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+// Lens categories group lens types in the storefront popup (category → lens type → package).
+// Stored in the "lens_categories" setting; a lens type points to one through its categoryKey.
+interface LensCategory {
+    key: string;
+    name: string;
+    description?: string;
+}
+
+const slugify = (name: string) => name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 const LensManager: React.FC = () => {
     const [types, setTypes] = useState<any[]>([]);
@@ -17,8 +27,12 @@ const LensManager: React.FC = () => {
         imageUrl: '', 
         isActive: true,
         allowPackages: true,
-        skipPowerEntry: false
+        skipPowerEntry: false,
+        categoryKey: ''
     });
+    const [categories, setCategories] = useState<LensCategory[]>([]);
+    const [catForm, setCatForm] = useState<LensCategory & { editingKey: string | null }>({ key: '', name: '', description: '', editingKey: null });
+    const [savingCats, setSavingCats] = useState(false);
     const [pendingTypeImage, setPendingTypeImage] = useState<File | null>(null);
 
     const token = localStorage.getItem('token') || '';
@@ -30,8 +44,12 @@ const LensManager: React.FC = () => {
     const loadData = async () => {
         try {
             setLoading(true);
-            const typesData = await lens.listTypes(token);
+            const [typesData, catSetting] = await Promise.all([
+                lens.listTypes(token),
+                settings.get('lens_categories').catch(() => null),
+            ]);
             setTypes(typesData);
+            setCategories(Array.isArray(catSetting?.value) ? catSetting.value : []);
         } catch (error) {
             toast({ title: "Error", description: "Failed to load lens data", variant: "destructive" });
         } finally {
@@ -80,6 +98,57 @@ const LensManager: React.FC = () => {
         }
     };
 
+    const saveCategories = async (next: LensCategory[]) => {
+        try {
+            setSavingCats(true);
+            await settings.update('lens_categories', { value: next, category: 'lens', description: 'Lens categories shown before lens types in the lens popup' }, token);
+            setCategories(next);
+            return true;
+        } catch (error) {
+            toast({ title: "Error", description: (error as Error).message || "Failed to save categories", variant: "destructive" });
+            return false;
+        } finally {
+            setSavingCats(false);
+        }
+    };
+
+    const handleSaveCategory = async () => {
+        const name = catForm.name.trim();
+        if (!name) {
+            toast({ title: "Validation Error", description: "Category name is required", variant: "destructive" });
+            return;
+        }
+        let next: LensCategory[];
+        if (catForm.editingKey) {
+            // Keep the key so lens types stay linked when a category is renamed
+            next = categories.map((c) => c.key === catForm.editingKey ? { ...c, name, description: catForm.description?.trim() } : c);
+        } else {
+            let key = slugify(name) || `cat-${Date.now()}`;
+            if (categories.some((c) => c.key === key)) key = `${key}-${Date.now().toString(36)}`;
+            next = [...categories, { key, name, description: catForm.description?.trim() }];
+        }
+        if (await saveCategories(next)) {
+            toast({ title: "Success", description: catForm.editingKey ? "Category updated" : "Category added" });
+            setCatForm({ key: '', name: '', description: '', editingKey: null });
+        }
+    };
+
+    const handleDeleteCategory = async (key: string) => {
+        const used = types.filter((t) => t.categoryKey === key).length;
+        if (!window.confirm(used ? `${used} lens type(s) use this category. They will show without a category. Delete it?` : "Delete this category?")) return;
+        if (await saveCategories(categories.filter((c) => c.key !== key))) {
+            toast({ title: "Success", description: "Category deleted" });
+        }
+    };
+
+    const moveCategory = (index: number, dir: -1 | 1) => {
+        const next = [...categories];
+        const target = index + dir;
+        if (target < 0 || target >= next.length) return;
+        [next[index], next[target]] = [next[target], next[index]];
+        saveCategories(next);
+    };
+
     const startEditing = (type: any) => {
         setIsEditingType(type._id);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -90,7 +159,8 @@ const LensManager: React.FC = () => {
             imageUrl: type.imageUrl || '',
             isActive: type.isActive !== false,
             allowPackages: type.allowPackages !== false,
-            skipPowerEntry: type.skipPowerEntry === true
+            skipPowerEntry: type.skipPowerEntry === true,
+            categoryKey: type.categoryKey || ''
         });
         setPendingTypeImage(null);
     };
@@ -113,7 +183,7 @@ const LensManager: React.FC = () => {
                     onClick={() => {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                         setIsEditingType('new');
-                        setTypeForm({ name: '', subtitle: '', description: '', imageUrl: '', isActive: true, allowPackages: true, skipPowerEntry: false });
+                        setTypeForm({ name: '', subtitle: '', description: '', imageUrl: '', isActive: true, allowPackages: true, skipPowerEntry: false, categoryKey: '' });
                         setPendingTypeImage(null);
                     }}
                     className="bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-bold text-sm"
@@ -145,6 +215,18 @@ const LensManager: React.FC = () => {
                                         onChange={e => setTypeForm({ ...typeForm, name: e.target.value })}
                                         className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Lens Category</label>
+                                    <select
+                                        value={typeForm.categoryKey}
+                                        onChange={e => setTypeForm({ ...typeForm, categoryKey: e.target.value })}
+                                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    >
+                                        <option value="">No category (shown directly)</option>
+                                        {categories.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
+                                    </select>
+                                    <p className="text-[11px] text-slate-400 ml-1">Customers pick the category first, then this lens type. Manage categories below.</p>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold uppercase text-slate-500 ml-1">Subtitle / Badge</label>
@@ -263,6 +345,60 @@ const LensManager: React.FC = () => {
                     </div>
                 )}
 
+                {/* LENS CATEGORIES */}
+                <div className="bg-white p-5 border border-slate-200 rounded-2xl space-y-4">
+                    <div>
+                        <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2"><Layers className="w-5 h-5 text-blue-600" /> Lens Categories</h2>
+                        <p className="text-sm text-slate-500">e.g. Single Vision, Progressive, Zero Power. Customers choose a category first, then a lens type inside it.</p>
+                    </div>
+
+                    {categories.length > 0 && (
+                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-100">
+                            {categories.map((c, i) => (
+                                <div key={c.key} className="flex items-center justify-between gap-3 p-3">
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-slate-900">{c.name} <span className="ml-1 text-xs font-medium text-slate-400">{types.filter((t) => t.categoryKey === c.key).length} lens type(s)</span></p>
+                                        {c.description && <p className="text-xs text-slate-500 truncate">{c.description}</p>}
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <button disabled={i === 0 || savingCats} onClick={() => moveCategory(i, -1)} className="px-2 py-1 text-slate-400 hover:text-slate-700 disabled:opacity-30" title="Move up">↑</button>
+                                        <button disabled={i === categories.length - 1 || savingCats} onClick={() => moveCategory(i, 1)} className="px-2 py-1 text-slate-400 hover:text-slate-700 disabled:opacity-30" title="Move down">↓</button>
+                                        <button onClick={() => setCatForm({ key: c.key, name: c.name, description: c.description || '', editingKey: c.key })} className="p-2 text-slate-400 hover:text-blue-600" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                                        <button onClick={() => handleDeleteCategory(c.key)} className="p-2 text-slate-300 hover:text-red-500" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="flex flex-col md:flex-row gap-3">
+                        <input
+                            placeholder="Category name, e.g. Progressive"
+                            value={catForm.name}
+                            onChange={e => setCatForm({ ...catForm, name: e.target.value })}
+                            className="flex-1 bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                        <input
+                            placeholder="Short description (optional)"
+                            value={catForm.description}
+                            onChange={e => setCatForm({ ...catForm, description: e.target.value })}
+                            className="flex-[1.5] bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                        <div className="flex gap-2">
+                            {catForm.editingKey && (
+                                <button onClick={() => setCatForm({ key: '', name: '', description: '', editingKey: null })} className="px-4 py-3 rounded-xl text-slate-600 font-bold hover:bg-slate-100">Cancel</button>
+                            )}
+                            <button
+                                onClick={handleSaveCategory}
+                                disabled={savingCats}
+                                className="bg-blue-600 text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2"
+                            >
+                                {catForm.editingKey ? <><Check className="w-4 h-4" /> Save</> : <><Plus className="w-4 h-4" /> Add Category</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* LIST VIEW */}
                 <div className="grid gap-4">
                     {types.length === 0 ? (
@@ -291,6 +427,11 @@ const LensManager: React.FC = () => {
                                         <div className="flex items-center gap-3">
                                             <h3 className="font-extrabold text-xl text-slate-900 leading-none">{type.name}</h3>
                                             <div className="flex gap-1.5 Items-center">
+                                                {type.categoryKey && (
+                                                    <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-lg font-bold uppercase tracking-wider">
+                                                        {categories.find((c) => c.key === type.categoryKey)?.name || 'Unknown category'}
+                                                    </span>
+                                                )}
                                                 {!type.isActive && <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-lg font-bold uppercase tracking-wider">Inactive</span>}
                                                 {type.allowPackages === false && (
                                                     <span className="flex items-center gap-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg font-bold uppercase tracking-wider">

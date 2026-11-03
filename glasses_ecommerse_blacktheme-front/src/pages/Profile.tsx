@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { User, Phone, Mail, Calendar, Gift, ShoppingBag, MapPin, Heart, Edit, Copy, Check, X, Camera, Eye, Users, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { users, orders, addresses, products, getToken, getUser, setUser } from "@/lib/api";
+import { users, orders, addresses, products, referrals, getToken, getUser, setUser } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
 import { useNavigate, Link } from "react-router-dom";
 import { useWishlist } from "@/context/WishlistContext";
@@ -93,6 +93,25 @@ const shrinkPhoto = async (file: File): Promise<File> => {
     } catch {
         return file;
     }
+};
+
+interface RewardCoupon {
+    _id: string;
+    code: string;
+    discountType: "flat" | "percent";
+    discountValue: number;
+    minOrderAmount?: number;
+    expiryDate?: string;
+    timesUsed?: number;
+    usageLimit?: number;
+    isActive?: boolean;
+}
+
+const rewardStatus = (c: RewardCoupon) => {
+    if ((c.timesUsed || 0) >= (c.usageLimit || 1)) return { label: "Used", className: "bg-muted text-muted-foreground" };
+    if (c.expiryDate && new Date(c.expiryDate) < new Date()) return { label: "Expired", className: "bg-red-500/10 text-red-400" };
+    if (c.isActive === false) return { label: "Inactive", className: "bg-muted text-muted-foreground" };
+    return { label: "Available", className: "bg-emerald-500/10 text-emerald-400" };
 };
 
 const Profile = () => {
@@ -242,6 +261,27 @@ const Profile = () => {
 
     const updateEye = (eye: "right" | "left", key: EyeKey, value: string) => {
         setPrescriptionForm((prev) => ({ ...prev, [eye]: { ...prev[eye], [key]: value } }));
+    };
+
+    // Referral reward coupons earned when referred friends place their first order
+    const [rewardCoupons, setRewardCoupons] = useState<RewardCoupon[] | null>(null);
+    const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
+    const hasProfile = !!profile;
+    useEffect(() => {
+        if (!hasProfile) return;
+        referrals.getMyInfo(getToken() || undefined)
+            .then((data: { earnedCoupons?: RewardCoupon[] }) => setRewardCoupons(data.earnedCoupons || []))
+            .catch(() => setRewardCoupons([]));
+    }, [hasProfile]);
+
+    const copyCoupon = async (code: string) => {
+        try {
+            await navigator.clipboard.writeText(code);
+            setCopiedCoupon(code);
+            setTimeout(() => setCopiedCoupon(null), 2000);
+        } catch {
+            toast({ title: "Copy failed", description: code });
+        }
     };
 
     const copyReferralCode = async () => {
@@ -656,6 +696,53 @@ const Profile = () => {
                                     )}
                                 </div>
                             )}
+
+                            {/* My Rewards: referral coupons */}
+                            <div className={cardClass}>
+                                <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
+                                    <Gift className="h-5 w-5 text-primary" /> My Rewards
+                                </h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Coupons you earn when a friend you referred places their first order. Apply them at checkout.
+                                </p>
+                                {rewardCoupons === null ? (
+                                    <div className="h-16 rounded-lg bg-muted/30 animate-pulse" />
+                                ) : rewardCoupons.length === 0 ? (
+                                    <div className="rounded-lg border border-dashed border-border/50 p-4 text-center text-sm text-muted-foreground">
+                                        No rewards yet. Share your referral code; when a friend places their first order, your coupon shows up here.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2.5">
+                                        {rewardCoupons.map((c) => {
+                                            const status = rewardStatus(c);
+                                            const usable = status.label === "Available";
+                                            return (
+                                                <div key={c._id} className={`flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background p-3 ${usable ? "" : "opacity-60"}`}>
+                                                    <div className="min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className="font-mono font-bold tracking-wider text-primary">{c.code}</span>
+                                                            <span className="rounded bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+                                                                {c.discountType === "flat" ? `₹${c.discountValue} OFF` : `${c.discountValue}% OFF`}
+                                                            </span>
+                                                            <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>{status.label}</span>
+                                                        </div>
+                                                        <p className="mt-1 text-xs text-muted-foreground">
+                                                            {c.minOrderAmount ? `Min order ₹${c.minOrderAmount}` : "No minimum order"}
+                                                            {c.expiryDate && ` · ${status.label === "Expired" ? "Expired" : "Valid till"} ${new Date(c.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`}
+                                                        </p>
+                                                    </div>
+                                                    {usable && (
+                                                        <button onClick={() => copyCoupon(c.code)} className="flex shrink-0 items-center gap-1.5 text-sm text-primary hover:underline">
+                                                            {copiedCoupon === c.code ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                                            {copiedCoupon === c.code ? "Copied" : "Copy"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>

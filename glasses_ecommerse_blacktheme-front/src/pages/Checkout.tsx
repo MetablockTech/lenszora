@@ -81,7 +81,8 @@ const Checkout = () => {
       try {
         const { coupons } = await import('@/lib/api')
         const list = await coupons.getMyCoupons(token)
-        setMyCoupons(list || [])
+        // Expired coupons can't be applied, so don't suggest them
+        setMyCoupons((list || []).filter((c: { expiryDate?: string }) => !c.expiryDate || new Date(c.expiryDate) > new Date()))
       } catch (err) {
         console.error('Failed to load my coupons:', err)
       }

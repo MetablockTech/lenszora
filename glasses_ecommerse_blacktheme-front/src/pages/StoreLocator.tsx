@@ -327,93 +327,87 @@ const StoreLocator = () => {
                   className={`group bg-[#111112] border transition-all duration-300 cursor-pointer rounded-2xl overflow-hidden ${selectedStore?._id === store._id ? "border-[#DAAB34] shadow-[0_0_30px_rgba(218,171,52,0.1)]" : "border-white/5 hover:border-white/10"
                     }`}
                 >
-                  <div className="flex p-4 gap-4">
-                    <div className="relative w-[120px] md:w-[160px] aspect-square self-start bg-[#0C1B3A] rounded-xl overflow-hidden grow-0 shrink-0 shadow-inner">
-                      {store.images?.[0] ? (
-                        <img src={getImageUrl(store.images[0])} alt={store.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
-                          <span className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Lenzora</span>
-                          <span className="text-[14px]">✨</span>
-                        </div>
-                      )}
-
-                      {store.freeGift && (
-                        <div className="absolute top-0 left-0 -translate-x-1/4 translate-y-1/4 -rotate-45 bg-[#DAAB34] text-black text-[7px] font-black px-6 py-1 z-10 shadow-sm uppercase tracking-tighter w-[100px] text-center">
-                          Free Gift
-                        </div>
-                      )}
-
-                      {store.isActive && (
-                        <div className="absolute top-3 right-3 flex items-center gap-1.5 text-[10px] font-bold text-[#0D8A3E] bg-[#E6F7EE]/90 backdrop-blur-sm px-2.5 py-1 rounded-full z-10">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#0D8A3E] animate-pulse" />
-                          Open Now
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 flex flex-col min-w-0">
-                      <div className="flex justify-between items-start mb-1.5">
-                        <div className="flex flex-col min-w-0 flex-1">
-                          <h3 className="font-playfair text-lg font-bold text-white leading-tight truncate pr-2 group-hover:text-[#DAAB34] transition-colors">{store.name}</h3>
-                          {store.vendorId && typeof store.vendorId === 'object' && (
-                            <span className="text-[10px] text-[#DAAB34] font-bold uppercase tracking-wider mt-0.5">
-                              {(store.vendorId as any).businessName}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 text-[13px] font-bold text-[#DAAB34] shrink-0">
-                          <Star className="w-3.5 h-3.5 fill-[#DAAB34]" />
-                          {store.rating || 4.9}
-                          <span className="text-white/40 font-normal">({store.totalReviews || 970})</span>
-                        </div>
+                  {/* Photo with rating and store name on top */}
+                  <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#0C1B3A]">
+                    {store.images?.[0] ? (
+                      <img src={getImageUrl(store.images[0])} alt={store.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="font-playfair text-2xl font-bold tracking-widest text-white/15">LENSZORA</span>
                       </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
 
-                      <p className="text-[12px] text-white/60 leading-snug mb-1.5 line-clamp-2">
-                        {store.addressLine}, {store.city}, {store.state}, {store.pincode}
-                      </p>
-                      <p className="text-[11px] text-[#DAAB34]/60 font-medium mb-3">Hours: {store.hours}</p>
+                    <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[13px] font-bold text-slate-900 shadow">
+                      <Star className="h-3.5 w-3.5 fill-[#0D8A3E] text-[#0D8A3E]" />
+                      {store.rating || 4.9}
+                    </div>
+                    {store.freeGift && (
+                      <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-[#DAAB34] px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-black shadow">
+                        <Gift className="h-3.5 w-3.5" /> Free Gift
+                      </div>
+                    )}
 
-                      <div className="flex items-center gap-6 mb-4">
-                        <a href={`tel:${store.phone}`} className="flex items-center gap-2 text-[12px] font-semibold text-white/80 hover:text-[#DAAB34] transition-colors">
-                          <Phone className="w-3.5 h-3.5 text-[#DAAB34]" />
-                          {store.phone}
-                        </a>
-                        <button className="flex items-center gap-2 text-[12px] font-semibold text-white/80 hover:text-[#DAAB34] transition-colors" onClick={(e) => {
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(store.vendorId ? `/shop?vendorId=${typeof store.vendorId === 'object' ? (store.vendorId as any)._id : store.vendorId}` : '/shop');
+                      }}
+                      className="absolute bottom-3 left-4 right-4 flex items-center gap-1 text-left"
+                    >
+                      <h3 className="truncate text-xl font-bold text-white drop-shadow md:text-2xl">{store.name?.trim()}</h3>
+                      <ChevronRight className="h-5 w-5 shrink-0 text-white" />
+                    </button>
+                  </div>
+
+                  <div className="p-4">
+                    <p className="text-[13px] leading-relaxed text-white/70 line-clamp-3">
+                      {[store.addressLine, store.city, store.state, store.pincode].filter(Boolean).join(', ')}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-semibold">
+                      {store.hours && (
+                        <span className="flex items-center gap-1.5 text-white/85">
+                          <Clock className="h-4 w-4 text-[#DAAB34]" />
+                          {/-/.test(store.hours) ? `Open till ${store.hours.split('-').pop()?.trim()}` : store.hours}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="flex items-center gap-1.5 border-b border-dashed border-[#DAAB34]/60 pb-0.5 text-[#DAAB34]"
+                        onClick={(e) => {
                           e.stopPropagation();
                           const query = encodeURIComponent(`${store.name}, ${store.addressLine}, ${store.city}, ${store.state} ${store.pincode}`);
                           window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
-                        }}>
-                          <Navigation className="w-4 h-4 text-[#DAAB34]" />
-                          {(store as any).distance ? `${(store as any).distance.toFixed(1)} km` : '1.8 km'} . Direction
-                        </button>
-                      </div>
+                        }}
+                      >
+                        <Navigation className="h-4 w-4" />
+                        {typeof (store as any).distance === 'number' ? `${(store as any).distance.toFixed(2)} km away` : 'Get directions'}
+                      </button>
+                    </div>
 
-                      <div className="flex gap-2.5 mt-auto">
-                        <button 
-                          className="flex-1 py-2.5 border border-white/10 rounded-xl text-[13px] font-semibold hover:bg-white/5 transition-colors text-white/80"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (store.vendorId) {
-                              navigate(`/shop?vendorId=${store.vendorId}`);
-                            } else {
-                              navigate('/shop');
-                            }
-                          }}
+                    <div className="mt-4 flex gap-3">
+                      {store.phone && (
+                        <a
+                          href={`tel:${store.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Call ${store.name}`}
+                          className="flex h-12 w-14 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-[#DAAB34] transition-colors hover:bg-white/10"
                         >
-                          Store Details
-                        </button>
-                        <button 
-                          className="flex-[1.5] py-2.5 bg-[#DAAB34] text-black rounded-xl text-[13px] font-bold hover:opacity-90 transition-all shadow-lg active:scale-95"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setBookingStore(store);
-                            setIsAppointmentModalOpen(true);
-                          }}
-                        >
-                          Book Free Appointment
-                        </button>
-                      </div>
+                          <Phone className="h-5 w-5" />
+                        </a>
+                      )}
+                      <button
+                        className="h-12 flex-1 rounded-xl bg-[#DAAB34] text-[15px] font-bold text-black shadow-lg transition-all hover:opacity-90 active:scale-[0.98]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBookingStore(store);
+                          setIsAppointmentModalOpen(true);
+                        }}
+                      >
+                        Book Free Eye Test
+                      </button>
                     </div>
                   </div>
 
