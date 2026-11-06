@@ -167,7 +167,8 @@ const ProductSchema = new Schema<IProduct>({
         benefits: { type: [String], default: [] }, // Top highlights with icons
         imageUrl: { type: String },
         warranty: { type: String },
-        indexLabel: { type: String }
+        indexLabel: { type: String },
+        categoryKey: { type: String, default: '' } // Lens category (Blue Block, Polarised…) from setting "lens_categories"
       }]
     }],
     directLensOptions: [{ // Fallback for simple flat lists

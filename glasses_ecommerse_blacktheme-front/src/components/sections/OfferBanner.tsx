@@ -11,10 +11,11 @@ const OfferBanner = () => {
     const fetchOfferBanner = async () => {
       try {
         const data = await sliders.list();
-        // Find active Footer Banner, Offer Banner, Trending Banner, or any active slider
-        const active = data.find((s: any) => 
-          (s.bannerType === 'Footer Banner' || s.bannerType === 'Offer Banner' || s.bannerType === 'Promo Banner' || s.bannerType === 'Trending Banner') && (s.isActive !== false)
-        ) || data.find((s: any) => s.isActive !== false && !['Hero Sub Banner', 'Footer Sub Banner', 'Popup Banner'].includes(s.bannerType));
+        // Only a Footer Banner (or the older Offer / Promo types). No fallback to other banners:
+        // with no Footer Banner set, this section stays hidden instead of repeating e.g. the hero banner.
+        const active = data.find((s: any) =>
+          ['Footer Banner', 'Offer Banner', 'Promo Banner'].includes(s.bannerType) && s.isActive !== false
+        );
 
         if (active) setBanner(active);
       } catch (error) {
@@ -26,16 +27,10 @@ const OfferBanner = () => {
     fetchOfferBanner();
   }, []);
 
-  // Default fallback banner (Never disappears if database banner is not set yet)
-  const defaultBanner = {
-    image: "",
-    title: "FIND A STORE NEARBY",
-    subtitle: "Locate a store near you to get a free eye test & exclusive discounts",
-    buttonText: "GET DIRECTIONS",
-    buttonLink: "/store-locator",
-  };
+  // Hidden until a Footer Banner is set and active in Admin → Banners
+  if (loading || !banner) return null;
 
-  const activeBanner = banner || defaultBanner;
+  const activeBanner = banner;
   const imageUrl = activeBanner.image ? getImageUrl(activeBanner.image) : "";
 
   const redirectLink = activeBanner.buttonLink || activeBanner.url || "/shop";

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/components/ui/use-toast'
 import { Loader2, Plus, Save, Trash2, X, ImageIcon, Sparkles, Layers, Check, Zap, Shield, Eye, Waves, Sun, Droplets, Award, ShieldCheck, ShieldAlert } from 'lucide-react'
-import { categories, brands, products, vendors, getUser, eyewearAttributes as eyewearAttributesAPI, lens } from '@/lib/api'
+import { categories, brands, products, vendors, getUser, eyewearAttributes as eyewearAttributesAPI, lens, settings } from '@/lib/api'
 import { getToken, getImageUrl, cn, colorSwatchBackground, formatColorName } from '@/lib/utils'
 import { generateUniqueSKU, generateVariantSKU } from '@/lib/generateSKU'
 const productSchema = z.object({
@@ -102,7 +102,8 @@ const productSchema = z.object({
                 benefits: z.array(z.string()).default([]),
                 imageUrl: z.string().optional(),
                 warranty: z.string().optional().default('6 Months'),
-                indexLabel: z.string().optional().default('1.56')
+                indexLabel: z.string().optional().default('1.56'),
+                categoryKey: z.string().optional().default('')
             })).default([])
         })).default([]),
         directLensOptions: z.array(z.object({
@@ -142,6 +143,13 @@ const ProductForm = () => {
     const [variantsGenerated, setVariantsGenerated] = useState(false)
     const [dynamicAttributes, setDynamicAttributes] = useState<any[]>([])
     const [vendorLensTypes, setVendorLensTypes] = useState<any[]>([])
+    // Lens categories (Blue Block, Polarised…) from Admin → Lens Manager; each package can belong to one
+    const [lensCategories, setLensCategories] = useState<{ key: string; name: string }[]>([])
+    useEffect(() => {
+        settings.get('lens_categories')
+            .then((s: { value?: unknown }) => setLensCategories(Array.isArray(s?.value) ? s.value : []))
+            .catch(() => setLensCategories([]))
+    }, [])
     const [allVendors, setAllVendors] = useState<any[]>([])
 
     const currentUser = getUser()
@@ -1542,6 +1550,25 @@ const ProductForm = () => {
                                                                                     <FormItem className="space-y-1">
                                                                                         <FormLabel className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Package Title</FormLabel>
                                                                                         <FormControl><Input placeholder="e.g. Premium Anti-Glare" {...field} className="h-9 text-[11px] bg-white border-slate-200 font-bold" /></FormControl>
+                                                                                    </FormItem>
+                                                                                )}
+                                                                            />
+
+                                                                            <FormField
+                                                                                control={form.control} name={`lensSettings.lensTypes.${fieldIndex}.packages.${pkgIdx}.categoryKey`}
+                                                                                render={({ field }) => (
+                                                                                    <FormItem className="space-y-1">
+                                                                                        <FormLabel className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Lens Category</FormLabel>
+                                                                                        <FormControl>
+                                                                                            <select
+                                                                                                value={field.value || ''}
+                                                                                                onChange={(e) => field.onChange(e.target.value)}
+                                                                                                className="h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-800"
+                                                                                            >
+                                                                                                <option value="">No category</option>
+                                                                                                {lensCategories.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
+                                                                                            </select>
+                                                                                        </FormControl>
                                                                                     </FormItem>
                                                                                 )}
                                                                             />

@@ -60,7 +60,8 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
     const [activePackageDetails, setActivePackageDetails] = useState<any>(null);
 
-    // Lens categories from Admin → Lens Manager: step 1 shows categories first, then the lens types inside one
+    // Lens categories from Admin → Lens Manager (Blue Block, Polarised…): after a lens type is chosen,
+    // step 2 shows the categories its packages belong to, then the packages inside the chosen one
     const [lensCategories, setLensCategories] = useState<{ key: string; name: string; description?: string }[]>([]);
     const [openCategory, setOpenCategory] = useState<string | null>(null);
     useEffect(() => {
@@ -425,6 +426,7 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
         }
         const type = contactLensMode ? { ...rawType, wearDuration, name: `${rawType.name} · ${wearDuration}` } : rawType;
         setSelectedType(type);
+        setOpenCategory(null);
         setSelectedPackage(null);
 
         // Find packages for this specific type to decide if we skip Step 2
@@ -525,7 +527,7 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
 
     const handleBack = () => {
         // Inside a lens category: Back returns to the category list
-        if (step === 1 && openCategory) {
+        if (step === 2 && openCategory) {
             setOpenCategory(null);
             return;
         }
@@ -575,6 +577,13 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
                 <line x1="33" y1="22" x2="54" y2="22" stroke="#bbb" strokeWidth="1" strokeDasharray="3 2" />
             </svg>
         ),
+        tinted: (
+            <svg viewBox="0 0 60 44" fill="none" width="52">
+                <circle cx="17" cy="22" r="13" stroke="#475569" strokeWidth="2.2" fill="rgba(51,65,85,0.75)" />
+                <circle cx="43" cy="22" r="13" stroke="#475569" strokeWidth="2.2" fill="rgba(51,65,85,0.75)" />
+                <path d="M9 17 L16 13 M35 17 L42 13" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+        ),
         frame: (
             <svg viewBox="0 0 60 44" fill="none" width="52">
                 <circle cx="17" cy="22" r="13" stroke="#ccc" strokeWidth="2.2" fill="rgba(240,240,240,0.2)" />
@@ -585,6 +594,7 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
 
     const getLensTypeSVGKey = (name: string) => {
         const n = name.toLowerCase();
+        if (/polar|sun|tint|photochrom|transition/.test(n)) return "tinted";
         if (n.includes("zero") || n.includes("blu")) return "zero";
         if (n.includes("reading")) return "reading";
         if (n.includes("progressive") || n.includes("bifocal")) return "progressive";
@@ -594,6 +604,7 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
 
     const getLensTypeBg = (name: string) => {
         const n = name.toLowerCase();
+        if (/polar|sun|tint|photochrom|transition/.test(n)) return "radial-gradient(circle at 40% 40%,#e2e8f0,#f1f5f9)";
         if (n.includes("zero") || n.includes("blu")) return "radial-gradient(circle at 40% 40%,#e0f2fe,#f0f8ff)";
         if (n.includes("reading")) return "radial-gradient(circle at 40% 40%,#fff7ed,#fff0e6)";
         if (n.includes("progressive") || n.includes("bifocal")) return "radial-gradient(circle at 40% 40%,#f0f0f8,#f5f5f5)";
@@ -771,44 +782,9 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
                                 <div className="space-y-3">
                                     {[1, 2, 3].map(i => <div key={i} className="h-20 bg-slate-100 rounded-xl animate-pulse" />)}
                                 </div>
-                            ) : lensTypes.length > 0 ? (() => {
-                                const visibleTypes = lensTypes.filter((type) => !(hideFrameOnly && isFrameOnlyType(type)));
-                                // Categories that hold at least one of this product's lens types
-                                const groups = contactLensMode ? [] : lensCategories.filter((c) => visibleTypes.some((t) => t.categoryKey === c.key));
-                                const groupKeys = new Set(groups.map((g) => g.key));
-                                const openGroup = groups.find((g) => g.key === openCategory);
-                                const shownTypes = openGroup
-                                    ? visibleTypes.filter((t) => t.categoryKey === openGroup.key)
-                                    : visibleTypes.filter((t) => !groupKeys.has(t.categoryKey));
-                                return (
+                            ) : lensTypes.length > 0 ? (
                                 <div className="space-y-3">
-                                    {openGroup && (
-                                        <button type="button" onClick={() => setOpenCategory(null)} className="flex items-center gap-1 text-[.85rem] font-semibold text-teal-700">
-                                            <ChevronLeft className="w-4 h-4" /> All lens categories · <span className="text-slate-900">{openGroup.name}</span>
-                                        </button>
-                                    )}
-                                    {!openGroup && groups.map((g) => {
-                                        const count = visibleTypes.filter((t) => t.categoryKey === g.key).length;
-                                        return (
-                                            <div
-                                                key={g.key}
-                                                onClick={() => setOpenCategory(g.key)}
-                                                className="flex items-center gap-4 px-4 py-4 border-[1.5px] rounded-xl cursor-pointer transition-all bg-white lc-card shadow-sm hover:shadow-md border-slate-100 hover:border-slate-300"
-                                            >
-                                                <div className="w-[70px] h-[52px] rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-50" style={{ background: getLensTypeBg(g.name) }}>
-                                                    <div className="scale-110">{lensTypeSVGs[getLensTypeSVGKey(g.name)]}</div>
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <span className="text-[1rem] font-bold text-slate-800 tracking-tight">{g.name}</span>
-                                                    <p className="text-[.82rem] text-slate-500 leading-snug opacity-80">{g.description || `${count} lens option${count > 1 ? 's' : ''}`}</p>
-                                                </div>
-                                                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
-                                                    <ChevronRight className="w-4 h-4" />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    {shownTypes.map((type) => {
+                                    {lensTypes.filter((type) => !(hideFrameOnly && isFrameOnlyType(type))).map((type) => {
                                         const badge = 'badge' in type ? type.badge : getLensTypeBadge(type.name);
                                         const svgKey = getLensTypeSVGKey(type.name);
                                         const bg = getLensTypeBg(type.name);
@@ -849,8 +825,7 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
                                         );
                                     })}
                                 </div>
-                                );
-                            })() : (
+                            ) : (
                                 // Fallback static cards when no lens types from API
                                 <div className="space-y-3">
                                     {[
@@ -894,9 +869,46 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
                         <div>
                             {/* Filter tabs removed for truly dynamic experience */}
 
-                            {currentPackages.length > 0 ? (
+                            {currentPackages.length > 0 ? (() => {
+                                // Categories that hold at least one package of this lens type
+                                const pkgGroups = lensCategories.filter((c) => currentPackages.some((pk) => pk.categoryKey === c.key));
+                                const groupKeys = new Set(pkgGroups.map((g) => g.key));
+                                const openGroup = pkgGroups.find((g) => g.key === openCategory);
+                                const shownPackages = openGroup
+                                    ? currentPackages.filter((pk) => pk.categoryKey === openGroup.key)
+                                    : currentPackages.filter((pk) => !groupKeys.has(pk.categoryKey));
+                                return (
                                 <div className="space-y-3.5">
-                                    {currentPackages.map((pkg, index) => {
+                                    {openGroup && (
+                                        <button type="button" onClick={() => setOpenCategory(null)} className="flex items-center gap-1 text-[.85rem] font-semibold text-teal-700">
+                                            <ChevronLeft className="w-4 h-4" /> {selectedType?.name} · <span className="text-slate-900">{openGroup.name}</span>
+                                        </button>
+                                    )}
+                                    {!openGroup && pkgGroups.map((g) => {
+                                        const groupPkgs = currentPackages.filter((pk) => pk.categoryKey === g.key);
+                                        const from = Math.min(...groupPkgs.map((pk) => Number(pk.price) || 0));
+                                        return (
+                                            <div
+                                                key={g.key}
+                                                onClick={() => { setOpenCategory(g.key); setSelectedPackage(null); }}
+                                                className="flex items-center gap-4 px-4 py-4 border-[1.5px] rounded-xl cursor-pointer transition-all bg-white lc-card shadow-sm hover:shadow-md border-slate-100 hover:border-slate-300"
+                                            >
+                                                <div className="w-[70px] h-[52px] rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-50" style={{ background: getLensTypeBg(g.name) }}>
+                                                    <div className="scale-110">{lensTypeSVGs[getLensTypeSVGKey(g.name)]}</div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="text-[1rem] font-bold text-slate-800 tracking-tight">{g.name}</span>
+                                                    <p className="text-[.82rem] text-slate-500 leading-snug opacity-80">
+                                                        {g.description || `${groupPkgs.length} option${groupPkgs.length > 1 ? 's' : ''}`}{` · from ₹${from}`}
+                                                    </p>
+                                                </div>
+                                                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
+                                                    <ChevronRight className="w-4 h-4" />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {shownPackages.map((pkg, index) => {
                                         const isSelected = selectedPackage?._id === pkg._id;
                                         const banner = getPkgBanner(pkg, index);
                                         const svgEl = pkgSVGs[index % pkgSVGs.length];
@@ -980,7 +992,8 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
                                         );
                                     })}
                                 </div>
-                            ) : (
+                                );
+                            })() : (
                                 // Graceful empty state when no packages found for specific selection
                                 <div className="text-center py-12 px-6">
                                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">

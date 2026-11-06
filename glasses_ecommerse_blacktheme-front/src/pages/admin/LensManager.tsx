@@ -4,8 +4,9 @@ import { lens, API_URL, products, settings } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-// Lens categories group lens types in the storefront popup (category → lens type → package).
-// Stored in the "lens_categories" setting; a lens type points to one through its categoryKey.
+// Lens categories (Blue Block, Polarised…) group the packages of a lens type in the storefront popup
+// (lens type → category → package). Stored in the "lens_categories" setting; a package points to one
+// through its categoryKey, set in the product form's Lens Setup.
 interface LensCategory {
     key: string;
     name: string;
@@ -134,8 +135,7 @@ const LensManager: React.FC = () => {
     };
 
     const handleDeleteCategory = async (key: string) => {
-        const used = types.filter((t) => t.categoryKey === key).length;
-        if (!window.confirm(used ? `${used} lens type(s) use this category. They will show without a category. Delete it?` : "Delete this category?")) return;
+        if (!window.confirm("Delete this category? Packages in it will show without a category.")) return;
         if (await saveCategories(categories.filter((c) => c.key !== key))) {
             toast({ title: "Success", description: "Category deleted" });
         }
@@ -215,18 +215,6 @@ const LensManager: React.FC = () => {
                                         onChange={e => setTypeForm({ ...typeForm, name: e.target.value })}
                                         className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Lens Category</label>
-                                    <select
-                                        value={typeForm.categoryKey}
-                                        onChange={e => setTypeForm({ ...typeForm, categoryKey: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    >
-                                        <option value="">No category (shown directly)</option>
-                                        {categories.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
-                                    </select>
-                                    <p className="text-[11px] text-slate-400 ml-1">Customers pick the category first, then this lens type. Manage categories below.</p>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold uppercase text-slate-500 ml-1">Subtitle / Badge</label>
@@ -349,7 +337,7 @@ const LensManager: React.FC = () => {
                 <div className="bg-white p-5 border border-slate-200 rounded-2xl space-y-4">
                     <div>
                         <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2"><Layers className="w-5 h-5 text-blue-600" /> Lens Categories</h2>
-                        <p className="text-sm text-slate-500">e.g. Single Vision, Progressive, Zero Power. Customers choose a category first, then a lens type inside it.</p>
+                        <p className="text-sm text-slate-500">e.g. Blue Block, Polarised, Photochromic. After choosing a lens type, customers pick a category, then a package in it. Assign each package to a category in Products → Edit → Lens Setup.</p>
                     </div>
 
                     {categories.length > 0 && (
@@ -357,7 +345,7 @@ const LensManager: React.FC = () => {
                             {categories.map((c, i) => (
                                 <div key={c.key} className="flex items-center justify-between gap-3 p-3">
                                     <div className="min-w-0">
-                                        <p className="font-bold text-slate-900">{c.name} <span className="ml-1 text-xs font-medium text-slate-400">{types.filter((t) => t.categoryKey === c.key).length} lens type(s)</span></p>
+                                        <p className="font-bold text-slate-900">{c.name}</p>
                                         {c.description && <p className="text-xs text-slate-500 truncate">{c.description}</p>}
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
@@ -373,7 +361,7 @@ const LensManager: React.FC = () => {
 
                     <div className="flex flex-col md:flex-row gap-3">
                         <input
-                            placeholder="Category name, e.g. Progressive"
+                            placeholder="Category name, e.g. Blue Block"
                             value={catForm.name}
                             onChange={e => setCatForm({ ...catForm, name: e.target.value })}
                             className="flex-1 bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -427,11 +415,6 @@ const LensManager: React.FC = () => {
                                         <div className="flex items-center gap-3">
                                             <h3 className="font-extrabold text-xl text-slate-900 leading-none">{type.name}</h3>
                                             <div className="flex gap-1.5 Items-center">
-                                                {type.categoryKey && (
-                                                    <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-lg font-bold uppercase tracking-wider">
-                                                        {categories.find((c) => c.key === type.categoryKey)?.name || 'Unknown category'}
-                                                    </span>
-                                                )}
                                                 {!type.isActive && <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-lg font-bold uppercase tracking-wider">Inactive</span>}
                                                 {type.allowPackages === false && (
                                                     <span className="flex items-center gap-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg font-bold uppercase tracking-wider">

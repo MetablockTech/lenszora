@@ -10,6 +10,7 @@ export interface ILensPackage extends Document {
     price: number
     warranty?: string
     indexLabel?: string // e.g., "1.56", "1.61"
+    categoryKey?: string
     imageUrl?: string // Specific image for Step 2
     isActive: boolean
 }
@@ -23,6 +24,7 @@ const LensPackageSchema = new Schema<ILensPackage>({
     price: { type: Number, required: true, default: 0 },
     warranty: { type: String },
     indexLabel: { type: String },
+    categoryKey: { type: String, default: '' }, // Lens category (Blue Block, Polarised…) from setting "lens_categories"
     imageUrl: { type: String },
     isActive: { type: Boolean, default: true }
 }, { timestamps: true })
