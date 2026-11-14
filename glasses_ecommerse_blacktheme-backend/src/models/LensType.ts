@@ -9,7 +9,7 @@ export interface ILensType extends Document {
     isActive: boolean
     allowPackages: boolean // If false, skip Step 2 on storefront
     skipPowerEntry: boolean // If true, skip Step 3 (prescription) on storefront
-    categoryKey?: string // Lens category from Admin → Lens Manager (setting "lens_categories"), e.g. "progressive"
+    subCategories?: { key: string; name: string; description?: string }[]
     vendorId?: Types.ObjectId | IVendor | null // Null for platform-wide lenses
 }
 
@@ -21,7 +21,8 @@ const LensTypeSchema = new Schema<ILensType>({
     isActive: { type: Boolean, default: true },
     allowPackages: { type: Boolean, default: true },
     skipPowerEntry: { type: Boolean, default: false },
-    categoryKey: { type: String, default: '' },
+    // Sub-categories inside this lens type (e.g. Blue Block, Polarised); packages point to one by key
+    subCategories: [{ key: { type: String, required: true }, name: { type: String, required: true }, description: { type: String } }],
     vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', default: null }
 }, { timestamps: true })
 

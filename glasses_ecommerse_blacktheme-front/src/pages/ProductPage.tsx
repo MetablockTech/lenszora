@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info, Sparkles, Check, Glasses, Eye, Truck, ShieldCheck, CheckCircle2, PackageCheck, MessageSquare, Gift, Tag, HelpCircle, BadgePercent, Ruler, Headphones, RefreshCw } from "lucide-react";
 import { cn, getImageUrl, calculateProductDiscount, isFrameOnlyLens, colorSwatchBackground, formatColorName } from "@/lib/utils";
+import { getWearDuration } from "@/lib/contactLens";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -543,10 +544,13 @@ const ProductPage = () => {
   const reviewCount: number = product.totalReviews || 0;
   const faceShapes: string[] = (Array.isArray(eyewear.faceShape) ? eyewear.faceShape : [eyewear.faceShape]).filter(Boolean);
   const categoryName: string = typeof product.category === 'object' ? product.category?.name || '' : '';
+  // Contact lenses: how often they are replaced (admin field, else read from the title / category)
+  const wearDuration = getWearDuration(product);
   const specPills = [
     eyewear.gender && { key: 'gender', icon: Users, label: String(eyewear.gender), color: 'text-[#DAAB34]' },
     eyewear.frameShape && { key: 'shape', icon: Scissors, label: String(eyewear.frameShape), color: 'text-orange-400' },
     faceShapes.length > 0 && { key: 'face', icon: Info, label: `For ${faceShapes.join(' / ')} face`, color: 'text-emerald-400' },
+    isContactLens && wearDuration && { key: 'duration', icon: RefreshCw, label: `${wearDuration.label} · ${wearDuration.hint}`, color: 'text-[#DAAB34]' },
     categoryName && { key: 'category', icon: Layers, label: categoryName, color: 'text-violet-400' },
     eyewear.polarized && { key: 'polarized', icon: Zap, label: 'Polarized', color: 'text-yellow-400' },
     eyewear.uvProtection && { key: 'uv', icon: Shield, label: String(eyewear.uvProtection), color: 'text-green-400' },

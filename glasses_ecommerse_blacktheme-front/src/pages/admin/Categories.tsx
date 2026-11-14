@@ -175,7 +175,22 @@ const CategoriesPage: React.FC = () => {
       toast.success("Category deleted")
       await load()
     } catch (err: any) {
-      toast.error(err.message || "Delete failed")
+      // The API answers 400 with childrenCount when the category still has sub-categories
+      let body: { error?: string; message?: string; childrenCount?: number } = {}
+      try { body = JSON.parse(err.message) } catch { /* plain text */ }
+      if (body.childrenCount) {
+        if (!confirm(`This category has ${body.childrenCount} sub-categor${body.childrenCount > 1 ? 'ies' : 'y'}. Delete it together with all of them?`)) return
+        try {
+          await categories.remove(id, token, true)
+          toast.success("Category and its sub-categories deleted")
+          await load()
+        } catch (cascadeErr: any) {
+          toast.error("Delete failed")
+          console.error(cascadeErr)
+        }
+        return
+      }
+      toast.error(body.error || body.message || err.message || "Delete failed")
     }
   }
 

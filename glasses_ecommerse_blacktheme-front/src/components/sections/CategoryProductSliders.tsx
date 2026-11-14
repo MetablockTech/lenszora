@@ -47,7 +47,11 @@ const CategoryProductSliders = () => {
     async function fetchCategoryProducts() {
         try {
             const mainCategoriesData = await categories.getMain();
-            const mainCategories = Array.isArray(mainCategoriesData) ? mainCategoriesData : [];
+            // Eyeglasses, sunglasses, contact lenses and accessories already have their own section
+            // higher up the homepage, so only other main categories get a product row here
+            const COVERED_ABOVE = /eye\s*glass|sun\s*glass|contact\s*lens|accessor/;
+            const mainCategories = (Array.isArray(mainCategoriesData) ? mainCategoriesData : [])
+                .filter((cat: Category) => !COVERED_ABOVE.test(`${cat.name} ${cat.slug || ''}`.toLowerCase().replace(/[-_]/g, ' ')));
 
             const allCategoriesData = await categories.list();
             const allCategories = Array.isArray(allCategoriesData) ? allCategoriesData : [];

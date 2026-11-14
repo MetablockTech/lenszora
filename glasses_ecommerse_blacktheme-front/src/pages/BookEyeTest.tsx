@@ -248,7 +248,10 @@ const BookEyeTest = () => {
           )}
         </div>
       </main>
-      <Footer />
+      {/* Phones: no site footer on this app-style screen (main already pads for the bottom nav) */}
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </div>
   );
 };

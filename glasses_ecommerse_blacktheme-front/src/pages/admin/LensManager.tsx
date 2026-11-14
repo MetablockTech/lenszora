@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Check, X, Trash2, Package, Layers, Image as ImageIcon, ShieldCheck, ShieldAlert } from 'lucide-react';
-import { lens, API_URL, products, settings } from '@/lib/api';
+import { lens, API_URL, products } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-// Lens categories (Blue Block, Polarised…) group the packages of a lens type in the storefront popup
-// (lens type → category → package). Stored in the "lens_categories" setting; a package points to one
-// through its categoryKey, set in the product form's Lens Setup.
-interface LensCategory {
+// Sub-categories of a lens type (e.g. Ineed Progressive → Blue Block, Polarised). In the storefront popup
+// the customer picks the lens type, then a sub-category, then a package in it. Each package is assigned
+// to a sub-category in Products → Edit → Lens Setup (its categoryKey).
+interface SubCategory {
     key: string;
     name: string;
     description?: string;
@@ -29,11 +29,9 @@ const LensManager: React.FC = () => {
         isActive: true,
         allowPackages: true,
         skipPowerEntry: false,
-        categoryKey: ''
+        subCategories: [] as SubCategory[]
     });
-    const [categories, setCategories] = useState<LensCategory[]>([]);
-    const [catForm, setCatForm] = useState<LensCategory & { editingKey: string | null }>({ key: '', name: '', description: '', editingKey: null });
-    const [savingCats, setSavingCats] = useState(false);
+    const [subCatInput, setSubCatInput] = useState({ name: '', description: '' });
     const [pendingTypeImage, setPendingTypeImage] = useState<File | null>(null);
 
     const token = localStorage.getItem('token') || '';
@@ -45,12 +43,8 @@ const LensManager: React.FC = () => {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [typesData, catSetting] = await Promise.all([
-                lens.listTypes(token),
-                settings.get('lens_categories').catch(() => null),
-            ]);
+            const typesData = await lens.listTypes(token);
             setTypes(typesData);
-            setCategories(Array.isArray(catSetting?.value) ? catSetting.value : []);
         } catch (error) {
             toast({ title: "Error", description: "Failed to load lens data", variant: "destructive" });
         } finally {
@@ -99,54 +93,33 @@ const LensManager: React.FC = () => {
         }
     };
 
-    const saveCategories = async (next: LensCategory[]) => {
-        try {
-            setSavingCats(true);
-            await settings.update('lens_categories', { value: next, category: 'lens', description: 'Lens categories shown before lens types in the lens popup' }, token);
-            setCategories(next);
-            return true;
-        } catch (error) {
-            toast({ title: "Error", description: (error as Error).message || "Failed to save categories", variant: "destructive" });
-            return false;
-        } finally {
-            setSavingCats(false);
-        }
-    };
-
-    const handleSaveCategory = async () => {
-        const name = catForm.name.trim();
+    const addSubCategory = () => {
+        const name = subCatInput.name.trim();
         if (!name) {
-            toast({ title: "Validation Error", description: "Category name is required", variant: "destructive" });
+            toast({ title: "Validation Error", description: "Sub-category name is required", variant: "destructive" });
             return;
         }
-        let next: LensCategory[];
-        if (catForm.editingKey) {
-            // Keep the key so lens types stay linked when a category is renamed
-            next = categories.map((c) => c.key === catForm.editingKey ? { ...c, name, description: catForm.description?.trim() } : c);
-        } else {
-            let key = slugify(name) || `cat-${Date.now()}`;
-            if (categories.some((c) => c.key === key)) key = `${key}-${Date.now().toString(36)}`;
-            next = [...categories, { key, name, description: catForm.description?.trim() }];
+        const existing = typeForm.subCategories;
+        if (existing.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+            toast({ title: "Already added", description: `${name} is already a sub-category` });
+            return;
         }
-        if (await saveCategories(next)) {
-            toast({ title: "Success", description: catForm.editingKey ? "Category updated" : "Category added" });
-            setCatForm({ key: '', name: '', description: '', editingKey: null });
-        }
+        let key = slugify(name) || `sub-${Date.now()}`;
+        if (existing.some((c) => c.key === key)) key = `${key}-${Date.now().toString(36)}`;
+        setTypeForm({ ...typeForm, subCategories: [...existing, { key, name, description: subCatInput.description.trim() }] });
+        setSubCatInput({ name: '', description: '' });
     };
 
-    const handleDeleteCategory = async (key: string) => {
-        if (!window.confirm("Delete this category? Packages in it will show without a category.")) return;
-        if (await saveCategories(categories.filter((c) => c.key !== key))) {
-            toast({ title: "Success", description: "Category deleted" });
-        }
+    const removeSubCategory = (key: string) => {
+        setTypeForm({ ...typeForm, subCategories: typeForm.subCategories.filter((c) => c.key !== key) });
     };
 
-    const moveCategory = (index: number, dir: -1 | 1) => {
-        const next = [...categories];
+    const moveSubCategory = (index: number, dir: -1 | 1) => {
+        const next = [...typeForm.subCategories];
         const target = index + dir;
         if (target < 0 || target >= next.length) return;
         [next[index], next[target]] = [next[target], next[index]];
-        saveCategories(next);
+        setTypeForm({ ...typeForm, subCategories: next });
     };
 
     const startEditing = (type: any) => {
@@ -160,8 +133,9 @@ const LensManager: React.FC = () => {
             isActive: type.isActive !== false,
             allowPackages: type.allowPackages !== false,
             skipPowerEntry: type.skipPowerEntry === true,
-            categoryKey: type.categoryKey || ''
+            subCategories: Array.isArray(type.subCategories) ? type.subCategories.map((c: SubCategory) => ({ key: c.key, name: c.name, description: c.description || '' })) : []
         });
+        setSubCatInput({ name: '', description: '' });
         setPendingTypeImage(null);
     };
 
@@ -183,7 +157,8 @@ const LensManager: React.FC = () => {
                     onClick={() => {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                         setIsEditingType('new');
-                        setTypeForm({ name: '', subtitle: '', description: '', imageUrl: '', isActive: true, allowPackages: true, skipPowerEntry: false, categoryKey: '' });
+                        setTypeForm({ name: '', subtitle: '', description: '', imageUrl: '', isActive: true, allowPackages: true, skipPowerEntry: false, subCategories: [] });
+                        setSubCatInput({ name: '', description: '' });
                         setPendingTypeImage(null);
                     }}
                     className="bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-bold text-sm"
@@ -316,6 +291,50 @@ const LensManager: React.FC = () => {
                             </div>
                         </div>
 
+                        <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div>
+                                <label className="text-xs font-bold uppercase text-slate-500">Sub Categories</label>
+                                <p className="text-xs text-slate-500 mt-0.5">e.g. Blue Block, Polarised, Photochromic. Customers choose this lens type, then a sub-category, then a package. Assign packages to a sub-category in Products → Edit → Lens Setup.</p>
+                            </div>
+                            {typeForm.subCategories.length > 0 && (
+                                <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+                                    {typeForm.subCategories.map((c, i) => (
+                                        <div key={c.key} className="flex items-center justify-between gap-3 px-3 py-2">
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-slate-900">{c.name}</p>
+                                                {c.description && <p className="text-xs text-slate-500 truncate">{c.description}</p>}
+                                            </div>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                <button type="button" disabled={i === 0} onClick={() => moveSubCategory(i, -1)} className="px-2 py-1 text-slate-400 hover:text-slate-700 disabled:opacity-30" title="Move up">↑</button>
+                                                <button type="button" disabled={i === typeForm.subCategories.length - 1} onClick={() => moveSubCategory(i, 1)} className="px-2 py-1 text-slate-400 hover:text-slate-700 disabled:opacity-30" title="Move down">↓</button>
+                                                <button type="button" onClick={() => removeSubCategory(c.key)} className="p-1.5 text-slate-300 hover:text-red-500" title="Remove"><X className="w-4 h-4" /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="flex flex-col md:flex-row gap-2">
+                                <input
+                                    placeholder="Sub-category name, e.g. Blue Block"
+                                    value={subCatInput.name}
+                                    onChange={e => setSubCatInput({ ...subCatInput, name: e.target.value })}
+                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubCategory(); } }}
+                                    className="flex-1 bg-white border border-slate-200 p-2.5 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                                <input
+                                    placeholder="Short description (optional)"
+                                    value={subCatInput.description}
+                                    onChange={e => setSubCatInput({ ...subCatInput, description: e.target.value })}
+                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubCategory(); } }}
+                                    className="flex-[1.4] bg-white border border-slate-200 p-2.5 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                                <button type="button" onClick={addSubCategory} className="flex items-center justify-center gap-1.5 bg-slate-900 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-700">
+                                    <Plus className="w-4 h-4" /> Add
+                                </button>
+                            </div>
+                            <p className="text-[11px] text-slate-400">Click Save Changes / Create below to save the sub-categories.</p>
+                        </div>
+
                         <div className="flex justify-end gap-3 pt-4 border-t">
                             <button 
                                 onClick={() => setIsEditingType(null)} 
@@ -332,60 +351,6 @@ const LensManager: React.FC = () => {
                         </div>
                     </div>
                 )}
-
-                {/* LENS CATEGORIES */}
-                <div className="bg-white p-5 border border-slate-200 rounded-2xl space-y-4">
-                    <div>
-                        <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2"><Layers className="w-5 h-5 text-blue-600" /> Lens Categories</h2>
-                        <p className="text-sm text-slate-500">e.g. Blue Block, Polarised, Photochromic. After choosing a lens type, customers pick a category, then a package in it. Assign each package to a category in Products → Edit → Lens Setup.</p>
-                    </div>
-
-                    {categories.length > 0 && (
-                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-100">
-                            {categories.map((c, i) => (
-                                <div key={c.key} className="flex items-center justify-between gap-3 p-3">
-                                    <div className="min-w-0">
-                                        <p className="font-bold text-slate-900">{c.name}</p>
-                                        {c.description && <p className="text-xs text-slate-500 truncate">{c.description}</p>}
-                                    </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        <button disabled={i === 0 || savingCats} onClick={() => moveCategory(i, -1)} className="px-2 py-1 text-slate-400 hover:text-slate-700 disabled:opacity-30" title="Move up">↑</button>
-                                        <button disabled={i === categories.length - 1 || savingCats} onClick={() => moveCategory(i, 1)} className="px-2 py-1 text-slate-400 hover:text-slate-700 disabled:opacity-30" title="Move down">↓</button>
-                                        <button onClick={() => setCatForm({ key: c.key, name: c.name, description: c.description || '', editingKey: c.key })} className="p-2 text-slate-400 hover:text-blue-600" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                                        <button onClick={() => handleDeleteCategory(c.key)} className="p-2 text-slate-300 hover:text-red-500" title="Delete"><Trash2 className="w-4 h-4" /></button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    <div className="flex flex-col md:flex-row gap-3">
-                        <input
-                            placeholder="Category name, e.g. Blue Block"
-                            value={catForm.name}
-                            onChange={e => setCatForm({ ...catForm, name: e.target.value })}
-                            className="flex-1 bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                        <input
-                            placeholder="Short description (optional)"
-                            value={catForm.description}
-                            onChange={e => setCatForm({ ...catForm, description: e.target.value })}
-                            className="flex-[1.5] bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                        <div className="flex gap-2">
-                            {catForm.editingKey && (
-                                <button onClick={() => setCatForm({ key: '', name: '', description: '', editingKey: null })} className="px-4 py-3 rounded-xl text-slate-600 font-bold hover:bg-slate-100">Cancel</button>
-                            )}
-                            <button
-                                onClick={handleSaveCategory}
-                                disabled={savingCats}
-                                className="bg-blue-600 text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2"
-                            >
-                                {catForm.editingKey ? <><Check className="w-4 h-4" /> Save</> : <><Plus className="w-4 h-4" /> Add Category</>}
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
                 {/* LIST VIEW */}
                 <div className="grid gap-4">
@@ -439,6 +404,13 @@ const LensManager: React.FC = () => {
                                             )}
                                         </div>
                                         <p className="text-sm text-slate-500 leading-snug max-w-xl line-clamp-1">{type.description || 'No description provided'}</p>
+                                        {(type.subCategories?.length ?? 0) > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 pt-1">
+                                                {type.subCategories.map((c: SubCategory) => (
+                                                    <span key={c.key} className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-lg font-bold">{c.name}</span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">

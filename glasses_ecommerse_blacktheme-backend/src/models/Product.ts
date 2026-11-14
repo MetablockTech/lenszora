@@ -69,6 +69,7 @@ export interface IProduct extends Document {
     faceShape?: string[] // Recommended face shapes
     uvProtection?: string
     polarized?: boolean
+    wearDuration?: string // Contact lenses: daily | biweekly | monthly | yearly
     features?: string[]
   }
   lensSettings?: {
@@ -145,6 +146,8 @@ const ProductSchema = new Schema<IProduct>({
     faceShape: { type: [String], default: [] },
     uvProtection: { type: String },
     polarized: { type: Boolean, default: false },
+    // Contact lenses: how often they are replaced (daily | biweekly | monthly | yearly)
+    wearDuration: { type: String, enum: ['', 'daily', 'biweekly', 'monthly', 'yearly'], default: '' },
     features: { type: [String], default: [] }
   },
   lensSettings: {

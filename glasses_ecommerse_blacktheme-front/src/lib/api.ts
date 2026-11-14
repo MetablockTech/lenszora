@@ -66,6 +66,7 @@ export const products = {
     isBulk?: string;
     search?: string;
     sale?: boolean | string;
+    wearDuration?: string;
   }) {
     const query = new URLSearchParams()
     if (params?.status) query.append('status', params.status)
@@ -87,6 +88,7 @@ export const products = {
     if (params?.faceShape) query.append('faceShape', params.faceShape)
     if (params?.vendorId) query.append('vendorId', params.vendorId)
     if (params?.search) query.append('search', params.search)
+    if (params?.wearDuration) query.append('wearDuration', params.wearDuration)
 
     const res = await fetch(`${API_URL}/api/products${query.toString() ? `?${query.toString()}` : ''}`)
     if (!res.ok) throw new Error('Failed to fetch products')
@@ -237,8 +239,9 @@ export const categories = {
     if (!res.ok) throw new Error(await res.text())
     return res.json()
   },
-  async remove(id: string, token?: string) {
-    const res = await fetch(`${API_URL}/api/categories/${id}`, {
+  // cascade: also delete every sub-category under it (the API refuses to delete a category with children otherwise)
+  async remove(id: string, token?: string, cascade = false) {
+    const res = await fetch(`${API_URL}/api/categories/${id}${cascade ? '?cascade=true' : ''}`, {
       method: 'DELETE',
       headers: getHeaders(token)
     })

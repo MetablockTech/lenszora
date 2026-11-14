@@ -12,6 +12,7 @@ import { ShoppingBag, Heart, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn, getImageUrl, getProductImage, calculateProductDiscount } from "@/lib/utils";
+import { WEAR_DURATIONS, getWearDuration } from "@/lib/contactLens";
 
 interface Product {
   _id: string;
@@ -37,6 +38,7 @@ interface Product {
     polarized?: boolean;
     gender?: string;
     frameSize?: string;
+    wearDuration?: string;
   };
 }
 
@@ -73,10 +75,13 @@ const Shop = () => {
   const urlFaceShape = searchParams.get('faceShape') || "";
   const urlSort = searchParams.get('sortBy') || "newest";
   const urlVendor = searchParams.get('vendorId') || "";
+  const urlDuration = searchParams.get('wearDuration') || "";
   const urlSale = searchParams.get('sale') === 'true';
 
   const [searchQuery, setSearchQuery] = useState(urlSearch);
   const [onlySale, setOnlySale] = useState(urlSale);
+  // Contact lenses: Monthly / Dailies / Bi-Weekly / Yearly tabs
+  const [selectedDuration, setSelectedDuration] = useState(urlDuration);
   const [loading, setLoading] = useState(true);
   const [productList, setProductList] = useState<Product[]>([]);
   const [categoryList, setCategoryList] = useState<Category[]>([]);
@@ -86,6 +91,12 @@ const Shop = () => {
   const [selectedMainCategory, setSelectedMainCategory] = useState(urlCategory);
   const [selectedSubCategory, setSelectedSubCategory] = useState(urlSubcategory);
   const [selectedSubSubCategory, setSelectedSubSubCategory] = useState(urlType);
+  // Shopping contact lenses (any selected category or the URL category is / sits under Contact Lenses)
+  const isContactLensShop = [selectedMainCategory, selectedSubCategory, selectedSubSubCategory, urlCategory].some((val) => {
+    if (!val) return false;
+    const cat = categoryList.find((c) => c._id === val || c.slug === val);
+    return /contact[s-]*lens/i.test(`${cat?.name || ""} ${cat?.slug || val}`);
+  });
   const [selectedBrand, setSelectedBrand] = useState(urlBrand);
   const [selectedGender, setSelectedGender] = useState(
     urlGender ? urlGender.charAt(0).toUpperCase() + urlGender.slice(1).toLowerCase() : ""
@@ -139,6 +150,7 @@ const Shop = () => {
         vendorId: selectedVendor || undefined,
         search: searchToFilter,
         sale: onlySale ? 'true' : undefined,
+        wearDuration: isContactLensShop && selectedDuration ? selectedDuration : undefined,
         sort: sortBy === 'price-asc' ? 'price:asc' : sortBy === 'price-desc' ? 'price:desc' : 'createdAt:desc'
       });
 
@@ -207,6 +219,7 @@ const Shop = () => {
     searchQuery,
     selectedVendor,
     onlySale,
+    selectedDuration,
     searchParams
   ]);
 
@@ -422,6 +435,9 @@ const Shop = () => {
     // Add sale param
     if (onlySale) params.set('sale', 'true');
 
+    // Contact lens duration tab
+    if (isContactLensShop && selectedDuration) params.set('wearDuration', selectedDuration);
+
     // Update URL without page reload
     const newUrl = params.toString() ? `/shop?${params.toString()}` : '/shop';
     navigate(newUrl, { replace: true });
@@ -432,7 +448,7 @@ const Shop = () => {
     if (categoryList.length > 0 && brandList.length > 0) {
       updateURLParams();
     }
-  }, [selectedMainCategory, selectedSubCategory, selectedSubSubCategory, selectedBrand, selectedGender, selectedFrameType, selectedFrameShape, selectedFrameMaterial, selectedWeightGroup, selectedFaceShape, sortBy, searchQuery, selectedVendor, onlySale]);
+  }, [selectedMainCategory, selectedSubCategory, selectedSubSubCategory, selectedBrand, selectedGender, selectedFrameType, selectedFrameShape, selectedFrameMaterial, selectedWeightGroup, selectedFaceShape, sortBy, searchQuery, selectedVendor, onlySale, selectedDuration]);
 
   const rawMainCategories = categoryList.filter((c) => !c.parentId);
   const hasAccessoryInCat = rawMainCategories.some(c => c.slug?.toLowerCase().includes("accessor") || c.name?.toLowerCase().includes("accessor"));
@@ -1044,6 +1060,25 @@ const Shop = () => {
 
             {/* Products Grid */}
             <div className="lg:col-span-9">
+              {/* Contact lenses: filter by how often they are replaced */}
+              {isContactLensShop && (
+                <div className="mb-5 grid grid-cols-5 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+                  {[{ key: '', label: 'All', code: 'ALL' }, ...WEAR_DURATIONS].map((d) => {
+                    const active = selectedDuration === d.key;
+                    return (
+                      <button
+                        key={d.key || 'all'}
+                        type="button"
+                        onClick={() => setSelectedDuration(d.key)}
+                        className={`flex flex-col items-center gap-1 py-2.5 transition-colors ${active ? 'border-b-2 border-[#DAAB34] bg-[#DAAB34]/10 text-[#DAAB34]' : 'border-b-2 border-transparent text-slate-400 hover:text-white'}`}
+                      >
+                        <span className={`flex h-7 w-8 items-center justify-center rounded-md border text-[10px] font-extrabold ${active ? 'border-[#DAAB34]' : 'border-white/30'}`}>{d.code}</span>
+                        <span className="text-[11px] sm:text-xs font-bold">{d.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {loading ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
                   {[...Array(6)].map((_, i) => (
@@ -1093,6 +1128,11 @@ const Shop = () => {
                           >
                             {/* Product Image: fills the whole top of the card, edge to edge */}
                             <div className="relative aspect-[4/3] overflow-hidden bg-[#0d0d0f]">
+                              {isContactLensShop && getWearDuration(product) && (
+                                <span className="absolute bottom-2 left-2 z-10 rounded-md bg-black/75 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#DAAB34]">
+                                  {getWearDuration(product)!.label}
+                                </span>
+                              )}
                               <img
                                 src={getProductImage(product)}
                                 alt={product.title}

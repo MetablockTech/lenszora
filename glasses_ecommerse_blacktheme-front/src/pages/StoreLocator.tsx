@@ -513,7 +513,11 @@ const StoreLocator = () => {
 
       </main>
 
-      <Footer />
+      {/* Phones: app-style screen without the site footer; the spacer keeps content clear of the bottom nav */}
+      <div className="h-16 md:hidden" aria-hidden="true" />
+      <div className="hidden md:block">
+        <Footer />
+      </div>
 
       <HomeEyeTestModal isOpen={isHomeVisitOpen} onClose={() => setIsHomeVisitOpen(false)} />
 

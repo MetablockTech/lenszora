@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
       status, isBestSeller, isFeatured, sort, limit,
       category, brand, minPrice, maxPrice,
       gender, frameType, frameShape, frameMaterial, weightGroup, faceShape,
-      vendorId, isBulk, search, sale
+      vendorId, isBulk, search, sale, wearDuration
     } = req.query
 
     const filter: any = {}
@@ -195,6 +195,23 @@ router.get('/', async (req, res) => {
     if (faceShape) {
       const faceStr = String(faceShape).trim()
       filter['eyewearDetails.faceShape'] = { $regex: new RegExp(faceStr, 'i') }
+    }
+
+    // Contact lens duration: the admin-set value, or (older products) the duration in the title
+    const DURATION_TITLE: Record<string, RegExp> = {
+      daily: /dail|\b1\s*day|one\s*day/i,
+      biweekly: /bi\s*-?\s*weekly|fortnight|2\s*weeks?/i,
+      monthly: /month/i,
+      yearly: /year|annual/i,
+    }
+    if (wearDuration && DURATION_TITLE[String(wearDuration)]) {
+      const key = String(wearDuration)
+      andConditions.push({
+        $or: [
+          { 'eyewearDetails.wearDuration': key },
+          { 'eyewearDetails.wearDuration': { $in: [null, ''] }, title: { $regex: DURATION_TITLE[key] } }
+        ]
+      })
     }
 
     if (andConditions.length > 0) {
