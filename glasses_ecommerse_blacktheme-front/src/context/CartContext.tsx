@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { getToken, users } from '@/lib/api'
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
+import { getToken, users, AUTH_CHANGE_EVENT } from '@/lib/api'
 
 export interface CartItem {
     productId: string;
@@ -45,39 +45,113 @@ interface CartContextType {
  
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
-export function CartProvider({ children }: { children: ReactNode }) {
-    const [cart, setCart] = useState<CartItem[]>([])
+// The cart in this browser belongs to one account (or to a guest). Its owner is saved next to it so a
+// cart left behind by one account is never shown to, or synced into, another account after logout/login.
+const CART_KEY = 'cart'
+const CART_OWNER_KEY = 'cart_owner'
+const GUEST = 'guest'
+// Initial state before the right cart is loaded; never saved or synced (it would wipe the account's cart)
+const NOT_LOADED: CartItem[] = []
 
-    // Load cart from localStorage or backend
+// The signed-in account's id, read from the session token (the API signs { userId })
+function currentAccount(): string {
+    const token = getToken()
+    if (!token) return GUEST
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        return String(payload.userId || payload.id || payload._id || payload.sub || GUEST)
+    } catch {
+        return GUEST
+    }
+}
+
+function readLocalCart(): CartItem[] {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(CART_KEY) || '[]')
+        return Array.isArray(parsed) ? parsed : []
+    } catch {
+        return []
+    }
+}
+
+const sameLine = (a: CartItem, b: CartItem) =>
+    a.productId === b.productId &&
+    a.variant?.sku === b.variant?.sku &&
+    (a.lens?.packageId || a.lens?.name || '') === (b.lens?.packageId || b.lens?.name || '')
+
+// Account cart plus what was added as a guest before logging in (guest lines that already exist are kept once)
+function mergeCarts(accountCart: CartItem[], guestCart: CartItem[]): CartItem[] {
+    const merged = [...accountCart]
+    guestCart.forEach((item) => {
+        if (!merged.some((m) => sameLine(m, item))) merged.push(item)
+    })
+    return merged
+}
+
+export function CartProvider({ children }: { children: ReactNode }) {
+    const [cart, setCart] = useState<CartItem[]>(NOT_LOADED)
+    // Account the cart in state belongs to; null while the right cart is still loading (nothing is saved or synced then)
+    const ownerRef = useRef<string | null>(null)
+
+    // Load the cart for whoever is signed in now. Runs on start and on every login / logout.
     useEffect(() => {
-        const saved = localStorage.getItem('cart')
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved)
-                setCart(parsed)
+        let cancelled = false
+
+        const loadForCurrentAccount = () => {
+            const account = currentAccount()
+            const local = readLocalCart()
+            const localOwner = localStorage.getItem(CART_OWNER_KEY)
+            ownerRef.current = null
+
+            if (account === GUEST) {
+                // Logged out: keep only a guest cart; a signed-in account's cart stays on its account
+                const guestCart = !localOwner || localOwner === GUEST ? local : []
+                ownerRef.current = GUEST
+                setCart(guestCart)
                 return
-            } catch {
-                setCart([])
             }
+
+            if (localOwner === account) {
+                // Same account as before (e.g. page reload): the local copy is current
+                ownerRef.current = account
+                setCart(local)
+                return
+            }
+
+            // Logged in to an account: its server cart, plus anything added as a guest just before.
+            // A cart left by another account (or an old cart with no owner) is not carried over.
+            const guestCart = localOwner === GUEST ? local : []
+            users.getCart(getToken())
+                .then((serverCart: CartItem[]) => mergeCarts(Array.isArray(serverCart) ? serverCart : [], guestCart))
+                .catch(() => guestCart)
+                .then((next) => {
+                    if (cancelled || currentAccount() !== account) return
+                    ownerRef.current = account
+                    setCart(next)
+                })
         }
-        
-        // If no local cart, try fetching from backend if logged in
-        const token = getToken()
-        if (token) {
-            users.getCart(token).then((serverCart) => {
-                if (serverCart && serverCart.length > 0) {
-                    setCart(serverCart)
-                }
-            }).catch(() => {})
+
+        loadForCurrentAccount()
+        window.addEventListener(AUTH_CHANGE_EVENT, loadForCurrentAccount)
+        // Another tab logged in or out
+        const onStorage = (e: StorageEvent) => { if (e.key === 'token') loadForCurrentAccount() }
+        window.addEventListener('storage', onStorage)
+        return () => {
+            cancelled = true
+            window.removeEventListener(AUTH_CHANGE_EVENT, loadForCurrentAccount)
+            window.removeEventListener('storage', onStorage)
         }
     }, [])
 
-    // Save cart to localStorage & sync to server
+    // Save the cart locally (with its owner) and sync it to the owner's account
     useEffect(() => {
-        localStorage.setItem('cart', JSON.stringify(cart))
-        
+        const owner = ownerRef.current
+        if (cart === NOT_LOADED || !owner || owner !== currentAccount()) return
+        localStorage.setItem(CART_KEY, JSON.stringify(cart))
+        localStorage.setItem(CART_OWNER_KEY, owner)
+
         const token = getToken()
-        if (token) {
+        if (token && owner !== GUEST) {
             users.syncCart(cart, token).catch((err) => {
                 console.error('Failed to sync cart to server:', err)
             })

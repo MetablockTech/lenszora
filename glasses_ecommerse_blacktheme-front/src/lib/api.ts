@@ -758,13 +758,21 @@ export function getToken() {
   return token
 }
 
+// Fired when someone logs in or out, so per-account state (the cart) can switch accounts
+export const AUTH_CHANGE_EVENT = 'lz-auth-change'
+const notifyAuthChange = () => {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(AUTH_CHANGE_EVENT))
+}
+
 export function setToken(token: string) {
   localStorage.setItem('token', token)
+  notifyAuthChange()
 }
 
 export function clearToken() {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
+  notifyAuthChange()
 }
 
 export function setUser(user: any) {

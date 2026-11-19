@@ -3,7 +3,7 @@ import Footer from "@/components/layout/Footer";
 import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Filter, SlidersHorizontal, ChevronRight, Star, Tag, Zap, ShieldCheck } from 'lucide-react'
+import { Filter, SlidersHorizontal, ChevronRight, Star, Tag, Zap, ShieldCheck, ArrowUpDown, Check } from 'lucide-react'
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { products, categories, brands, eyewearAttributes as eyewearAttributesAPI, stores } from "@/lib/api";
 import { useWishlist } from "@/context/WishlistContext";
@@ -120,6 +120,10 @@ const Shop = () => {
   const [activeStore, setActiveStore] = useState<any>(null);
   const [priceRange, setPriceRange] = useState<number[]>([0, 100000]);
   const [sortBy, setSortBy] = useState(urlSort);
+  // Mobile: Sort and Filter open as separate bottom sheets; the filter sheet shows one group at a time
+  const [mobileSortOpen, setMobileSortOpen] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [mobileFilterGroup, setMobileFilterGroup] = useState('category');
 
   async function fetchFilteredProducts() {
     try {
@@ -1019,35 +1023,177 @@ const Shop = () => {
           })()}
 
           <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8">
-            {/* Mobile Filter Button */}
-            <div className="lg:hidden flex items-center justify-between mb-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2 border-primary/20 bg-secondary/20 hover:bg-secondary/40 text-xs font-bold uppercase tracking-wider h-10 px-4">
-                    <SlidersHorizontal className="h-3.5 w-3.5 text-[#DAAB34]" />
-                    Filters & Sort
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] bg-slate-950 border-r border-white/5 p-0 overflow-y-auto custom-scrollbar">
-                  <SheetHeader className="p-6 border-b border-white/5">
-                    <SheetTitle className="text-sm font-bold uppercase tracking-[3px] text-white flex items-center gap-2">
-                      <Filter className="h-4 w-4 text-[#DAAB34]" />
-                      Refine Search
-                    </SheetTitle>
-                    <SheetDescription className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                      Filter by type, shape, color & more
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="p-4 pt-0">
-                    <FilterSidebarContent />
-                  </div>
-                </SheetContent>
-              </Sheet>
+            {/* Mobile: separate Sort and Filter buttons */}
+            {(() => {
+              const SORT_OPTIONS = [
+                { value: 'newest', label: 'Newest First' },
+                { value: 'price-asc', label: 'Price: Low to High' },
+                { value: 'price-desc', label: 'Price: High to Low' },
+              ];
+              const urlCat = (searchParams.get('category') || '').toLowerCase();
+              const isAccessoryShop = urlCat.includes('accessor') || (selectedMainCategory || '').toLowerCase().includes('accessor');
+              const names = (list: (string | { name: string })[]) => list.map((o) => (typeof o === 'string' ? o : o.name));
+              type Group = { key: string; label: string; options: { value: string; label: string }[]; value: string; set: (v: string) => void };
+              const groups: Group[] = [
+                {
+                  key: 'category', label: 'Category', value: selectedMainCategory,
+                  set: (v) => { setSelectedMainCategory(v); setSelectedSubCategory(''); setSelectedSubSubCategory(''); },
+                  options: allMainCategories.map((c) => ({ value: c._id, label: c.name })),
+                },
+                ...(!isAccessoryShop ? [
+                  { key: 'gender', label: 'Gender', value: selectedGender, set: setSelectedGender, options: genderOptions.map((g) => ({ value: g, label: g })) },
+                  { key: 'frameType', label: 'Frame Type', value: selectedFrameType, set: setSelectedFrameType, options: names(frameTypeOptions).map((n) => ({ value: n, label: n })) },
+                  { key: 'frameShape', label: 'Frame Shape', value: selectedFrameShape, set: setSelectedFrameShape, options: names(frameShapeOptions).map((n) => ({ value: n, label: n })) },
+                  { key: 'faceShape', label: 'Face Shape', value: selectedFaceShape, set: setSelectedFaceShape, options: names(faceShapeOptions).map((n) => ({ value: n, label: n })) },
+                  { key: 'brand', label: 'Brand', value: selectedBrand, set: setSelectedBrand, options: brandList.map((b) => ({ value: b._id, label: b.name })) },
+                  { key: 'material', label: 'Material', value: selectedFrameMaterial, set: setSelectedFrameMaterial, options: frameMaterialOptions.map((m) => ({ value: m, label: m })) },
+                  { key: 'weight', label: 'Weight', value: selectedWeightGroup, set: setSelectedWeightGroup, options: weightGroupOptions.map((w) => ({ value: w, label: w })) },
+                ] : []),
+              ];
+              const activeCount = [selectedGender, selectedFrameType, selectedFrameShape, selectedFaceShape, selectedBrand, selectedFrameMaterial, selectedWeightGroup].filter(Boolean).length
+                + (onlySale ? 1 : 0) + (priceRange[1] < 100000 ? 1 : 0);
+              const current = groups.find((g) => g.key === mobileFilterGroup);
+              const clearAll = () => {
+                setSelectedGender(''); setSelectedFrameType(''); setSelectedFrameShape(''); setSelectedFaceShape('');
+                setSelectedBrand(''); setSelectedFrameMaterial(''); setSelectedWeightGroup(''); setOnlySale(false); setPriceRange([0, 100000]);
+              };
+              const sortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label || 'Newest First';
 
-              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                {productList.length} Styles
-              </div>
-            </div>
+              return (
+                <div className="lg:hidden mb-1 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMobileSortOpen(true)}
+                      className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-bold uppercase tracking-wider text-white"
+                    >
+                      <ArrowUpDown className="h-4 w-4 text-[#DAAB34]" />
+                      <span className="flex flex-col items-start leading-tight">
+                        Sort
+                        <span className="text-[9px] font-medium normal-case tracking-normal text-slate-400">{sortLabel}</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobileFilterOpen(true)}
+                      className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-bold uppercase tracking-wider text-white"
+                    >
+                      <SlidersHorizontal className="h-4 w-4 text-[#DAAB34]" />
+                      Filter
+                      {activeCount > 0 && <span className="rounded-full bg-[#DAAB34] px-1.5 text-[10px] font-black text-black">{activeCount}</span>}
+                    </button>
+                  </div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{productList.length} Styles</div>
+
+                  {/* Sort sheet */}
+                  <Sheet open={mobileSortOpen} onOpenChange={setMobileSortOpen}>
+                    <SheetContent side="bottom" className="rounded-t-2xl border-white/10 bg-[#111112] p-0 text-white">
+                      <SheetHeader className="border-b border-white/10 px-5 py-4 text-left">
+                        <SheetTitle className="text-base font-bold text-white">Sort by</SheetTitle>
+                        <SheetDescription className="sr-only">Choose how products are ordered</SheetDescription>
+                      </SheetHeader>
+                      <div className="pb-6">
+                        {SORT_OPTIONS.map((o) => (
+                          <button
+                            key={o.value}
+                            type="button"
+                            onClick={() => { setSortBy(o.value); setMobileSortOpen(false); }}
+                            className="flex w-full items-center justify-between px-5 py-4 text-left text-sm"
+                          >
+                            <span className={sortBy === o.value ? 'font-bold text-[#DAAB34]' : 'text-slate-200'}>{o.label}</span>
+                            {sortBy === o.value && <Check className="h-4 w-4 text-[#DAAB34]" />}
+                          </button>
+                        ))}
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+
+                  {/* Filter sheet: groups on the left, the chosen group's options on the right */}
+                  <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
+                    <SheetContent side="bottom" className="flex h-[85vh] flex-col rounded-t-2xl border-white/10 bg-[#111112] p-0 text-white">
+                      <SheetHeader className="flex-row items-center justify-between space-y-0 border-b border-white/10 px-5 py-4 text-left">
+                        <SheetTitle className="text-base font-bold text-white">Filters</SheetTitle>
+                        <SheetDescription className="sr-only">Filter products by category, shape, brand and more</SheetDescription>
+                        {activeCount > 0 && (
+                          <button type="button" onClick={clearAll} className="mr-8 text-xs font-bold uppercase tracking-wider text-[#DAAB34]">Clear all</button>
+                        )}
+                      </SheetHeader>
+                      <div className="flex min-h-0 flex-1">
+                        <nav className="w-[38%] shrink-0 overflow-y-auto border-r border-white/10 bg-black/30">
+                          {[...groups.map((g) => ({ key: g.key, label: g.label, on: !!g.value })), { key: 'price', label: 'Price', on: priceRange[1] < 100000 }, { key: 'sale', label: 'Sale & Deals', on: onlySale }].map((g) => (
+                            <button
+                              key={g.key}
+                              type="button"
+                              onClick={() => setMobileFilterGroup(g.key)}
+                              className={cn(
+                                'relative flex w-full items-center justify-between px-4 py-3.5 text-left text-[13px]',
+                                mobileFilterGroup === g.key ? 'bg-[#111112] font-bold text-white' : 'text-slate-400'
+                              )}
+                            >
+                              {mobileFilterGroup === g.key && <span className="absolute inset-y-0 left-0 w-1 bg-[#DAAB34]" />}
+                              {g.label}
+                              {g.on && <span className="h-1.5 w-1.5 rounded-full bg-[#DAAB34]" />}
+                            </button>
+                          ))}
+                        </nav>
+                        <div className="flex-1 overflow-y-auto px-4 py-2">
+                          {current && (
+                            <>
+                              {[{ value: '', label: current.key === 'category' ? 'All Categories' : 'All' }, ...current.options].map((o) => {
+                                const on = current.value === o.value;
+                                return (
+                                  <button
+                                    key={o.value || 'all'}
+                                    type="button"
+                                    onClick={() => current.set(o.value)}
+                                    className="flex w-full items-center justify-between border-b border-white/5 py-3.5 text-left text-sm"
+                                  >
+                                    <span className={on ? 'font-bold text-[#DAAB34]' : 'text-slate-200'}>{o.label}</span>
+                                    <span className={cn('flex h-5 w-5 items-center justify-center rounded-full border', on ? 'border-[#DAAB34] bg-[#DAAB34]' : 'border-white/25')}>
+                                      {on && <Check className="h-3 w-3 text-black" />}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </>
+                          )}
+                          {mobileFilterGroup === 'price' && (
+                            <div className="space-y-4 py-4">
+                              <p className="text-sm text-slate-300">Up to <span className="font-bold text-white">₹{priceRange[1] >= 100000 ? 'any price' : priceRange[1].toLocaleString('en-IN')}</span></p>
+                              <input
+                                type="range" min="500" max="15000" step="500"
+                                value={Math.min(priceRange[1], 15000)}
+                                onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                                className="w-full accent-[#DAAB34]"
+                              />
+                              <div className="flex justify-between text-[11px] text-slate-500"><span>₹500</span><span>₹15,000</span></div>
+                              {priceRange[1] < 100000 && (
+                                <button type="button" onClick={() => setPriceRange([0, 100000])} className="text-xs font-bold text-[#DAAB34]">Any price</button>
+                              )}
+                            </div>
+                          )}
+                          {mobileFilterGroup === 'sale' && (
+                            <label className="flex cursor-pointer items-center justify-between py-4">
+                              <span className="text-sm text-slate-200">Only items on sale</span>
+                              <input type="checkbox" checked={onlySale} onChange={(e) => setOnlySale(e.target.checked)} className="h-5 w-5 accent-[#DAAB34]" />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                      <div className="border-t border-white/10 p-3">
+                        <button
+                          type="button"
+                          onClick={() => setMobileFilterOpen(false)}
+                          className="h-12 w-full rounded-xl bg-[#DAAB34] text-sm font-bold text-black"
+                        >
+                          {loading ? 'Loading…' : `Show ${productList.length} product${productList.length === 1 ? '' : 's'}`}
+                        </button>
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              );
+            })()}
 
             {/* Desktop Sidebar Filters */}
             <motion.div

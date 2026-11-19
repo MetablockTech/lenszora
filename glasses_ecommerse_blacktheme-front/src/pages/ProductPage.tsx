@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Heart, ShoppingBag, Shield, Star, ChevronRight, Layers, Minus, Plus, ShoppingCart, Store, Zap, Users, Award, Scissors, Info, Sparkles, Check, Glasses, Eye, Truck, ShieldCheck, CheckCircle2, PackageCheck, MessageSquare, Gift, Tag, HelpCircle, BadgePercent, Ruler, Headphones, RefreshCw } from "lucide-react";
 import { cn, getImageUrl, calculateProductDiscount, isFrameOnlyLens, colorSwatchBackground, formatColorName } from "@/lib/utils";
 import { getWearDuration } from "@/lib/contactLens";
+import ShareButton from "@/components/product/ShareButton";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -616,14 +617,21 @@ const ProductPage = () => {
                     <h1 className="text-xl lg:text-2xl font-bold leading-snug text-white">{product.title}</h1>
                     {frameSummary && <p className="text-sm text-slate-400 mt-1">{frameSummary}</p>}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleWishlist(product._id)}
-                    aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                    className={`shrink-0 h-10 w-10 rounded-full border flex items-center justify-center transition-colors ${isWishlisted ? 'border-red-500/50 bg-red-500/10 text-red-500' : 'border-white/15 text-slate-300 hover:border-white/30 hover:text-white'}`}
-                  >
-                    <Heart className="h-[18px] w-[18px]" fill={isWishlisted ? 'currentColor' : 'none'} />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <ShareButton
+                      title={product.title}
+                      text={`${brandName ? `${brandName} ` : ''}${product.title} on LensZora`}
+                      url={`${window.location.origin}/product/${product._id}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleWishlist(product._id)}
+                      aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                      className={`shrink-0 h-10 w-10 rounded-full border flex items-center justify-center transition-colors ${isWishlisted ? 'border-red-500/50 bg-red-500/10 text-red-500' : 'border-white/15 text-slate-300 hover:border-white/30 hover:text-white'}`}
+                    >
+                      <Heart className="h-[18px] w-[18px]" fill={isWishlisted ? 'currentColor' : 'none'} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Social proof: only when there is something to show */}

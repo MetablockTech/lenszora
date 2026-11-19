@@ -3,7 +3,7 @@ import Footer from '@/components/layout/Footer'
 import { useCart } from '@/hooks/use-cart'
 import { orders, addresses, pincodes, getUser } from '@/lib/api'
 import { getToken } from '@/lib/api'
-import { Trash2, ChevronRight, AlertCircle, MapPin, Plus, Check, Edit2, Tag, Home, Briefcase, Star, Sparkles, X, Mail } from 'lucide-react'
+import { Trash2, ChevronRight, AlertCircle, MapPin, Plus, Minus, Check, Edit2, Tag, Home, Briefcase, Star, Sparkles, X, Mail } from 'lucide-react'
 import { getImageUrl, isFrameOnlyLens } from '@/lib/utils'
 import React, { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
@@ -23,6 +23,9 @@ interface SavedAddress {
   isDefault: boolean;
   addressType: 'home' | 'work' | 'other';
 }
+
+// Most of one item a customer can order in a single cart line (stock is checked again when ordering)
+const MAX_QTY_PER_LINE = 10
 
 const Checkout = () => {
   const { cart, total: cartTotal, clearCart, removeFromCart, updateItem } = useCart()
@@ -618,6 +621,34 @@ const Checkout = () => {
           </div>
         );
         const lineTotal = `₹${((item.price + (item.lens?.price || 0)) * item.quantity).toLocaleString()}`;
+        // Change this exact cart line (the same frame can be in the cart twice with different lenses)
+        const setQty = (q: number) => updateItem(idx, { ...item, quantity: Math.min(MAX_QTY_PER_LINE, Math.max(1, q)) });
+        const qtyControl = (
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center rounded-lg border border-zinc-700 bg-zinc-900">
+              <button
+                type="button"
+                aria-label="Decrease quantity"
+                onClick={() => setQty(item.quantity - 1)}
+                disabled={item.quantity <= 1}
+                className="flex h-8 w-8 items-center justify-center text-gray-300 hover:text-white disabled:opacity-30"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <span className="w-8 text-center text-sm font-bold text-white" aria-live="polite">{item.quantity}</span>
+              <button
+                type="button"
+                aria-label="Increase quantity"
+                onClick={() => setQty(item.quantity + 1)}
+                disabled={item.quantity >= MAX_QTY_PER_LINE}
+                className="flex h-8 w-8 items-center justify-center text-gray-300 hover:text-white disabled:opacity-30"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <span className="text-xs text-gray-500">× ₹{(item.price + (item.lens?.price || 0)).toLocaleString()}</span>
+          </div>
+        );
 
         if (stacked) {
           return (
@@ -638,11 +669,11 @@ const Checkout = () => {
                 <h3 className="font-semibold text-white leading-snug line-clamp-2 group-hover/details:text-gold transition-colors">
                   {item.title}
                 </h3>
-                <div className="flex items-center justify-between gap-3 mt-1">
-                  <p className="text-sm text-gray-400">Qty: {item.quantity} × ₹{item.price.toLocaleString()}</p>
-                  <p className="font-bold text-white">{lineTotal}</p>
-                </div>
               </Link>
+              <div className="flex items-center justify-between gap-3 mt-2">
+                {qtyControl}
+                <p className="font-bold text-white">{lineTotal}</p>
+              </div>
               {lensBlock}
             </div>
           );
@@ -665,10 +696,8 @@ const Checkout = () => {
                 <h3 className="font-medium text-white truncate group-hover/details:text-gold transition-colors">
                   {item.title}
                 </h3>
-                <p className="text-sm text-gray-400">
-                  Qty: {item.quantity} × ₹{item.price.toLocaleString()}
-                </p>
               </Link>
+              <div className="mt-1.5">{qtyControl}</div>
               {lensBlock}
               <p className="font-semibold text-white mt-1">{lineTotal}</p>
             </div>

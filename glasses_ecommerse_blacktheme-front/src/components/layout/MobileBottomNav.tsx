@@ -29,8 +29,8 @@ const MobileBottomNav = () => {
       id: "tryon",
       label: "AR Try on",
       icon: Scan,
-      path: "/contact",
-      isActive: location.pathname === "/contact",
+      path: "/try-on",
+      isActive: location.pathname === "/try-on",
     },
     {
       id: "eyetest",

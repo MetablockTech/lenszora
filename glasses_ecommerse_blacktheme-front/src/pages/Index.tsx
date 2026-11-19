@@ -28,9 +28,7 @@ const Index = () => {
         <TrendingBanners />
         <BrandHorizontalSlider />
 
-        <div className="bg-background py-6 lg:py-12 border-t border-white/5">
-          <CategoryProductSliders />
-        </div>
+        <CategoryProductSliders />
 
         <NewArrivals />
         <EyeCheckupSection />

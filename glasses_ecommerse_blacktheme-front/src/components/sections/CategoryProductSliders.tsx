@@ -97,20 +97,12 @@ const CategoryProductSliders = () => {
         }
     }
 
-    if (loading) {
-        return (
-            <div className="py-8 bg-background">
-                <div className="container mx-auto px-4">
-                    <div className="h-96 bg-slate-800/30 rounded-2xl animate-pulse" />
-                </div>
-            </div>
-        );
-    }
-
-    if (categoryData.length === 0) return null;
+    // Often there is nothing to show (the main categories have their own section above),
+    // so no loading placeholder: the section appears only once it has product rows
+    if (loading || categoryData.length === 0) return null;
 
     return (
-        <section className="py-8 bg-background overflow-hidden">
+        <section className="py-14 lg:py-20 bg-background overflow-hidden border-t border-white/5">
             <div className="container mx-auto px-4 space-y-16">
                 {categoryData.map((catData) => (
                     <ProductSlider
