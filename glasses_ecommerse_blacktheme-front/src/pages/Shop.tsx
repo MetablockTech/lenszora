@@ -1275,7 +1275,7 @@ const Shop = () => {
                             {/* Product Image: fills the whole top of the card, edge to edge */}
                             <div className="relative aspect-[4/3] overflow-hidden bg-[#0d0d0f]">
                               {isContactLensShop && getWearDuration(product) && (
-                                <span className="absolute bottom-2 left-2 z-10 rounded-md bg-black/75 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#DAAB34]">
+                                <span className="absolute bottom-2 right-2 z-20 rounded-md bg-black/75 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#DAAB34]">
                                   {getWearDuration(product)!.label}
                                 </span>
                               )}

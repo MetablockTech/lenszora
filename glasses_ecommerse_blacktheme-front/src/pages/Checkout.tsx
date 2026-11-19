@@ -131,6 +131,8 @@ const Checkout = () => {
   })
 
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'manual'>('razorpay')
+  // Two steps: delivery address first, then payment
+  const [checkoutStep, setCheckoutStep] = useState<'address' | 'payment'>('address')
   const [manualPaymentSettings, setManualPaymentSettings] = useState<any>(null)
   const [paymentProof, setPaymentProof] = useState<string>('')
   const [utrNumber, setUTRNumber] = useState('')
@@ -407,6 +409,37 @@ const Checkout = () => {
     } finally {
       setUploadingProof(false)
     }
+  }
+
+  // Step 1 → 2: needs a complete delivery address (a saved one, or the new-address form filled in)
+  function goToPayment() {
+    let current = formData
+    const hasAddress = (d: typeof formData) => !!(d.firstName && d.address && d.phone && d.zipCode)
+    if (!hasAddress(current) && newAddressData.name && newAddressData.phone && newAddressData.addressLine1 && /^\d{6}$/.test(newAddressData.pincode)) {
+      current = {
+        firstName: newAddressData.name.trim().split(' ')[0] || newAddressData.name,
+        lastName: newAddressData.name.trim().split(' ').slice(1).join(' '),
+        email: formData.email || getUser()?.email || '',
+        phone: newAddressData.phone,
+        address: `${newAddressData.addressLine1}${newAddressData.addressLine2 ? ', ' + newAddressData.addressLine2 : ''}`,
+        city: newAddressData.city,
+        state: newAddressData.state,
+        zipCode: newAddressData.pincode,
+        country: 'India',
+      }
+      setFormData(current)
+      checkPincodeAvailability(newAddressData.pincode)
+    }
+    if (!hasAddress(current)) {
+      toast({ title: "Add a delivery address", description: "Select a saved address or fill in name, phone, address and pincode.", variant: "destructive" })
+      return
+    }
+    if (deliveryInfo && !deliveryInfo.serviceable) {
+      toast({ title: "Delivery not available", description: deliveryInfo.message || "We don't deliver to this pincode yet.", variant: "destructive" })
+      return
+    }
+    setCheckoutStep('payment')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function handlePayment(e?: React.MouseEvent) {
@@ -720,13 +753,36 @@ const Checkout = () => {
 
       <main className="py-8 lg:py-12 w-full flex flex-col">
         <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6">
-          <h1 className="text-3xl lg:text-4xl font-playfair font-bold text-white mb-8">
+          <h1 className="text-3xl lg:text-4xl font-playfair font-bold text-white mb-5">
             Checkout
           </h1>
 
+          {/* Steps: 1 Address → 2 Payment */}
+          <div className="mb-8 flex items-center gap-3 max-w-md">
+            {([['address', 'Address'], ['payment', 'Payment']] as const).map(([key, label], i) => {
+              const active = checkoutStep === key
+              const done = key === 'address' && checkoutStep === 'payment'
+              return (
+                <div key={key} className="flex flex-1 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { if (key === 'address') setCheckoutStep('address'); else goToPayment() }}
+                    className="flex items-center gap-2"
+                  >
+                    <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${active ? 'bg-gold text-black' : done ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-gray-400'}`}>
+                      {done ? <Check className="h-4 w-4" /> : i + 1}
+                    </span>
+                    <span className={`text-sm font-semibold ${active ? 'text-white' : 'text-gray-400'}`}>{label}</span>
+                  </button>
+                  {i === 0 && <span className={`h-px flex-1 ${checkoutStep === 'payment' ? 'bg-emerald-500' : 'bg-zinc-700'}`} />}
+                </div>
+              )
+            })}
+          </div>
+
           <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8 w-full">
             {/* Phones: products first, then address/billing, then summary + pay */}
-            <div className="lg:hidden bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
+            <div className={`lg:hidden bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6 ${checkoutStep === 'address' ? '' : 'hidden'}`}>
               <h2 className="text-xl font-playfair font-bold text-white mb-4">
                 Your Items ({cart.length})
               </h2>
@@ -738,7 +794,7 @@ const Checkout = () => {
             {/* Left: Shipping Form */}
             <div className="lg:col-span-2 space-y-8 w-full min-w-0">
               {/* Saved Addresses Section (Amazon Style) */}
-              {savedAddresses.length > 0 && !showNewAddressForm && (
+              {checkoutStep === 'address' && savedAddresses.length > 0 && !showNewAddressForm && (
                 <motion.div
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -874,7 +930,7 @@ const Checkout = () => {
               )}
 
               {/* Email Field for saved address users */}
-              {savedAddresses.length > 0 && !showNewAddressForm && (
+              {checkoutStep === 'address' && savedAddresses.length > 0 && !showNewAddressForm && (
                 <motion.div
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -901,7 +957,7 @@ const Checkout = () => {
               )}
 
               {/* New Address Form (Amazon Style) */}
-              {(showNewAddressForm || savedAddresses.length === 0) && (
+              {checkoutStep === 'address' && (showNewAddressForm || savedAddresses.length === 0) && (
                 <motion.div
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1133,7 +1189,7 @@ const Checkout = () => {
               )}
 
               {/* Delivery Info */}
-              {deliveryInfo && (
+              {checkoutStep === 'address' && deliveryInfo && (
                 <div className={`border rounded-lg p-4 ${deliveryInfo.serviceable
                   ? 'bg-green-900/20 border-green-800'
                   : 'bg-red-900/20 border-red-800'
@@ -1159,6 +1215,20 @@ const Checkout = () => {
                   </div>
                 </div>
               )}
+
+              {checkoutStep === 'payment' && (<>
+              {/* Where it's going, with a way back to step 1 */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 flex items-start justify-between gap-4">
+                <div className="flex gap-3 min-w-0">
+                  <MapPin className="h-5 w-5 text-gold shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Delivering to</p>
+                    <p className="font-semibold text-white mt-1">{[formData.firstName, formData.lastName].filter(Boolean).join(' ')} · {formData.phone}</p>
+                    <p className="text-sm text-gray-400 break-words">{[formData.address, formData.city, formData.state, formData.zipCode].filter(Boolean).join(', ')}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setCheckoutStep('address')} className="text-sm font-semibold text-gold hover:underline shrink-0">Change</button>
+              </div>
 
               {/* Payment Method Selection */}
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
@@ -1353,6 +1423,7 @@ const Checkout = () => {
                   </p>
                 </div>
               </div>
+              </>)}
             </div>
 
             {/* Right: Order Summary */}
@@ -1456,7 +1527,19 @@ const Checkout = () => {
                   </div>
                 </div>
 
+                {/* Step 1: continue to payment */}
+                {checkoutStep === 'address' && (
+                  <button
+                    type="button"
+                    onClick={goToPayment}
+                    className="w-full mt-6 bg-gold text-black py-3 rounded-lg font-bold hover:brightness-110 transition-all"
+                  >
+                    Continue to Payment
+                  </button>
+                )}
+
                 {/* Payment Button */}
+                {checkoutStep === 'payment' && (
                 <button
                   onClick={handlePayment}
                   disabled={loading || !deliveryInfo?.serviceable}
@@ -1469,6 +1552,7 @@ const Checkout = () => {
                       : 'Pay with Razorpay'
                   }
                 </button>
+                )}
 
                 <button
                   onClick={() => navigate('/shop')}
