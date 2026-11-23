@@ -152,6 +152,12 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
 
             // Push initial modal state if depth is 0
             if (modalHistoryDepthRef.current === 0) {
+                // Opened part-way (e.g. Edit Power from the cart): record the earlier steps too, so Back
+                // walks power → package → lens type instead of closing the popup
+                if (initialStep > 1) {
+                    pushModalHistory(1, false);
+                    if (initialStep === 3 && initialData?.package) pushModalHistory(2, false);
+                }
                 pushModalHistory(initialStep, false);
                 // Opened straight into the power form: Back should return to the power options
                 if (openPowerForm && initialData?.prescription?.method === 'manual' && initialStep === 3) {
@@ -161,8 +167,12 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
         }
     }, [isOpen, vendorId, product, initialData]);
 
-    // The product page may only learn it's a contact lens after the modal opened: swap the power types then
+    // The product page may only learn it's a contact lens after the modal opened: swap the power types then.
+    // Only on a real change: on first render this would clear the type the cart's Edit/Change Lens just restored.
+    const prevContactLensModeRef = useRef(contactLensMode);
     useEffect(() => {
+        if (prevContactLensModeRef.current === contactLensMode) return;
+        prevContactLensModeRef.current = contactLensMode;
         if (!isOpen) return;
         fetchLensData();
         if (step === 1) setSelectedType(null);
