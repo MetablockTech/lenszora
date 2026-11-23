@@ -1482,27 +1482,67 @@ const Checkout = () => {
                     </div>
                   )}
 
-                  {/* My Available Coupons Pills */}
-                  {myCoupons.length > 0 && !appliedCoupon && (
-                    <div className="space-y-1.5 pt-1">
-                      <span className="text-[11px] text-gray-400 font-semibold">Your Available Coupons:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {myCoupons.map((c) => (
-                          <button
-                            key={c._id}
-                            type="button"
-                            onClick={() => handleApplyCoupon(c.code)}
-                            className="bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-amber-500/30 text-[10px] font-mono px-2 py-1 rounded transition-all flex items-center gap-1"
-                          >
-                            <span>{c.code}</span>
-                            <span className="bg-amber-500/20 text-amber-400 text-[9px] px-1 rounded">
-                              {c.discountType === 'flat' ? `₹${c.discountValue}` : `${c.discountValue}%`}
-                            </span>
-                          </button>
-                        ))}
+                  {/* Every coupon this customer can use: applicable ones first (biggest saving on top), then the ones that need a bigger order */}
+                  {myCoupons.length > 0 && (() => {
+                    type CouponCard = { _id: string; code: string; discountType: string; discountValue: number; minOrderAmount?: number; maxDiscount?: number; expiryDate?: string; isReferralReward?: boolean }
+                    const saving = (c: CouponCard) => {
+                      const raw = c.discountType === 'percent' ? (cartTotal * Number(c.discountValue || 0)) / 100 : Number(c.discountValue || 0)
+                      return Math.round(Math.min(c.maxDiscount ? Math.min(raw, c.maxDiscount) : raw, cartTotal))
+                    }
+                    const list = (myCoupons as CouponCard[])
+                      .map((c) => ({ c, ok: cartTotal >= Number(c.minOrderAmount || 0), save: saving(c) }))
+                      .sort((a, b) => (a.ok === b.ok ? b.save - a.save : a.ok ? -1 : 1))
+                    const usable = list.filter((x) => x.ok).length
+                    return (
+                      <div className="space-y-2 pt-1">
+                        <p className="text-[11px] text-gray-400 font-semibold">
+                          {usable > 0 ? `${usable} coupon${usable > 1 ? 's' : ''} available for this order` : 'Coupons you can unlock'}
+                        </p>
+                        <div className="space-y-2 max-h-72 overflow-y-auto pr-0.5">
+                          {list.map(({ c, ok, save }) => {
+                            const isApplied = appliedCoupon?.code === c.code
+                            return (
+                              <div
+                                key={c._id}
+                                className={`rounded-lg border p-2.5 ${isApplied ? 'border-emerald-500/50 bg-emerald-950/30' : ok ? 'border-amber-500/30 bg-zinc-950' : 'border-zinc-800 bg-zinc-950/60 opacity-70'}`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="font-mono text-xs font-bold text-amber-300 border border-dashed border-amber-500/50 rounded px-1.5 py-0.5">{c.code}</span>
+                                      <span className="text-[11px] font-bold text-white">
+                                        {c.discountType === 'percent' ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`}
+                                        {c.discountType === 'percent' && c.maxDiscount ? ` (up to ₹${c.maxDiscount})` : ''}
+                                      </span>
+                                      {c.isReferralReward && <span className="text-[9px] font-bold uppercase text-emerald-400">Referral reward</span>}
+                                    </div>
+                                    <p className="mt-1 text-[10px] text-gray-400">
+                                      {ok
+                                        ? `You save ₹${save.toLocaleString()} on this order`
+                                        : `Add ₹${(Number(c.minOrderAmount) - cartTotal).toLocaleString()} more to use (min order ₹${Number(c.minOrderAmount).toLocaleString()})`}
+                                      {c.expiryDate ? ` · Valid till ${new Date(c.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}
+                                    </p>
+                                  </div>
+                                  {isApplied ? (
+                                    <span className="shrink-0 text-[11px] font-bold text-emerald-400">Applied</span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApplyCoupon(c.code)}
+                                      disabled={!ok || applyingCoupon}
+                                      className="shrink-0 rounded-md bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-black hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-gray-500"
+                                    >
+                                      {appliedCoupon ? 'Use this' : 'Apply'}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                 </div>
 
                 {/* Pricing */}

@@ -71,13 +71,15 @@ router.post('/apply', async (req, res) => {
 router.get('/my-coupons', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id
+    // Every coupon this user can use right now: their own (e.g. referral rewards) and public ones.
+    // usageLimit 0 means unlimited, as in /apply; expired coupons are left out.
     const coupons = await Coupon.find({
-      $or: [
-        { userId: userId },
-        { userId: null, isReferralReward: false }
-      ],
       isActive: true,
-      $expr: { $lt: ['$timesUsed', '$usageLimit'] }
+      $and: [
+        { $or: [{ userId: userId }, { userId: null, isReferralReward: false }] },
+        { $or: [{ usageLimit: { $lte: 0 } }, { $expr: { $lt: ['$timesUsed', '$usageLimit'] } }] },
+        { $or: [{ expiryDate: null }, { expiryDate: { $gt: new Date() } }] }
+      ]
     }).sort({ createdAt: -1 })
 
     res.json(coupons)
