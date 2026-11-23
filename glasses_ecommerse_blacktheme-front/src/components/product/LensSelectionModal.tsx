@@ -127,9 +127,14 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
                 }
                 
                 // Determine step
-                if (initialData.package || initialData.type?.allowPackages === false) {
+                if (initialData.package) {
                     initialStep = initialData.prescription ? 3 : 2;
+                } else if (initialData.type?.allowPackages === false && initialData.prescription) {
+                    // Type without packages but with a saved power: straight to the power step
+                    initialStep = 3;
                 } else {
+                    // No package to show (e.g. zero / plain power, Change Lens): start from the lens types,
+                    // never on an empty "Choose Lens Package" step
                     initialStep = 1;
                 }
             } else {
