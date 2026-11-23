@@ -16,41 +16,6 @@ interface TrendingItem {
   badge?: string;
 }
 
-const defaultTrendingCampaigns: TrendingItem[] = [
-  {
-    _id: "trend-c1",
-    title: "Blue-Cut Anti-Glare",
-    image: "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=800&auto=format&fit=crop&q=80",
-    tagline: "PROTECT YOUR EYES FROM DIGITAL SCREEN GLARE",
-    badge: "BESTSELLER",
-    link: "/shop?type=eyeglasses",
-  },
-  {
-    _id: "trend-c2",
-    title: "Polarized UV400 Sun",
-    image: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&auto=format&fit=crop&q=80",
-    tagline: "MAXIMUM GLARE REDUCTION FOR OUTDOORS",
-    badge: "POPULAR",
-    link: "/shop?type=sunglasses",
-  },
-  {
-    _id: "trend-c3",
-    title: "Featherlight Acetate",
-    image: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=800&auto=format&fit=crop&q=80",
-    tagline: "ALL-DAY COMFORT & PREMIUM FIT",
-    badge: "NEW ARRIVAL",
-    link: "/shop",
-  },
-  {
-    _id: "trend-c4",
-    title: "Retro Round Classics",
-    image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&auto=format&fit=crop&q=80",
-    tagline: "VINTAGE AESTHETIC FOR MODERN LOOKS",
-    badge: "TRENDING",
-    link: "/shop?frameShape=round",
-  },
-];
-
 const TrendingBanners = () => {
   const [items, setItems] = useState<TrendingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +67,12 @@ const TrendingBanners = () => {
         });
       }
 
+      // The section exists only for the admin's Trending Banners: with none active, hide it
+      if (trendingCards.length === 0) {
+        setItems([]);
+        return;
+      }
+
       // 2. Add Bestseller / Featured Products as Trending Cards
       const rawProducts = Array.isArray(productList) ? productList : (productList?.products || []);
       if (rawProducts && rawProducts.length > 0) {
@@ -121,32 +92,18 @@ const TrendingBanners = () => {
         });
       }
 
-      // 3. Fallback campaigns if no custom sliders/products exist
-      if (trendingCards.length === 0) {
-        setItems(defaultTrendingCampaigns);
-      } else {
-        setItems(trendingCards);
-      }
+      setItems(trendingCards);
     } catch (error) {
       console.error("Failed to fetch trending cards:", error);
-      setItems(defaultTrendingCampaigns);
+      setItems([]);
     } finally {
       setLoading(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="py-10 container mx-auto px-4">
-        <div className="h-8 bg-slate-800 animate-pulse rounded w-64 mb-6"></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-[300px] sm:h-[320px] md:h-[340px] bg-slate-900 animate-pulse rounded-[2rem]"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // Nothing while loading, and nothing at all without an active Trending Banner
+  if (loading || items.length === 0) return null;
+
 
   return (
     <section className="py-10 md:py-14 bg-background relative overflow-hidden">

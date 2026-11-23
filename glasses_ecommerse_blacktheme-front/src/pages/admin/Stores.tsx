@@ -11,6 +11,7 @@ import { MapPin, Plus, Edit, Trash2, Search, Phone, Clock, Gift, Globe, ImageIco
 import { getImageUrl } from '@/lib/utils'
 import { products } from '@/lib/api'
 import { toast } from 'sonner'
+import { geocodeAddress, parseLatLng } from '@/lib/geo'
 
 const AdminStores = () => {
   const [stores, setStores] = useState<any[]>([])
@@ -44,7 +45,6 @@ const AdminStores = () => {
   const token = getToken()
 
   const handleGeocode = async () => {
-    const address = `${formData.addressLine}, ${formData.city}, ${formData.state} ${formData.pincode}`;
     if (!formData.addressLine || !formData.city) {
       toast.error('Please enter Address and City first');
       return;
@@ -52,21 +52,26 @@ const AdminStores = () => {
 
     setIsGeocoding(true);
     try {
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`);
-      const data = await response.json();
-
-      if (data.status === 'OK') {
-        const { lat, lng } = data.results[0].geometry.location;
-        setFormData(prev => ({ ...prev, latitude: lat.toString(), longitude: lng.toString() }));
-        toast.success('Location coordinates fetched successfully');
+      const point = await geocodeAddress(formData);
+      if (point) {
+        setFormData(prev => ({ ...prev, latitude: point.lat.toFixed(6), longitude: point.lng.toFixed(6) }));
+        toast.success(`Location found (${point.source}). Check it, or paste the exact Google Maps link below.`);
       } else {
-        toast.error(`Geocoding failed: ${data.status}`);
+        toast.error("Could not find this address. Paste the store's Google Maps link below instead.");
       }
-    } catch (error) {
-      toast.error('Failed to connect to Geocoding service');
     } finally {
       setIsGeocoding(false);
+    }
+  };
+
+  // Paste a Google Maps link (or "lat, lng") to fill the exact coordinates
+  const handleMapsLinkPaste = (text: string) => {
+    const point = parseLatLng(text);
+    if (point) {
+      setFormData(prev => ({ ...prev, latitude: point.lat.toFixed(6), longitude: point.lng.toFixed(6) }));
+      toast.success('Coordinates taken from the link');
+    } else if (text.trim()) {
+      toast.error('No coordinates in that link. Open the store in Google Maps and copy the link from the address bar (it contains @lat,lng).');
     }
   };
 
@@ -163,10 +168,12 @@ const AdminStores = () => {
       } else if (editingStore?.location?.coordinates) {
         payload.location = editingStore.location
       } else {
+        // No location yet: saved as [0, 0], which the store page treats as unknown (no distance shown)
         payload.location = {
           type: 'Point',
           coordinates: [0, 0]
         }
+        toast.warning("Saved without map coordinates: customers won't see the distance to this store. Use Auto-Locate or paste the Google Maps link.")
       }
 
       if (editingStore) {
@@ -318,6 +325,10 @@ const AdminStores = () => {
                         <Label htmlFor="longitude" className="text-[10px] uppercase text-muted-foreground">Longitude</Label>
                         <Input id="longitude" name="longitude" value={formData.longitude} onChange={handleInputChange} placeholder="e.g. 75.7873" />
                       </div>
+                    </div>
+                    <div className="mt-3 space-y-1">
+                      <Label htmlFor="mapsLink" className="text-[10px] uppercase text-muted-foreground">Or paste the store's Google Maps link / "lat, lng"</Label>
+                      <Input id="mapsLink" placeholder="https://www.google.com/maps/place/...@26.95,75.75,17z" onPaste={(e) => { e.preventDefault(); const t = e.clipboardData.getData('text'); e.currentTarget.value = t; handleMapsLinkPaste(t); }} onBlur={(e) => handleMapsLinkPaste(e.target.value)} />
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-2">Click "Auto-Locate" to find coordinates automatically based on the address above.</p>
                   </div>

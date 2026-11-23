@@ -5,6 +5,7 @@ import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-m
 import { useNavigate } from "react-router-dom";
 import { stores as storesApi } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
+import { toLatLng, distanceKm } from "@/lib/geo";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import AppointmentModal from "@/components/modals/AppointmentModal";
@@ -102,18 +103,6 @@ const StoreLocator = () => {
     return () => clearTimeout(timer);
   }, [isLoaded, mapFailed]);
 
-  // Haversine Distance Formula (Returns KM)
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Radius of the earth in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
 
   useEffect(() => {
     // 1. Get User Location
@@ -154,14 +143,10 @@ const StoreLocator = () => {
       `${store.name} ${store.city} ${store.state} ${store.pincode}`.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .map(store => {
-      if (userLocation && store.location?.coordinates) {
-        const dist = calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          store.location.coordinates[1],
-          store.location.coordinates[0]
-        );
-        return { ...store, distance: dist };
+      // Stores saved without a location have [0, 0]: no distance for them (shows "Get directions")
+      const storePoint = toLatLng(store.location?.coordinates);
+      if (userLocation && storePoint) {
+        return { ...store, distance: distanceKm(userLocation, storePoint) };
       }
       return store;
     })
