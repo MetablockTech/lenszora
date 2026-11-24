@@ -22,8 +22,8 @@ const ProductGallery = ({ images, productName, hideThumbnails, currentImage, onI
 
   return (
     <div className="w-full space-y-4">
-      {/* Main Image */}
-      <div className="relative w-full aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_center,_#1f1f23_0%,_#0d0d0f_75%)] group">
+      {/* Main Image: shown at its own shape, full width (no fixed box, so no empty bands around it) */}
+      <div className="relative w-full min-h-[200px] overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d0f] group">
         <AnimatePresence mode="wait">
           <motion.img
             key={selectedImage}
@@ -33,7 +33,7 @@ const ProductGallery = ({ images, productName, hideThumbnails, currentImage, onI
             transition={{ duration: 0.2 }}
             src={getImageUrl(images[selectedImage] || images[0])}
             alt={`${productName} - View ${selectedImage + 1}`}
-            className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+            className="block w-full h-auto max-h-[85vh] object-contain mx-auto transition-transform duration-500 ease-out group-hover:scale-105"
           />
         </AnimatePresence>
 

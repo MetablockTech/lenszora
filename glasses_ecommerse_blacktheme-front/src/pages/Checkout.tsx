@@ -687,8 +687,8 @@ const Checkout = () => {
           return (
             <div key={`${item.productId}-${idx}`} className="pb-5 border-b border-zinc-800 last:border-0 last:pb-0">
               <div className="relative">
-                <Link to={productUrl} aria-label={`View ${item.title}`} className="block w-full aspect-[4/3] rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800">
-                  <img src={getImageUrl(item.image)} alt={item.title} className="w-full h-full object-contain" />
+                <Link to={productUrl} aria-label={`View ${item.title}`} className="block w-full rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800">
+                  <img src={getImageUrl(item.image)} alt={item.title} className="block w-full h-auto max-h-[70vh] object-contain mx-auto" />
                 </Link>
                 <button
                   onClick={() => removeFromCart(item.productId, item.variant?.sku)}
