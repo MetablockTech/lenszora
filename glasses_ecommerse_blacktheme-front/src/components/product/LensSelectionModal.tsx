@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, Zap, Shield, Eye, Waves, Sun, Droplets, Award, Sparkles, Check, Layers, Upload, MessageCircle, FileText, PhoneCall, Image as ImageIcon } from "lucide-react";
-import { lens, API_URL, returnRequests, getToken } from "@/lib/api";
+import { lens, API_URL, returnRequests, getToken, users } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import PrescriptionForm from "./PrescriptionForm";
@@ -47,6 +47,9 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     const [selectedPackage, setSelectedPackage] = useState<any>(null);
     const [powerOption, setPowerOption] = useState<'later' | 'manual' | 'upload' | null>(null);
     const [prescription, setPrescription] = useState<any>(null);
+    // Prescription saved in the customer's profile, turned into the power form's format
+    const [savedRx, setSavedRx] = useState<any>(null);
+    const [savedRxDate, setSavedRxDate] = useState<string | null>(null);
     const [prescriptionImage, setPrescriptionImage] = useState<string | null>(null);
     const [prescriptionFileName, setPrescriptionFileName] = useState<string | null>(null);
     const [uploadingPrescription, setUploadingPrescription] = useState(false);
@@ -510,6 +513,56 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
                 }
             }
         }
+    };
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const token = getToken();
+        if (!token) { setSavedRx(null); return; }
+        let cancelled = false;
+        // Power values in the form are strings like "-1.25" / "+0.50" / "0.00"
+        const fmt = (n: any, signed = true) => {
+            if (n === undefined || n === null || n === '' || isNaN(Number(n))) return '';
+            const v = Number(n);
+            if (!signed) return v.toFixed(2);
+            return v === 0 ? '0.00' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
+        };
+        const eye = (e: any) => ({
+            sph: fmt(e?.sph),
+            cyl: fmt(e?.cyl),
+            axis: e?.axis !== undefined && e?.axis !== null && e?.axis !== '' ? String(Math.round(Number(e.axis))) : '',
+            addl: e?.add ? fmt(e.add, false) : '',
+        });
+        users.getMe(token)
+            .then((me: any) => {
+                if (cancelled) return;
+                const rx = me?.prescription;
+                if (!rx || (!rx.right && !rx.left)) { setSavedRx(null); return; }
+                const od = eye(rx.right);
+                const os = eye(rx.left);
+                if (!od.sph && !os.sph) { setSavedRx(null); return; }
+                setSavedRx({
+                    od, os,
+                    pd: rx.pd ? String(rx.pd) : '62',
+                    isSamePower: false,
+                    hasCylindrical: !!(od.cyl || os.cyl),
+                    customerName: me?.name || '',
+                    customerPhone: String(me?.phone || '').replace(/\D/g, '').slice(-10),
+                    fromProfile: true,
+                });
+                setSavedRxDate(rx.prescribedOn ? new Date(rx.prescribedOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null);
+            })
+            .catch(() => { if (!cancelled) setSavedRx(null); });
+        return () => { cancelled = true; };
+    }, [isOpen]);
+
+    // Fill the power form with the saved prescription; the customer checks it and taps Save & Proceed
+    const applySavedPrescription = () => {
+        if (!savedRx) return;
+        setPrescription({ ...savedRx });
+        setPowerOption('manual');
+        setShowPrescriptionForm(true);
+        pushModalHistory(3, true);
     };
 
     const handleBack = () => {
@@ -981,6 +1034,29 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
                                     Need Help? <ChevronRight className="w-3.5 h-3.5" />
                                 </a>
                             </div>
+
+                            {/* Saved prescription from the customer's profile */}
+                            {savedRx && (
+                                <div
+                                    onClick={applySavedPrescription}
+                                    className="flex items-start gap-3.5 p-4 border-[1.5px] rounded-xl cursor-pointer bg-teal-50/40 border-teal-300 hover:border-teal-500 transition-all"
+                                >
+                                    <div className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center bg-teal-100 text-teal-700 border border-teal-200">
+                                        <Check className="w-6 h-6" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between mb-0.5 flex-wrap gap-1">
+                                            <span className="text-[.92rem] font-bold text-slate-900">Use My Saved Prescription</span>
+                                            <span className="text-[.62rem] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 uppercase">From profile</span>
+                                        </div>
+                                        <div className="text-[.78rem] text-slate-600 leading-snug">
+                                            Right (OD) SPH {savedRx.od.sph || '—'}{savedRx.od.cyl ? ` · CYL ${savedRx.od.cyl}` : ''} &nbsp;|&nbsp; Left (OS) SPH {savedRx.os.sph || '—'}{savedRx.os.cyl ? ` · CYL ${savedRx.os.cyl}` : ''}
+                                            {savedRxDate ? ` · prescribed ${savedRxDate}` : ''}
+                                        </div>
+                                        <div className="mt-1 text-[.72rem] font-semibold text-teal-700 flex items-center gap-1">Review &amp; use <ChevronRight className="w-3.5 h-3.5" /></div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Option 1: Submit Power Later (WhatsApp / Call) */}
                             <div

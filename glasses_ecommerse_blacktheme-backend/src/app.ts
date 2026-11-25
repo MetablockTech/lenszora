@@ -30,6 +30,7 @@ import inquiryRoutes from './routes/inquiries'
 import couponsRoutes from './routes/coupons'
 import referralRoutes from './routes/referral'
 import storeVisitRoutes from './routes/storeVisits'
+import contactMessageRoutes from './routes/contactMessages'
 
 export function startServer() {
   const app = express()
@@ -41,7 +42,8 @@ export function startServer() {
     allowedHeaders: ['Content-Type', 'Authorization']
   }))
 
-  app.use(express.json())
+  // Products with many lens packages are bigger than the 100kb default
+  app.use(express.json({ limit: '5mb' }))
 
   // Serve uploaded files
   const uploadsDir = path.join(__dirname, '..', 'uploads')
@@ -74,6 +76,7 @@ export function startServer() {
   app.use('/api/coupons', couponsRoutes)
   app.use('/api/referral', referralRoutes)
   app.use('/api/store-visits', storeVisitRoutes)
+  app.use('/api/contact-messages', contactMessageRoutes)
 
   app.get('/', (req, res) => res.json({ ok: true }))
 

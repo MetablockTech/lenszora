@@ -4,7 +4,30 @@ import path from 'path'
 import fs from 'fs'
 import { Product } from '../models/Product'
 import { Setting } from '../models/Setting'
-import { requireAuth, requireAdmin, requireVendorOrAdmin, AuthRequest } from '../middleware/auth'
+import { requireAuth, requireAdmin, requireVendorOrAdmin, optionalAuth, AuthRequest } from '../middleware/auth'
+
+// Same SKU on two products is not allowed (case-insensitive). Returns true when another product already uses it.
+async function skuTaken(sku: any, exceptId?: string) {
+  const clean = String(sku || '').trim()
+  if (!clean) return false
+  const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const q: any = { sku: { $regex: new RegExp(`^${escaped}$`, 'i') } }
+  if (exceptId) q._id = { $ne: exceptId }
+  return !!(await Product.exists(q))
+}
+
+// Category ids of a category and all its descendants
+async function categoryTreeIds(rootId: any): Promise<any[]> {
+  const { Category } = require('../models/Category')
+  const ids = [rootId]
+  let frontier = [rootId]
+  while (frontier.length) {
+    const kids = await Category.find({ parentId: { $in: frontier } }).select('_id').lean()
+    frontier = kids.map((k: any) => k._id)
+    ids.push(...frontier)
+  }
+  return ids
+}
 
 const router = express.Router()
 
@@ -20,13 +43,13 @@ const storage = multer.diskStorage({
 const upload = multer({ storage })
 
 // Get all products (Admin/Public with optional status filter)
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req: AuthRequest, res) => {
   try {
     const {
       status, isBestSeller, isFeatured, sort, limit,
       category, brand, minPrice, maxPrice,
       gender, frameType, frameShape, frameMaterial, weightGroup, faceShape,
-      vendorId, isBulk, search, sale, wearDuration
+      vendorId, isBulk, search, sale, wearDuration, scope, excludeAccessories
     } = req.query
 
     const filter: any = {}
@@ -64,8 +87,25 @@ router.get('/', async (req, res) => {
       filter.isBulk = { $ne: true }
     }
 
-    // Status filter
-    if (status) filter.status = status
+    // Status filter: shoppers only ever see approved (active) products. Admins asking with scope=all
+    // see every status; a vendor with scope=all sees only their own products.
+    const role = req.user?.role
+    const fullAccess = scope === 'all' && (role === 'admin' || (role === 'vendor' && !!vendorId && String(vendorId) === String(req.user?.vendorId || req.user?.id)))
+    if (fullAccess) {
+      if (status) filter.status = status
+    } else {
+      filter.status = 'active'
+    }
+
+    // Admin Products list: leave out everything under the Accessories category (it has its own section)
+    if (excludeAccessories === 'true') {
+      const { Category } = require('../models/Category')
+      const accRoots = await Category.find({ $or: [{ slug: /^accessor/i }, { name: /^accessor/i }], parentId: null }).select('_id').lean()
+      if (accRoots.length) {
+        const accIds = (await Promise.all(accRoots.map((c: any) => categoryTreeIds(c._id)))).flat()
+        andConditions.push({ category: { $nin: accIds } })
+      }
+    }
     if (isBestSeller === 'true') filter.isBestSeller = true
     if (isFeatured === 'true') filter.isFeatured = true
 
@@ -238,10 +278,19 @@ router.get('/', async (req, res) => {
       query = query.limit(parseInt(limit as string))
     }
 
-    const products = await query
+    const products: any[] = await query
       .populate('category')
       .populate('brand')
       .lean()
+
+    // Admin lists show the vendor's name; vendorId itself stays a plain id (the cart and orders use it)
+    if (fullAccess && products.length) {
+      const { Vendor } = require('../models/Vendor')
+      const ids = [...new Set(products.map((p) => String(p.vendorId || '')).filter(Boolean))]
+      const vendors = await Vendor.find({ _id: { $in: ids } }).select('businessName email').lean()
+      const byId = new Map(vendors.map((v: any) => [String(v._id), { _id: v._id, businessName: v.businessName, email: v.email }]))
+      products.forEach((p) => { p.vendor = byId.get(String(p.vendorId)) || null })
+    }
     res.json(products)
   } catch (err: any) {
     res.status(500).json({ error: err.message })
@@ -316,7 +365,7 @@ router.get('/vendor/me', requireAuth, requireVendorOrAdmin, async (req: AuthRequ
   }
 })
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req: AuthRequest, res) => {
   try {
     const p = await Product.findById(req.params.id)
       // Include the parent chain (sub → main) so the product page can tell e.g. contact lenses apart right away
@@ -325,6 +374,13 @@ router.get('/:id', async (req, res) => {
       .populate('vendorId')
       .populate('lensSettings.lensTypes.lensTypeId')
     if (!p) return res.status(404).json({ error: 'Not found' })
+    // Pending / rejected / inactive products are visible only to admins and the owning vendor
+    if (p.status !== 'active') {
+      const role = req.user?.role
+      const ownerId = String((p.vendorId as any)?._id || p.vendorId || '')
+      const isOwner = role === 'vendor' && ownerId === String(req.user?.vendorId || req.user?.id)
+      if (role !== 'admin' && !isOwner) return res.status(404).json({ error: 'Not found' })
+    }
     res.json(p)
   } catch (err: any) {
     if (err.name === 'CastError') {
@@ -358,6 +414,10 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
       return res.status(400).json({ error: 'Vendor ID is required' })
     }
 
+    if (await skuTaken(sku)) {
+      return res.status(400).json({ error: `SKU "${sku}" is already used by another product. Please use a unique SKU.` })
+    }
+
     // Sanitize category & brand (convert empty strings or 'none' to null)
     const finalCategory = (category && category !== '' && category !== 'none') ? category : null
     const finalBrand = (brand && brand !== '' && brand !== 'none') ? brand : null
@@ -374,7 +434,7 @@ router.post('/', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, res
     }
 
     const product = new Product({
-      title, description, price, images: images || [], thumbnail: thumbnail || (images && images[0]) || undefined, stock: stock || 0,
+      title, description, price, images: images || [], thumbnail: thumbnail || (images && images[0]) || undefined, stock: Math.max(0, Number(stock) || 0),
       category: finalCategory, brand: finalBrand,
       vendorId: finalVendorId,
       productType: productType || 'physical',
@@ -421,13 +481,33 @@ router.put('/:id', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, r
     // For now let's say if a vendor edits an active product, it stays active or goes back to pending?
     // In many marketplaces, edits trigger re-approval. For now, let's keep it simple.
     const updateData = { ...req.body }
+    // Never overwrite the id/timestamps, and store plain ids even if populated objects were sent back
+    delete updateData._id; delete updateData.__v; delete updateData.createdAt; delete updateData.updatedAt
+    for (const key of ['category', 'brand', 'vendorId']) {
+      if (updateData[key] && typeof updateData[key] === 'object') updateData[key] = updateData[key]._id || null
+    }
+    if (Array.isArray(updateData.lensSettings?.lensTypes)) {
+      updateData.lensSettings.lensTypes.forEach((lt: any) => {
+        if (lt?.lensTypeId && typeof lt.lensTypeId === 'object') lt.lensTypeId = lt.lensTypeId._id
+      })
+    }
+    // Vendors can't approve their own products; editing a rejected product sends it back for review
+    if (req.user!.role === 'vendor') {
+      delete updateData.status
+      delete updateData.vendorId
+      if (product.status === 'rejected') updateData.status = 'pending'
+    }
+    if (updateData.sku !== undefined && await skuTaken(updateData.sku, req.params.id)) {
+      return res.status(400).json({ error: `SKU "${updateData.sku}" is already used by another product. Please use a unique SKU.` })
+    }
+    if (updateData.stock !== undefined) updateData.stock = Math.max(0, Number(updateData.stock) || 0)
     if (updateData.category === '' || updateData.category === 'none') updateData.category = null
     if (updateData.brand === '' || updateData.brand === 'none') updateData.brand = null
     if (updateData.vendorId === '') {
       updateData.vendorId = req.user!.vendorId || req.user!.id
     }
 
-    const updated = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true })
+    const updated = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
     res.json(updated)
   } catch (err: any) {
     res.status(500).json({ error: err.message })

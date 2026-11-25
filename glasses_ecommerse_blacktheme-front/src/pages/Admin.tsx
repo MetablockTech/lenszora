@@ -29,7 +29,7 @@ const Admin: React.FC = () => {
   async function loadProducts() {
     setLoading(true)
     try {
-      const data = await products.list()
+      const data = await products.list({ allStatuses: true })
       setProductsList(data)
     } catch (err) {
       // eslint-disable-next-line no-console

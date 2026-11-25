@@ -8,6 +8,7 @@ import { motion } from 'framer-motion'
 import { Package, Clock, CheckCircle, AlertCircle, Eye, Star, FileText } from 'lucide-react'
 import { getImageUrl } from '@/lib/utils'
 import OrderReceiptModal from '@/components/modals/OrderReceiptModal'
+import { orderItemsTotal, orderDiscount, orderPaidTotal } from '@/lib/orderTotals'
 
 interface Order {
   _id: string;
@@ -23,6 +24,10 @@ interface Order {
     };
   }>;
   total: number;
+  subtotal?: number;
+  discount?: number;
+  couponCode?: string;
+  shippingCharge?: number;
   paymentStatus: 'pending' | 'completed' | 'failed';
   orderStatus: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: string;
@@ -228,7 +233,10 @@ const Orders = () => {
                         </div>
                       </td>
                       <td className="p-4 font-semibold text-white">
-                        ₹{(order.items.reduce((sum, item) => sum + ((item.price + (item.lens?.price || 0)) * item.quantity), 0)).toLocaleString()}
+                        ₹{orderPaidTotal(order).toLocaleString()}
+                        {orderDiscount(order) > 0 && (
+                          <span className="block text-[10px] font-semibold text-emerald-400">Saved ₹{orderDiscount(order).toLocaleString()}</span>
+                        )}
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.orderStatus)} border-current bg-transparent`}>

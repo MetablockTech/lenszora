@@ -29,6 +29,7 @@ export interface IVendorOrder {
   subtotal: number;
   commission: number;
   vendorAmount: number;
+  discount?: number;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | 'partially_shipped' | 'partially_delivered';
   statusHistory: Array<{
     status: string;
@@ -46,6 +47,10 @@ export interface IOrder {
   total: number;
   totalCommission?: number;
   shippingCharge?: number;
+  subtotal?: number;
+  discount?: number;
+  couponCode?: string;
+  stockDeducted?: boolean;
   shippingAddress: {
     firstName: string;
     lastName: string;
@@ -145,6 +150,7 @@ const orderSchema = new Schema<IOrder>(
       subtotal: Number,
       commission: Number,
       vendorAmount: Number,
+      discount: { type: Number, default: 0 },
       status: {
         type: String,
         enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'partially_shipped', 'partially_delivered'],
@@ -169,6 +175,11 @@ const orderSchema = new Schema<IOrder>(
       type: Number,
       default: 0
     },
+    // Items total before coupon, coupon discount and code (total = subtotal - discount + shippingCharge)
+    subtotal: Number,
+    discount: { type: Number, default: 0 },
+    couponCode: String,
+    stockDeducted: { type: Boolean, default: false },
     shippingAddress: {
       firstName: String,
       lastName: String,

@@ -6,6 +6,15 @@ import { connectMongo } from './utils/mongo'
 
 const PORT = process.env.PORT || 4000
 
+// One failing request must not stop the API for everyone (an uncaught async error used to crash
+// the process, and every page then showed "Failed to fetch" until it restarted).
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err)
+})
+
 async function main() {
   const server = startServer()
   server.listen(PORT, () => {

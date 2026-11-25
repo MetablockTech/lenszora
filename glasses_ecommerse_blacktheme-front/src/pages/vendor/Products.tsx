@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { products, getToken } from '@/lib/api'
-import { Plus, Edit2, Trash2, Image as ImageIcon } from 'lucide-react'
+import { Plus, Edit2, Trash2, Eye, Image as ImageIcon } from 'lucide-react'
+import ProductDetailsDialog from '@/components/product/ProductDetailsDialog'
 import { getImageUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
@@ -10,6 +11,15 @@ const VendorProductsPage: React.FC = () => {
     const [list, setList] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const token = getToken()
+    const [viewing, setViewing] = useState<any | null>(null)
+
+    // Full record (with lens types) for the details view; the list copy is the fallback
+    async function openDetails(p: any) {
+        setViewing(p)
+        try {
+            setViewing(await products.get(p._id))
+        } catch { /* keep the list copy */ }
+    }
 
     useEffect(() => { loadAll() }, [])
 
@@ -104,6 +114,13 @@ const VendorProductsPage: React.FC = () => {
                                     </div>
                                     <div className="flex gap-2">
                                         <button
+                                            onClick={() => openDetails(p)}
+                                            title="View details"
+                                            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                        >
+                                            <Eye className="w-5 h-5" />
+                                        </button>
+                                        <button
                                             onClick={() => navigate(`/vendor/products/${p._id}`)}
                                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                         >
@@ -161,6 +178,7 @@ const VendorProductsPage: React.FC = () => {
                     )}
                 </>
             )}
+            <ProductDetailsDialog product={viewing} onClose={() => setViewing(null)} />
         </div>
     )
 }

@@ -262,7 +262,7 @@ const AccessoryFormPage: React.FC = () => {
         price: Number(price),
         discountAmount: Number(discountAmount || 0),
         discountType: 'flat',
-        stock: Number(stock || 0),
+        stock: Math.max(0, Math.floor(Number(stock) || 0)),
         category: selectedSubSub || selectedSub || selectedMain || category || undefined,
         searchTags: Array.from(new Set(['accessories', 'accessory', ...searchTags])),
         thumbnail: thumbnail || (images.length > 0 ? images[0] : ''),
@@ -382,8 +382,10 @@ const AccessoryFormPage: React.FC = () => {
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Stock Quantity</label>
               <Input
                 type="number"
+                min={0}
+                step={1}
                 value={stock}
-                onChange={(e) => setStock(e.target.value)}
+                onChange={(e) => setStock(e.target.value === '' ? '' : String(Math.max(0, Math.floor(Number(e.target.value) || 0))))}
                 className="bg-slate-50 border-slate-200 text-slate-900 focus:border-amber-500 h-11"
               />
             </div>

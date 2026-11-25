@@ -14,7 +14,8 @@ import {
     Settings,
     Image as ImageIcon,
     MapPin,
-    Calendar
+    Calendar,
+    RotateCcw
 } from 'lucide-react'
 import {
     Sidebar,
@@ -90,6 +91,7 @@ export default function VendorLayout() {
         { path: '/vendor/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/vendor/products', icon: Package, label: 'Products' },
         { path: '/vendor/orders', icon: ShoppingCart, label: 'Customer Orders' },
+        { path: '/vendor/returns', icon: RotateCcw, label: 'Returns & Exchanges' },
         { path: '/vendor/purchases', icon: Package, label: 'My Bulk Purchases' },
         { path: '/vendor/payouts', icon: DollarSign, label: 'Payouts' },
         { path: '/vendor/profile', icon: User, label: 'Profile' },

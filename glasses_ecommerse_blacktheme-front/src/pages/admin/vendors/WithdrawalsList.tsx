@@ -22,12 +22,19 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+
+// 'TBD' placeholders are what vendors get before they add real bank details
+const realValue = (v?: string) => !!v && v.trim() !== '' && v.trim().toUpperCase() !== 'TBD'
+const hasBank = (b?: Payout['vendorId']['bankDetails']) =>
+    !!b && ((realValue(b.accountNumber) && realValue(b.ifscCode) && realValue(b.bankName)) || realValue(b.upiId))
 
 interface Payout {
     _id: string
     vendorId: {
         businessName: string
         email: string
+        phone?: string
         bankDetails?: {
             bankName: string
             accountNumber: string
@@ -53,6 +60,7 @@ const WithdrawalsListPage: React.FC = () => {
     const [payoutList, setPayoutList] = useState<Payout[]>([])
     const [loading, setLoading] = useState(true)
     const [statusFilter, setStatusFilter] = useState<string>('')
+    const [viewing, setViewing] = useState<Payout | null>(null)
 
     const fetchPayouts = async () => {
         try {
@@ -199,10 +207,10 @@ const WithdrawalsListPage: React.FC = () => {
                                                         {payout.paymentMethod || 'BANK TRANSFER'}
                                                     </Badge>
                                                 </div>
-                                                {payout.vendorId?.bankDetails ? (
+                                                {hasBank(payout.vendorId?.bankDetails) && payout.vendorId.bankDetails ? (
                                                     <div className="text-[11px] leading-tight text-slate-500">
                                                         <span className="font-semibold text-slate-700">{payout.vendorId.bankDetails.bankName}</span><br />
-                                                        A/C: <span className="text-slate-600 italic">****{payout.vendorId.bankDetails.accountNumber.slice(-4)}</span><br />
+                                                        A/C: <span className="text-slate-600 italic">****{String(payout.vendorId.bankDetails.accountNumber || '').slice(-4)}</span><br />
                                                         <span className="text-blue-500 uppercase font-bold">{payout.vendorId.bankDetails.ifscCode}</span>
                                                     </div>
                                                 ) : (
@@ -227,19 +235,24 @@ const WithdrawalsListPage: React.FC = () => {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-48">
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleUpdateStatus(payout._id, 'completed')}
-                                                        className="text-green-600"
-                                                    >
-                                                        <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleUpdateStatus(payout._id, 'cancelled')}
-                                                        className="text-red-600"
-                                                    >
-                                                        <XCircle className="mr-2 h-4 w-4" /> Cancel Request
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
+                                                    {payout.status === 'pending' && (
+                                                        <>
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleUpdateStatus(payout._id, 'completed')}
+                                                                className="text-green-600"
+                                                                disabled={!hasBank(payout.vendorId?.bankDetails)}
+                                                            >
+                                                                <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleUpdateStatus(payout._id, 'cancelled')}
+                                                                className="text-red-600"
+                                                            >
+                                                                <XCircle className="mr-2 h-4 w-4" /> Cancel Request
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                    <DropdownMenuItem onClick={() => setViewing(payout)}>
                                                         <ExternalLink className="mr-2 h-4 w-4" /> View Details
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -293,6 +306,65 @@ const WithdrawalsListPage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Withdrawal details (was a dead "View Details" item) */}
+            <Dialog open={!!viewing} onOpenChange={(open) => { if (!open) setViewing(null) }}>
+                <DialogContent className="max-w-lg bg-white text-slate-900 border-slate-200">
+                    {viewing && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>Withdrawal #{viewing._id.slice(-8).toUpperCase()}</DialogTitle>
+                                <DialogDescription className="text-slate-500">
+                                    Requested {new Date(viewing.createdAt).toLocaleString('en-IN')}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 text-sm">
+                                <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
+                                    <div>
+                                        <p className="text-xs text-slate-500">Amount to pay</p>
+                                        <p className="text-2xl font-black">₹{viewing.netAmount.toLocaleString()}</p>
+                                        {viewing.commissionDeducted > 0 && (
+                                            <p className="text-xs text-slate-500">Gross ₹{viewing.amount.toLocaleString()} · commission ₹{viewing.commissionDeducted.toLocaleString()}</p>
+                                        )}
+                                    </div>
+                                    {getStatusBadge(viewing.status)}
+                                </div>
+                                <div>
+                                    <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">Vendor</p>
+                                    <p className="font-semibold">{viewing.vendorId?.businessName || 'N/A'}</p>
+                                    <p className="text-slate-500">{viewing.vendorId?.email}{viewing.vendorId?.phone ? ` · ${viewing.vendorId.phone}` : ''}</p>
+                                </div>
+                                <div>
+                                    <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1"><CreditCard className="h-3.5 w-3.5" /> Pay to</p>
+                                    {hasBank(viewing.vendorId?.bankDetails) && viewing.vendorId.bankDetails ? (
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                            <span className="text-slate-500">Account holder</span><span className="font-medium">{viewing.vendorId.bankDetails.accountHolderName}</span>
+                                            <span className="text-slate-500">Bank</span><span className="font-medium">{viewing.vendorId.bankDetails.bankName}</span>
+                                            <span className="text-slate-500">Account no.</span><span className="font-mono font-medium">{viewing.vendorId.bankDetails.accountNumber}</span>
+                                            <span className="text-slate-500">IFSC</span><span className="font-mono font-medium">{viewing.vendorId.bankDetails.ifscCode}</span>
+                                            {viewing.vendorId.bankDetails.branch && <><span className="text-slate-500">Branch</span><span className="font-medium">{viewing.vendorId.bankDetails.branch}</span></>}
+                                            {viewing.vendorId.bankDetails.upiId && <><span className="text-slate-500">UPI</span><span className="font-medium">{viewing.vendorId.bankDetails.upiId}</span></>}
+                                        </div>
+                                    ) : (
+                                        <p className="rounded-md bg-amber-50 p-2 text-amber-700">This vendor has not added bank details yet. Do not pay until they add them in their profile.</p>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                    <span className="text-slate-500">Method</span><span className="font-medium">{viewing.paymentMethod || 'Bank Transfer'}</span>
+                                    {viewing.transactionId && <><span className="text-slate-500">Transaction ID</span><span className="font-mono font-medium">{viewing.transactionId}</span></>}
+                                </div>
+                                {viewing.notes && <p className="rounded-md border border-slate-200 p-2 text-slate-600">{viewing.notes}</p>}
+                                {viewing.status === 'pending' && (
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="outline" className="text-red-600" onClick={() => { handleUpdateStatus(viewing._id, 'cancelled'); setViewing(null) }}>Cancel Request</Button>
+                                        <Button disabled={!hasBank(viewing.vendorId?.bankDetails)} className="bg-green-600 hover:bg-green-700" onClick={() => { handleUpdateStatus(viewing._id, 'completed'); setViewing(null) }}>Mark as Paid</Button>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

@@ -59,6 +59,8 @@ const ProductsPage: React.FC = () => {
     setLoading(true)
     try {
       const p = await products.list({
+        allStatuses: true,
+        excludeAccessories: !selectedCategory,
         category: selectedCategory || undefined,
         brand: selectedBrand || undefined,
         status: selectedStatus || undefined,

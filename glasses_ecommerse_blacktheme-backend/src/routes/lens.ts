@@ -117,32 +117,58 @@ router.patch('/vendor/packages/:id', auth, requireVendor, async (req: Request, r
     }
 })
 
-// LEGACY ROUTES (Keeping for compatibility if needed, but updated to admin only)
+// ADMIN (global lens types/packages). Every handler catches its own errors: an uncaught error here
+// used to take the whole API down, which showed up as "Failed to fetch" in the Lens Manager.
+const cleanBody = (body: any) => {
+    const data = { ...(body || {}) }
+    delete data._id; delete data.__v; delete data.createdAt; delete data.updatedAt; delete data.vendorId
+    return data
+}
+const sendError = (res: Response, error: any) => {
+    const status = error?.name === 'ValidationError' || error?.name === 'CastError' ? 400 : 500
+    res.status(status).json({ message: error?.message || 'Something went wrong' })
+}
+
+// All global lens types, including inactive ones, so the admin can switch them back on
 router.get('/types', auth, requireAdmin, async (req: Request, res: Response) => {
-    const types = await LensType.find({ vendorId: null })
-    res.json(types)
+    try {
+        const types = await LensType.find({ vendorId: null }).sort({ createdAt: 1 })
+        res.json(types)
+    } catch (error: any) { sendError(res, error) }
 })
 router.post('/types', auth, requireAdmin, async (req: Request, res: Response) => {
-    const lensType = new LensType({ ...req.body, vendorId: null })
-    await lensType.save()
-    res.status(201).json(lensType)
+    try {
+        const lensType = new LensType({ ...cleanBody(req.body), vendorId: null })
+        await lensType.save()
+        res.status(201).json(lensType)
+    } catch (error: any) { sendError(res, error) }
 })
 router.patch('/types/:id', auth, requireAdmin, async (req: Request, res: Response) => {
-    const lensType = await LensType.findByIdAndUpdate(req.params.id, req.body, { new: true })
-    res.json(lensType)
+    try {
+        const lensType = await LensType.findOneAndUpdate({ _id: req.params.id, vendorId: null }, cleanBody(req.body), { new: true, runValidators: true })
+        if (!lensType) return res.status(404).json({ message: 'Lens type not found' })
+        res.json(lensType)
+    } catch (error: any) { sendError(res, error) }
 })
 router.get('/packages', auth, requireAdmin, async (req: Request, res: Response) => {
-    const packages = await LensPackage.find({ vendorId: null }).populate('lensTypeId')
-    res.json(packages)
+    try {
+        const packages = await LensPackage.find({ vendorId: null }).populate('lensTypeId')
+        res.json(packages)
+    } catch (error: any) { sendError(res, error) }
 })
 router.post('/packages', auth, requireAdmin, async (req: Request, res: Response) => {
-    const lensPackage = new LensPackage({ ...req.body, vendorId: null })
-    await lensPackage.save()
-    res.status(201).json(lensPackage)
+    try {
+        const lensPackage = new LensPackage({ ...cleanBody(req.body), vendorId: null })
+        await lensPackage.save()
+        res.status(201).json(lensPackage)
+    } catch (error: any) { sendError(res, error) }
 })
 router.patch('/packages/:id', auth, requireAdmin, async (req: Request, res: Response) => {
-    const lensPackage = await LensPackage.findByIdAndUpdate(req.params.id, req.body, { new: true })
-    res.json(lensPackage)
+    try {
+        const lensPackage = await LensPackage.findOneAndUpdate({ _id: req.params.id, vendorId: null }, cleanBody(req.body), { new: true, runValidators: true })
+        if (!lensPackage) return res.status(404).json({ message: 'Lens package not found' })
+        res.json(lensPackage)
+    } catch (error: any) { sendError(res, error) }
 })
 
 // Delete global lens type

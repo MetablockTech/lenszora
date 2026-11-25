@@ -44,9 +44,14 @@ const LensManager: React.FC = () => {
         try {
             setLoading(true);
             const typesData = await lens.listTypes(token);
-            setTypes(typesData);
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to load lens data", variant: "destructive" });
+            setTypes(Array.isArray(typesData) ? typesData : []);
+        } catch (error: any) {
+            const offline = error instanceof TypeError; // network error: server unreachable
+            toast({
+                title: "Couldn't load lens types",
+                description: offline ? "The server could not be reached. Check your connection and try again." : (error?.message || "Failed to load lens data"),
+                variant: "destructive",
+            });
         } finally {
             setLoading(false);
         }

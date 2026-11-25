@@ -57,8 +57,9 @@ const CategoriesPage: React.FC = () => {
       const data = await categories.list()
       setList(data)
       // Expand all main category IDs by default for instant visibility
-      const mainIds = data.filter((c: any) => c.level === 'main' || !c.parentId).map((c: any) => c._id)
-      setExpandedParents(mainIds)
+      // Main categories and subcategories start open, so every level is visible at first
+      const parentIds = data.filter((c: any) => c.level === 'main' || c.level === 'sub' || !c.parentId).map((c: any) => c._id)
+      setExpandedParents(parentIds)
     } catch (err) {
       console.error(err)
       toast.error("Failed to load categories")
@@ -370,15 +371,25 @@ const CategoriesPage: React.FC = () => {
                            </div>
                         ) : subs.map(sub => {
                           const subsubs = getSubcategories(sub._id)
+                          const subOpen = expandedParents.includes(sub._id)
                           return (
                             <div key={sub._id} className="space-y-1.5">
                               {/* Subcategory Row */}
                               <div className="p-3 pl-10 flex items-center justify-between hover:bg-slate-100 rounded-xl border border-slate-200 bg-slate-50 group/sub">
                                 <div className="flex items-center gap-3">
-                                  <ChevronRight className="w-4 h-4 text-blue-600" />
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpand(sub._id)}
+                                    disabled={subsubs.length === 0}
+                                    aria-expanded={subOpen}
+                                    title={subsubs.length ? (subOpen ? 'Hide types' : 'Show types') : 'No types yet'}
+                                    className="-ml-1 p-1 rounded-md text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-default"
+                                  >
+                                    <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${subOpen && subsubs.length ? 'rotate-90' : ''}`} />
+                                  </button>
                                   <div>
                                     <span className="text-sm font-bold text-slate-700">{sub.name}</span>
-                                    <span className="text-[10px] text-slate-500 ml-2 font-mono">(Subcategory)</span>
+                                    <span className="text-[10px] text-slate-500 ml-2 font-mono">(Subcategory{subsubs.length ? ` · ${subsubs.length} types` : ''})</span>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5">
@@ -400,7 +411,7 @@ const CategoriesPage: React.FC = () => {
                               </div>
                               
                               {/* Sub-Subcategories Row */}
-                              {subsubs.length > 0 && (
+                              {subOpen && subsubs.length > 0 && (
                                 <div className="pl-16 space-y-1.5 pb-1">
                                   {subsubs.map(ss => (
                                     <div key={ss._id} className="p-2.5 flex items-center justify-between hover:bg-slate-100 rounded-lg border border-slate-200 bg-slate-50 pl-4">

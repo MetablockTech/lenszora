@@ -48,6 +48,7 @@ interface Product {
         businessName: string
         email: string
     }
+    vendor?: { businessName?: string; email?: string } | null
     createdAt: string
 }
 
@@ -71,7 +72,7 @@ const VendorProductsPage: React.FC = () => {
     const fetchProducts = async () => {
         try {
             setLoading(true)
-            const data = await products.list({ status })
+            const data = await products.list({ status, allStatuses: true })
             setProductList(data)
         } catch (error: any) {
             toast({
@@ -125,7 +126,7 @@ const VendorProductsPage: React.FC = () => {
     const filteredProducts = productList.filter(p =>
         p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.vendorId?.businessName?.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.vendor?.businessName || p.vendorId?.businessName)?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
@@ -228,8 +229,8 @@ const VendorProductsPage: React.FC = () => {
                                                     <Building2 className="w-4 h-4" />
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-medium text-slate-900">{product.vendorId?.businessName || 'N/A'}</div>
-                                                    <div className="text-xs text-slate-500">{product.vendorId?.email}</div>
+                                                    <div className="text-sm font-medium text-slate-900">{product.vendor?.businessName || product.vendorId?.businessName || 'N/A'}</div>
+                                                    <div className="text-xs text-slate-500">{product.vendor?.email || product.vendorId?.email}</div>
                                                 </div>
                                             </div>
                                         </td>

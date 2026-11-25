@@ -31,7 +31,7 @@ const productSchema = z.object({
     discountType: z.enum(['flat', 'percent']).default('flat'),
     shippingCost: z.coerce.number().min(0).default(0),
     shippingCostMultiply: z.boolean().default(false),
-    status: z.enum(['active', 'inactive']).default('active'),
+    status: z.enum(['active', 'inactive', 'pending', 'rejected']).default('active'),
     isFeatured: z.boolean().default(false),
     isSale: z.boolean().default(false),
     isBulk: z.boolean().default(false),
@@ -117,6 +117,17 @@ const productSchema = z.object({
 })
 
 type ProductFormValues = z.infer<typeof productSchema>
+
+// Saved products can hold null for empty fields; the form schema expects undefined, so null would block every edit
+const stripNulls = (v: any): any => {
+    if (Array.isArray(v)) return v.map(stripNulls)
+    if (v && typeof v === 'object') {
+        const out: any = {}
+        for (const [k, val] of Object.entries(v)) if (val !== null) out[k] = stripNulls(val)
+        return out
+    }
+    return v
+}
 
 const UNITS = ['kg', 'pc', 'gms', 'ltrs', 'pair', 'oz', 'lb']
 
@@ -288,7 +299,13 @@ const ProductForm = () => {
             setVendorLensTypes(lensTypes)
 
             if (isEdit && token) {
-                const product = await products.get(id)
+                const raw = await products.get(id)
+                const product = stripNulls(raw)
+                delete product._id; delete product.__v; delete product.createdAt; delete product.updatedAt
+                product.minOrderQuantity = Math.max(1, Number(product.minOrderQuantity) || 1)
+                if (!['flat', 'percent'].includes(product.discountType)) product.discountType = 'flat'
+                if (!['physical', 'digital'].includes(product.productType)) product.productType = 'physical'
+                if (!['active', 'inactive', 'pending', 'rejected'].includes(product.status)) product.status = 'active'
                 const prodCatId = product.category?._id || product.category
 
                 // Find category hierarchy
@@ -673,9 +690,18 @@ const ProductForm = () => {
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
                     console.error('Form Validation Errors:', errors)
+                    // Name the first failing field so the admin knows what to fix
+                    const firstError = (obj: any, path = ''): string => {
+                        for (const [k, v] of Object.entries(obj || {})) {
+                            const here = path ? `${path}.${k}` : k
+                            if ((v as any)?.message) return `${here}: ${(v as any).message}`
+                            if (v && typeof v === 'object') { const r = firstError(v, here); if (r) return r }
+                        }
+                        return ''
+                    }
                     toast({
                         title: "Validation Error",
-                        description: "Please check all fields for required information.",
+                        description: firstError(errors) || "Please check all fields for required information.",
                         variant: "destructive",
                     })
                 })} className="bg-white p-8 rounded-lg shadow-lg space-y-8 border border-slate-300">

@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button'
 import {
   Package, Tag, ShoppingCart, Users, Settings, LogOut, Link2, LayoutDashboard, Info, Menu, MapPin, ChevronDown, ChevronRight,
-  Layers, Image as ImageIcon, Calendar, MessageSquare, Gift, Sparkles, Eye, UserCheck, Heart, LayoutGrid, Store, RotateCcw,
+  Layers, Image as ImageIcon, Calendar, MessageSquare, Mail, Gift, Sparkles, Eye, UserCheck, Heart, LayoutGrid, Store, RotateCcw,
   Boxes, Navigation, ExternalLink, SlidersHorizontal, Glasses, type LucideIcon,
 } from 'lucide-react'
 import { useSettings } from '@/context/SettingsContext'
@@ -63,6 +63,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/customer-leads', label: 'Cart & Wishlists', icon: Heart },
       { to: '/admin/appointments', label: 'Appointments', icon: Calendar },
       { to: '/admin/product-inquiries', label: 'Inquiries', icon: MessageSquare },
+      { to: '/admin/contact-messages', label: 'Contact Messages', icon: Mail },
     ],
   },
   {

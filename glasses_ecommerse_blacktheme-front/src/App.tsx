@@ -78,10 +78,12 @@ import BulkProductForm from "./pages/admin/BulkProductForm";
 import BulkMarketplacePage from "./pages/vendor/BulkMarketplace";
 import WholesaleOrdersPage from "./pages/admin/BulkOrders";
 import ProductInquiriesPage from "./pages/admin/Inquiries";
+import ContactMessagesPage from "./pages/admin/ContactMessages";
 import VendorOrders from "./pages/vendor/VendorOrders";
 import VendorPurchases from "./pages/vendor/VendorPurchases";
 import VendorProfile from "./pages/vendor/VendorProfile";
 import VendorPayouts from "./pages/vendor/VendorPayouts";
+import VendorReturns from "./pages/vendor/VendorReturns";
 import AccessoriesAdminPage from "./pages/admin/Accessories";
 import AccessoryFormPage from "./pages/admin/AccessoryForm";
 
@@ -150,6 +152,7 @@ const AppContent = () => {
         <Route path="lens-manager" element={<VendorLensManagerPage />} />
         <Route path="stores" element={<VendorStores />} />
         <Route path="orders" element={<VendorOrders />} />
+        <Route path="returns" element={<VendorReturns />} />
         <Route path="purchases" element={<VendorPurchases />} />
         <Route path="profile" element={<VendorProfile />} />
         <Route path="payouts" element={<VendorPayouts />} />
@@ -194,6 +197,7 @@ const AppContent = () => {
         <Route path="bulk-products/:id" element={<BulkProductForm />} />
         <Route path="wholesale-orders" element={<WholesaleOrdersPage />} />
         <Route path="product-inquiries" element={<ProductInquiriesPage />} />
+        <Route path="contact-messages" element={<ContactMessagesPage />} />
         <Route path="gallery" element={<GalleryPage />} />
         <Route path="stores" element={<AdminStores />} />
         <Route path="lens-manager" element={<AdminLensManagerPage />} />

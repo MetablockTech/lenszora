@@ -67,8 +67,13 @@ export const products = {
     search?: string;
     sale?: boolean | string;
     wearDuration?: string;
+    /** Admin/vendor screens: include pending, rejected and inactive products (needs an admin or owning-vendor token) */
+    allStatuses?: boolean;
+    excludeAccessories?: boolean;
   }) {
     const query = new URLSearchParams()
+    if (params?.allStatuses) query.append('scope', 'all')
+    if (params?.excludeAccessories) query.append('excludeAccessories', 'true')
     if (params?.status) query.append('status', params.status)
     if (params?.isBestSeller) query.append('isBestSeller', 'true')
     if (params?.isFeatured) query.append('isFeatured', 'true')
@@ -90,7 +95,8 @@ export const products = {
     if (params?.search) query.append('search', params.search)
     if (params?.wearDuration) query.append('wearDuration', params.wearDuration)
 
-    const res = await fetch(`${API_URL}/api/products${query.toString() ? `?${query.toString()}` : ''}`)
+    const res = await fetch(`${API_URL}/api/products${query.toString() ? `?${query.toString()}` : ''}`,
+      params?.allStatuses ? { headers: getHeaders() } : undefined)
     if (!res.ok) throw new Error('Failed to fetch products')
     return res.json()
   },
@@ -111,7 +117,8 @@ export const products = {
     return res.json()
   },
   async get(id: string) {
-    const res = await fetch(`${API_URL}/api/products/${id}`)
+    // Token lets admins / the owning vendor open products that are not approved yet
+    const res = await fetch(`${API_URL}/api/products/${id}`, { headers: getHeaders() })
     if (!res.ok) throw new Error('Failed to fetch product')
     return res.json()
   },
@@ -498,7 +505,11 @@ export const vendors = {
       headers: getHeaders(),
       body: JSON.stringify(payload)
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      // Show the server's message ("Please fill in: City, Pincode"), not the raw JSON
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || err.error || 'Could not create the vendor')
+    }
     return res.json()
   },
   async updateStatus(id: string, payload: any, token?: string) {
@@ -565,7 +576,10 @@ export const payouts = {
       headers: getHeaders(token),
       body: JSON.stringify(payload)
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || err.error || 'Failed to update payout')
+    }
     return res.json()
   },
   async listVendor(token?: string, params?: { status?: string }) {
@@ -910,6 +924,16 @@ export const returnRequests = {
     if (!res.ok) throw new Error('Failed to fetch requests')
     return res.json()
   },
+  async getVendorRequests(token?: string, params?: { status?: string; type?: string }) {
+    const query = new URLSearchParams()
+    if (params?.status) query.append('status', params.status)
+    if (params?.type) query.append('type', params.type)
+    const res = await fetch(`${API_URL}/api/return-requests/vendor/me?${query}`, {
+      headers: getHeaders(token)
+    })
+    if (!res.ok) throw new Error('Failed to fetch return requests')
+    return res.json()
+  },
   async updateStatus(id: string, payload: any, token?: string) {
     const res = await fetch(`${API_URL}/api/return-requests/${id}/status`, {
       method: 'PATCH',
@@ -1056,13 +1080,25 @@ export const lens = {
     return res.json()
   },
   // Legacy/Compatibility (Proxies to admin for now)
-  async listTypes(token?: string) { return this.listAdminTypes(token) },
+  // Admin Lens Manager: every global type, active or not
+  async listTypes(token?: string) {
+    const res = await fetch(`${API_URL}/api/lens/types`, { headers: getHeaders(token) })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || err.error || `Request failed (${res.status})`)
+    }
+    return res.json()
+  },
   async createType(payload: any, token?: string) {
     const res = await fetch(`${API_URL}/api/lens/types`, {
       method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload)
     })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || err.error || `Request failed (${res.status})`)
+    }
     return res.json()
   },
   async updateType(id: string, payload: any, token?: string) {
@@ -1071,6 +1107,10 @@ export const lens = {
       headers: getHeaders(token),
       body: JSON.stringify(payload)
     })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || err.error || `Request failed (${res.status})`)
+    }
     return res.json()
   },
   async listPackages(token?: string) { return this.listAdminPackages(token) },
@@ -1080,6 +1120,10 @@ export const lens = {
       headers: getHeaders(token),
       body: JSON.stringify(payload)
     })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || err.error || `Request failed (${res.status})`)
+    }
     return res.json()
   },
   async updatePackage(id: string, payload: any, token?: string) {
@@ -1088,6 +1132,10 @@ export const lens = {
       headers: getHeaders(token),
       body: JSON.stringify(payload)
     })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || err.error || `Request failed (${res.status})`)
+    }
     return res.json()
   },
   async deleteType(id: string, token?: string) {
@@ -1436,5 +1484,38 @@ export const storeVisits = {
   },
   markCommissionCollected(id: string, token?: string) {
     return svRequest(`/admin/${id}/commission-collected`, { method: 'POST' }, token)
+  }
+}
+
+// Contact Us form messages
+export const contactMessages = {
+  async send(payload: { name: string; email: string; phone?: string; subject?: string; message: string }) {
+    const res = await fetch(`${API_URL}/api/contact-messages`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || 'Could not send your message')
+    return data
+  },
+  async list(token?: string, status?: string) {
+    const res = await fetch(`${API_URL}/api/contact-messages/admin${status ? `?status=${status}` : ''}`, { headers: getHeaders(token) })
+    if (!res.ok) throw new Error('Failed to load messages')
+    return res.json() as Promise<{ messages: any[]; unread: number }>
+  },
+  async update(id: string, payload: { status?: string; adminNotes?: string }, token?: string) {
+    const res = await fetch(`${API_URL}/api/contact-messages/admin/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload)
+    })
+    if (!res.ok) throw new Error('Failed to update message')
+    return res.json()
+  },
+  async remove(id: string, token?: string) {
+    const res = await fetch(`${API_URL}/api/contact-messages/admin/${id}`, { method: 'DELETE', headers: getHeaders(token) })
+    if (!res.ok) throw new Error('Failed to delete message')
+    return res.json()
   }
 }

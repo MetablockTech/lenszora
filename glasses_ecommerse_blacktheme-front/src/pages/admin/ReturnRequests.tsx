@@ -12,6 +12,12 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button'
 
+// Same order number customers see on their order page (#last 8 characters of the order id)
+const orderNo = (req: any) => {
+    const id = typeof req?.orderId === 'string' ? req.orderId : req?.orderId?._id
+    return id ? `#${String(id).slice(-8).toUpperCase()}` : '—'
+}
+
 const ReturnRequests = () => {
     const [requests, setRequests] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
@@ -133,7 +139,9 @@ const ReturnRequests = () => {
                 </div>
             ) : (
                 <div className="bg-card rounded-lg border border-border/30 shadow-sm overflow-hidden">
-                    <table className="w-full text-sm text-left">
+                    {/* Scrolls sideways on small screens so the Actions column is never cut off */}
+                    <div className="w-full overflow-x-auto">
+                    <table className="w-full min-w-[820px] text-sm text-left">
                         <thead className="bg-secondary text-muted-foreground font-medium border-b border-border/30">
                             <tr>
                                 <th className="px-6 py-3">Order</th>
@@ -149,7 +157,7 @@ const ReturnRequests = () => {
                             {paginatedList.map((req) => (
                                 <tr key={req._id} className="hover:bg-secondary/50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-foreground">
-                                        #{req.orderId?.orderNumber?.slice(-6) || '...'}
+                                        {orderNo(req)}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="font-medium text-foreground">{req.userId?.name || 'Unknown'}</div>
@@ -189,6 +197,7 @@ const ReturnRequests = () => {
                             ))}
                         </tbody>
                     </table>
+                    </div>
 
                     {/* Pagination Controls */}
                     {requests.length > 0 && (
@@ -249,6 +258,17 @@ const ReturnRequests = () => {
 
                     {selectedRequest && (
                         <div className="space-y-6 mt-4">
+                            {/* Order reference */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/40 px-4 py-3 text-sm">
+                                <div>
+                                    <span className="text-muted-foreground">Order Number: </span>
+                                    <span className="font-mono font-bold text-foreground">{orderNo(selectedRequest)}</span>
+                                </div>
+                                {selectedRequest.orderId?.createdAt && (
+                                    <span className="text-xs text-muted-foreground">Ordered on {new Date(selectedRequest.orderId.createdAt).toLocaleDateString()}</span>
+                                )}
+                            </div>
+
                             {/* Product Info */}
                             <div className="bg-secondary p-4 rounded-lg flex gap-4">
                                 {selectedRequest.productId?.thumbnail && (

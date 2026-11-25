@@ -46,6 +46,7 @@ interface Order {
     }>;
     subtotal: number;
     vendorAmount: number;
+    discount?: number;
     status: string;
   };
 }
@@ -125,7 +126,11 @@ const VendorOrders: React.FC = () => {
   }
 
   const itemsList = (order: Order) => order.vendorOrder?.items || order.items;
-  const orderTotal = (order: Order) => order.vendorOrder?.subtotal || order.total;
+  // Vendor's part of the order after its share of any coupon discount
+  const orderTotal = (order: Order) => order.vendorOrder
+    ? Math.max(0, (order.vendorOrder.subtotal || 0) - (order.vendorOrder.discount || 0))
+    : order.total;
+  const orderCouponShare = (order: Order) => order.vendorOrder?.discount || 0;
   const orderStatus = (order: Order) => order.vendorOrder?.status || order.orderStatus;
 
   return (
@@ -231,6 +236,12 @@ const VendorOrders: React.FC = () => {
                         {formatDate(selectedOrder.createdAt)}
                       </span>
                     </div>
+                    {orderCouponShare(selectedOrder) > 0 && (
+                      <div className="flex justify-between text-emerald-500">
+                        <span>Coupon Discount (your share):</span>
+                        <span className="font-semibold">-{formatPrice(orderCouponShare(selectedOrder))}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between pt-3 border-t border-border mt-2">
                       <span className="font-bold text-foreground">Your Share Total:</span>
                       <span className="font-black text-primary text-lg">{formatPrice(orderTotal(selectedOrder))}</span>

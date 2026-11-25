@@ -7,6 +7,7 @@ import { auth, AuthRequest } from '../middleware/auth'
 import { vendorAuth, adminOrVendorAuth } from '../middleware/vendorAuth'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { maskedBankDetails, hasValidBankDetails } from '../utils/vendorBank'
 
 const router = Router()
 
@@ -24,18 +25,53 @@ router.post('/register', async (req, res) => {
             businessLicense,
             taxId,
             gstNumber,
-            bankDetails
+            bankDetails,
+            commissionRate
         } = req.body
 
-        // Check if user already exists by email or phone
+        // 1. Check every required field first and answer with a clear list, before anything is saved
+        const missing: string[] = []
+        const blank = (v: any) => !String(v ?? '').trim()
+        if (blank(name)) missing.push('Owner name')
+        if (blank(email)) missing.push('Email')
+        if (blank(phone)) missing.push('Phone')
+        if (blank(password)) missing.push('Password')
+        if (blank(businessName)) missing.push('Business name')
+        if (blank(address?.street)) missing.push('Street address')
+        if (blank(address?.city)) missing.push('City')
+        if (blank(address?.state)) missing.push('State')
+        if (blank(address?.zipCode)) missing.push('Pincode')
+        if (missing.length) {
+            return res.status(400).json({ message: `Please fill in: ${missing.join(', ')}`, missingFields: missing })
+        }
+        if (!/^\S+@\S+\.\S+$/.test(String(email).trim())) {
+            return res.status(400).json({ message: 'Please enter a valid email address' })
+        }
+        if (String(password).length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters' })
+        }
+        let finalCommission: number | undefined
+        if (commissionRate !== undefined && commissionRate !== null && String(commissionRate).trim() !== '') {
+            finalCommission = Number(commissionRate)
+            if (!Number.isFinite(finalCommission) || finalCommission < 0 || finalCommission > 100) {
+                return res.status(400).json({ message: 'Commission must be a number between 0 and 100' })
+            }
+        }
+
+        // Check if user already exists by email or phone. An account left behind by an earlier failed
+        // registration (vendor role, no vendor profile) is removed so the same email can be used again.
         const existingUser = await User.findOne({ email })
         if (existingUser) {
-            return res.status(400).json({ message: 'Email already registered' })
+            const orphan = existingUser.role === 'vendor' && !existingUser.vendorId && !(await Vendor.exists({ userId: existingUser._id }))
+            if (!orphan) return res.status(400).json({ message: 'Email already registered' })
+            await User.deleteOne({ _id: existingUser._id })
         }
 
         const existingPhone = await User.findOne({ phone })
         if (existingPhone) {
-            return res.status(400).json({ message: 'Phone number already registered' })
+            const orphan = existingPhone.role === 'vendor' && !existingPhone.vendorId && !(await Vendor.exists({ userId: existingPhone._id }))
+            if (!orphan) return res.status(400).json({ message: 'Phone number already registered' })
+            await User.deleteOne({ _id: existingPhone._id })
         }
 
         // Hash password
@@ -52,7 +88,7 @@ router.post('/register', async (req, res) => {
             vendorSlug = `${vendorSlug}-${Math.random().toString(36).substring(2, 7)}`
         }
 
-        // Create user with vendor role
+        // Create user with vendor role (not saved until the vendor profile is known to be valid)
         const user = new User({
             email,
             password: hashedPassword,
@@ -60,7 +96,6 @@ router.post('/register', async (req, res) => {
             phone,
             role: 'vendor'
         })
-        await user.save()
 
         // Create vendor profile
         const vendor = new Vendor({
@@ -80,13 +115,28 @@ router.post('/register', async (req, res) => {
                 bankName: 'TBD',
                 ifscCode: 'TBD'
             },
+            ...(finalCommission !== undefined ? { commissionRate: finalCommission } : {}),
             verificationStatus: 'pending'
         })
-        await vendor.save()
 
-        // Link vendor to user
+        // 2. Validate both records before writing either, so a failed attempt leaves nothing behind
         user.vendorId = vendor._id
+        try {
+            await user.validate()
+            await vendor.validate()
+        } catch (validationError: any) {
+            const fields = Object.keys(validationError?.errors || {})
+            return res.status(400).json({ message: fields.length ? `Please check: ${fields.join(', ')}` : 'Please check the vendor details' })
+        }
+
+        // 3. Save; if the vendor profile can't be saved, remove the user again
         await user.save()
+        try {
+            await vendor.save()
+        } catch (saveError) {
+            await User.deleteOne({ _id: user._id }).catch(() => {})
+            throw saveError
+        }
 
         res.status(201).json({
             message: 'Vendor registration successful. Awaiting admin approval.',
@@ -98,7 +148,11 @@ router.post('/register', async (req, res) => {
         })
     } catch (error: any) {
         console.error('Vendor registration error:', error)
-        res.status(500).json({ message: 'Server error during registration', error: error.message })
+        if (error?.code === 11000) {
+            const field = Object.keys(error.keyPattern || {})[0] || 'value'
+            return res.status(400).json({ message: `This ${field} is already registered` })
+        }
+        res.status(500).json({ message: 'Could not create the vendor. Please try again.' })
     }
 })
 
@@ -480,7 +534,10 @@ router.get('/analytics/me', vendorAuth, async (req: AuthRequest, res) => {
             availableBalance: vendor.availableBalance || 0,
             totalEarned: vendor.totalEarned || 0,
             commissionRate: vendor.commissionRate,
-            verificationStatus: vendor.verificationStatus
+            verificationStatus: vendor.verificationStatus,
+            // Dashboard shows these instead of "No bank details added yet" once real details are saved
+            hasBankDetails: hasValidBankDetails(vendor),
+            bankDetails: maskedBankDetails(vendor)
         })
     } catch (error: any) {
         console.error('Get vendor analytics error:', error)

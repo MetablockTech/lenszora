@@ -62,6 +62,49 @@ async function checkAndTriggerReferralReward(userId: string) {
   }
 }
 
+// Re-check a coupon against the real cart total at order time (the checkout page may be out of date,
+// e.g. items removed after applying). Returns the discount or an error message.
+async function evaluateCoupon(code: any, userId: string, orderAmount: number): Promise<{ coupon?: any; discount: number; error?: string }> {
+  const cleanCode = String(code || '').trim().toUpperCase()
+  if (!cleanCode) return { discount: 0 }
+  const coupon = await Coupon.findOne({ code: cleanCode, isActive: true })
+  if (!coupon) return { discount: 0, error: 'Invalid or inactive coupon code' }
+  if (coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) return { discount: 0, error: 'Coupon code has expired' }
+  if (coupon.usageLimit > 0 && coupon.timesUsed >= coupon.usageLimit) return { discount: 0, error: 'Coupon usage limit reached' }
+  if (coupon.userId && coupon.userId.toString() !== String(userId)) return { discount: 0, error: 'This coupon is assigned to another user' }
+  if (orderAmount < (coupon.minOrderAmount || 0)) {
+    return { discount: 0, error: `Coupon ${coupon.code} needs a minimum order of ₹${coupon.minOrderAmount}. Your cart total is now ₹${Math.round(orderAmount)}, so the coupon was removed.` }
+  }
+  let discount = coupon.discountType === 'percent' ? (orderAmount * coupon.discountValue) / 100 : coupon.discountValue
+  if (coupon.discountType === 'percent' && coupon.maxDiscount && discount > coupon.maxDiscount) discount = coupon.maxDiscount
+  discount = Math.round(Math.min(discount, orderAmount))
+  return { coupon, discount }
+}
+
+// Take ordered quantities out of stock once payment is confirmed (never below 0). Runs once per order.
+async function deductStock(order: any) {
+  if (order.stockDeducted) return
+  for (const item of order.items) {
+    const qty = Number(item.quantity) || 0
+    if (!item.productId || qty <= 0) continue
+    await Product.updateOne({ _id: item.productId }, [
+      { $set: { stock: { $max: [0, { $subtract: [{ $ifNull: ['$stock', 0] }, qty] }] } } }
+    ])
+  }
+  order.stockDeducted = true
+}
+
+// Put stock back when a paid order is cancelled or returned
+async function restoreStock(order: any) {
+  if (!order.stockDeducted) return
+  for (const item of order.items) {
+    const qty = Number(item.quantity) || 0
+    if (!item.productId || qty <= 0) continue
+    await Product.updateOne({ _id: item.productId }, { $inc: { stock: qty } })
+  }
+  order.stockDeducted = false
+}
+
 // Initialize Razorpay
 const razorpay = (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
   ? new Razorpay({
@@ -153,8 +196,26 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
+    // Coupon: validated again on the server against the real items total, and the discount is stored on the order
+    const couponResult = await evaluateCoupon(req.body.couponCode, userId, itemsTotal)
+    if (couponResult.error) {
+      return res.status(400).json({ error: couponResult.error, couponInvalid: true })
+    }
+    const discount = couponResult.discount
+    const couponCode = couponResult.coupon?.code
+
+    // Share the discount between vendor orders in proportion to their subtotal (for vendor panels)
+    if (discount > 0 && itemsTotal > 0) {
+      let left = discount
+      vendorOrders.forEach((vo: any, i: number) => {
+        const share = i === vendorOrders.length - 1 ? left : Math.round((discount * vo.subtotal) / itemsTotal)
+        vo.discount = share
+        left -= share
+      })
+    }
+
     // Verify final total matches
-    const calculatedTotal = itemsTotal + shippingCharge
+    const calculatedTotal = Math.max(0, itemsTotal - discount) + shippingCharge
 
     // Handle Manual Payment
     if (paymentMethod === 'manual') {
@@ -163,6 +224,9 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
         items: processedItems,
         vendorOrders,
         total: calculatedTotal,
+        subtotal: itemsTotal,
+        discount,
+        couponCode,
         totalCommission,
         shippingCharge,
         shippingAddress,
@@ -178,8 +242,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       })
 
       // If a coupon was applied, increment timesUsed
-      if (req.body.couponCode) {
-        Coupon.findOneAndUpdate({ code: String(req.body.couponCode).trim().toUpperCase() }, { $inc: { timesUsed: 1 } }).catch(() => {})
+      if (couponCode) {
+        Coupon.findOneAndUpdate({ code: couponCode }, { $inc: { timesUsed: 1 } }).catch(() => {})
       }
 
       return res.json({
@@ -199,6 +263,9 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       items: processedItems,
       vendorOrders,
       total: calculatedTotal,
+      subtotal: itemsTotal,
+      discount,
+      couponCode,
       totalCommission,
       shippingCharge,
       shippingAddress,
@@ -250,12 +317,23 @@ router.post('/verify-payment', async (req: Request, res: Response) => {
     const generated_signature = hmac.digest('hex')
 
     if (generated_signature === razorpaySignature) {
+      // Repeated callback for an order that is already paid: nothing more to do
+      if (order.paymentStatus === 'completed') {
+        return res.json({ success: true, message: 'Payment verified successfully', order })
+      }
       // Payment verified
       order.paymentStatus = 'completed'
       order.orderStatus = 'confirmed'
       order.razorpayPaymentId = razorpayPaymentId
       order.razorpaySignature = razorpaySignature
+      order.statusHistory.push({ status: 'confirmed', timestamp: new Date(), note: 'Payment received' })
+      await deductStock(order)
       await order.save()
+
+      // Coupon is used up only once the payment has gone through
+      if (order.couponCode) {
+        Coupon.findOneAndUpdate({ code: order.couponCode }, { $inc: { timesUsed: 1 } }).catch(() => {})
+      }
 
       // Increment totalOrders for products
       for (const item of order.items) {
@@ -403,6 +481,7 @@ router.post('/:id/verify-manual-payment', requireAuth, requireAdmin, async (req:
       for (const item of order.items) {
         await Product.findByIdAndUpdate(item.productId, { $inc: { totalOrders: item.quantity } })
       }
+      await deductStock(order)
       console.log('[BACKEND] Payment approved, new status:', order.paymentStatus)
 
       // Payment confirmed: reward the referrer if this is the user's first paid order
@@ -444,6 +523,17 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req: Request, res:
     if (!order) {
       return res.status(404).json({ error: 'Order not found' })
     }
+
+    // An order whose payment failed or is still unverified can't be confirmed, shipped or delivered
+    const fulfilment = ['confirmed', 'shipped', 'delivered', 'partially_shipped', 'partially_delivered']
+    if (fulfilment.includes(status) && order.paymentStatus !== 'completed') {
+      const why = order.paymentStatus === 'failed' ? 'the payment failed' : 'the payment is not confirmed yet'
+      return res.status(400).json({ error: `Cannot mark this order as ${status}: ${why}.` })
+    }
+
+    // Stock: taken out when a paid order moves forward, put back if it is cancelled or returned
+    if (fulfilment.includes(status)) await deductStock(order)
+    if (['cancelled', 'returned', 'refunded'].includes(status)) await restoreStock(order)
 
     // Update status
     order.orderStatus = status

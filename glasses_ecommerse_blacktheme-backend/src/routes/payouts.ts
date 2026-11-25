@@ -4,6 +4,7 @@ import { Vendor } from '../models/Vendor'
 import { Order } from '../models/Order'
 import { auth, AuthRequest } from '../middleware/auth'
 import { vendorAuth, AuthRequest as VendorAuthRequest } from '../middleware/vendorAuth'
+import { hasValidBankDetails, NO_BANK_DETAILS_MESSAGE } from '../utils/vendorBank'
 
 const router = Router()
 
@@ -43,7 +44,8 @@ router.get('/vendor/me', vendorAuth, async (req: AuthRequest, res) => {
 // Vendor: Request a withdrawal
 router.post('/request', vendorAuth, async (req: AuthRequest, res) => {
     try {
-        const { amount, notes, paymentMethod } = req.body
+        const { notes, paymentMethod } = req.body
+        const amount = Number(req.body.amount)
         const vendorId = req.user?.vendorId
 
         const vendor = await Vendor.findById(vendorId)
@@ -51,7 +53,12 @@ router.post('/request', vendorAuth, async (req: AuthRequest, res) => {
             return res.status(404).json({ message: 'Vendor not found' })
         }
 
-        if (amount <= 0) {
+        // No payout without somewhere to send it
+        if (!hasValidBankDetails(vendor)) {
+            return res.status(400).json({ message: NO_BANK_DETAILS_MESSAGE })
+        }
+
+        if (!Number.isFinite(amount) || amount <= 0) {
             return res.status(400).json({ message: 'Invalid payout amount' })
         }
 
@@ -98,7 +105,7 @@ router.get('/', auth, async (req: AuthRequest, res) => {
         if (vendorId) filter.vendorId = vendorId
 
         const payouts = await VendorPayout.find(filter)
-            .populate('vendorId', 'businessName email')
+            .populate('vendorId', 'businessName email phone bankDetails availableBalance')
             .populate('processedBy', 'email name')
             .limit(Number(limit))
             .skip((Number(page) - 1) * Number(limit))
@@ -213,6 +220,11 @@ router.post('/', auth, async (req: AuthRequest, res) => {
 
         const netAmount = totalAmount - totalCommission
 
+        const payoutVendor = await Vendor.findById(vendorId)
+        if (!hasValidBankDetails(payoutVendor)) {
+            return res.status(400).json({ message: 'This vendor has not added bank details yet, so a payout cannot be created.' })
+        }
+
         const payout = new VendorPayout({
             vendorId,
             amount: totalAmount,
@@ -250,6 +262,15 @@ router.put('/:id/status', auth, async (req: AuthRequest, res) => {
         }
 
         const oldStatus = payout.status
+
+        // Paying out (processing/completed) needs the vendor's bank details on file
+        if ((status === 'completed' || status === 'processing') && oldStatus !== status) {
+            const payee = await Vendor.findById(payout.vendorId)
+            if (!hasValidBankDetails(payee)) {
+                return res.status(400).json({ message: 'This vendor has no bank details on file. Ask them to add bank details before marking the payout as paid.' })
+            }
+        }
+
         if (status) payout.status = status
         if (transactionId) payout.transactionId = transactionId
         if (transactionDetails) payout.transactionDetails = transactionDetails

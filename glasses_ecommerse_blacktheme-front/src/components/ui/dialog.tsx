@@ -42,7 +42,8 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+      {/* Own colours (not the theme text colour), so the X shows on both white and dark pop-ups */}
+      <DialogPrimitive.Close className="absolute right-3 top-3 z-20 rounded-full bg-white/90 p-1.5 text-slate-700 shadow ring-1 ring-black/10 transition-colors hover:bg-white hover:text-black focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:pointer-events-none">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

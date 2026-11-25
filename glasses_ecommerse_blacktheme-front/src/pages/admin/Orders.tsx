@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Eye, Truck, CheckCircle, XCircle, Clock, ArrowLeft, Star, Store } from 'lucide-react'
 import { formatDate, formatPrice } from '@/lib/utils'
 import { toast } from 'sonner'
+import { orderItemsTotal, orderDiscount, orderPaidTotal } from '@/lib/orderTotals'
 
 const OrdersPage: React.FC = () => {
   const [orderList, setOrderList] = useState<any[]>([])
@@ -117,7 +118,10 @@ const OrdersPage: React.FC = () => {
                     {order.items?.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0) || 0}
                   </TableCell>
                   <TableCell className="text-foreground font-medium">
-                    {formatPrice(order.items?.reduce((sum: number, item: any) => sum + ((item.price + (item.lens?.price || 0)) * (item.quantity || 1)), 0) || 0)}
+                    {formatPrice(orderPaidTotal(order))}
+                    {orderDiscount(order) > 0 && (
+                      <span className="block text-[10px] font-semibold text-emerald-500">-{formatPrice(orderDiscount(order))} coupon</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
@@ -232,15 +236,21 @@ const OrdersPage: React.FC = () => {
                   <div className="text-sm text-muted-foreground">
                     <div className="flex justify-between py-1">
                       <span>Subtotal</span>
-                      <span className="text-foreground">{formatPrice(selectedOrder.items.reduce((acc: number, item: any) => acc + ((item.price + (item.lens?.price || 0)) * item.quantity), 0) || 0)}</span>
+                      <span className="text-foreground">{formatPrice(orderItemsTotal(selectedOrder))}</span>
                     </div>
+                    {orderDiscount(selectedOrder) > 0 && (
+                      <div className="flex justify-between py-1 text-emerald-500">
+                        <span>Coupon Discount{selectedOrder.couponCode ? ` (${selectedOrder.couponCode})` : ''}</span>
+                        <span>-{formatPrice(orderDiscount(selectedOrder))}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-1">
                       <span>Shipping</span>
                       <span className="text-foreground">{formatPrice(selectedOrder.shippingCharge || 0)}</span>
                     </div>
                     <div className="flex justify-between py-1 font-bold border-t border-border mt-2 pt-2 text-foreground">
                       <span>Total</span>
-                      <span className="text-lg text-primary">{formatPrice(selectedOrder.items.reduce((acc: number, item: any) => acc + ((item.price + (item.lens?.price || 0)) * item.quantity), 0) || 0)}</span>
+                      <span className="text-lg text-primary">{formatPrice(orderPaidTotal(selectedOrder))}</span>
                     </div>
                   </div>
                 </div>

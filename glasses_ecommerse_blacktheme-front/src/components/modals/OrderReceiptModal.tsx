@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Printer, X, CheckCircle, Package, MapPin, Phone, Mail, ShieldCheck, Download } from 'lucide-react'
 import { useSettings } from '@/context/SettingsContext'
@@ -30,6 +31,9 @@ export interface OrderReceiptData {
   orderStatus: string;
   total: number;
   shippingCharge?: number;
+  subtotal?: number;
+  discount?: number;
+  couponCode?: string;
   shippingAddress: {
     firstName: string;
     lastName: string;
@@ -80,7 +84,11 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   // Financial calculations
   const framesSubtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
   const lensSubtotal = order.items.reduce((sum, item) => sum + ((item.lens?.price || 0) * item.quantity), 0)
-  const grandTotal = framesSubtotal + lensSubtotal
+  const itemsTotal = framesSubtotal + lensSubtotal
+  const discount = Number(order.discount) || 0
+  const shipping = Number(order.shippingCharge) || 0
+  // What the customer actually paid (saved on the order); older orders fall back to the items total
+  const grandTotal = Number(order.total) || Math.max(0, itemsTotal - discount) + shipping
   
   // Tax calculations (Estimated 18% GST included)
   const gstRate = 0.18
@@ -89,32 +97,45 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   const cgst = gstTotal / 2
   const sgst = gstTotal / 2
 
-  return (
+  // Rendered straight into <body> so that, when printing, everything else on the page can be hidden
+  // and only the receipt goes to paper. (Before, the receipt sat inside a wrapper hidden for print,
+  // which made the print preview blank.)
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto no-print">
+      <div id="receipt-print-root" className="receipt-overlay fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
         <style>
           {`
             @media print {
-              body * {
-                visibility: hidden !important;
+              @page { margin: 12mm; }
+              html, body { background: #ffffff !important; height: auto !important; overflow: visible !important; }
+              body > *:not(#receipt-print-root) { display: none !important; }
+              #receipt-print-root {
+                position: static !important;
+                display: block !important;
+                inset: auto !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                backdrop-filter: none !important;
+                overflow: visible !important;
               }
-              #printable-receipt, #printable-receipt * {
-                visibility: visible !important;
+              #receipt-print-root .receipt-card {
+                max-width: none !important;
+                width: 100% !important;
+                margin: 0 !important;
+                border: none !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+                transform: none !important;
+                opacity: 1 !important;
+                overflow: visible !important;
               }
               #printable-receipt {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                padding: 20px !important;
-                background: #ffffff !important;
-                color: #000000 !important;
-                box-shadow: none !important;
-                border: none !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
               }
-              .no-print {
-                display: none !important;
-              }
+              #receipt-print-root .no-print { display: none !important; }
             }
           `}
         </style>
@@ -123,7 +144,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="relative w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden my-8"
+          className="receipt-card relative w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden my-8"
         >
           {/* Action Bar (Top) */}
           <div className="flex items-center justify-between px-6 py-4 bg-zinc-950 border-b border-zinc-800 no-print">
@@ -331,18 +352,30 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                     <span>₹{lensSubtotal.toLocaleString()}</span>
                   </div>
                 )}
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-700">
+                    <span>Coupon Discount{order.couponCode ? ` (${order.couponCode})` : ''}:</span>
+                    <span>-₹{discount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-zinc-600">
                   <span>Shipping & Delivery:</span>
-                  <span className="font-bold text-green-600">FREE</span>
+                  {shipping > 0 ? <span>₹{shipping.toLocaleString()}</span> : <span className="font-bold text-green-600">FREE</span>}
                 </div>
                 <div className="border-t border-zinc-300 pt-2 flex justify-between text-base font-black text-zinc-900">
                   <span>Grand Total:</span>
                   <span>₹{grandTotal.toLocaleString()}</span>
                 </div>
-                <div className="p-2 bg-green-50 border border-green-200 rounded text-center text-green-800 font-bold text-xs flex items-center justify-center gap-1.5 mt-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  Amount Paid in Full
-                </div>
+                {order.paymentStatus === 'completed' ? (
+                  <div className="p-2 bg-green-50 border border-green-200 rounded text-center text-green-800 font-bold text-xs flex items-center justify-center gap-1.5 mt-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    Amount Paid in Full
+                  </div>
+                ) : (
+                  <div className="p-2 bg-amber-50 border border-amber-200 rounded text-center text-amber-800 font-bold text-xs mt-2">
+                    Payment {order.paymentStatus === 'failed' ? 'Failed' : 'Pending'}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -371,7 +404,8 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
 

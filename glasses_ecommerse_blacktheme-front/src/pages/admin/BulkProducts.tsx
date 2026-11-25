@@ -25,6 +25,7 @@ const BulkProductsPage: React.FC = () => {
     try {
       // Fetch products with isBulk=true
       const p = await products.list({
+        allStatuses: true,
         isBulk: 'true'
       })
 

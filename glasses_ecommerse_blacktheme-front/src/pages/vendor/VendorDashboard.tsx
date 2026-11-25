@@ -187,11 +187,14 @@ export default function VendorDashboard() {
                                         setWithdrawAmount(analytics?.availableBalance?.toString() || '');
                                         setShowWithdrawModal(true);
                                     }}
-                                    disabled={!analytics?.availableBalance || analytics?.availableBalance <= 0}
+                                    disabled={!analytics?.availableBalance || analytics?.availableBalance <= 0 || analytics?.hasBankDetails === false}
                                     className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-lg rounded-2xl shadow-lg shadow-blue-900/40 active:scale-95 transition-all"
                                 >
                                     WITHDRAW FUNDS
                                 </Button>
+                                {analytics?.hasBankDetails === false && (
+                                    <p className="text-[11px] text-center text-amber-400">Add your bank account in Profile to withdraw funds.</p>
+                                )}
                                 <p className="text-[10px] text-center text-slate-500 italic">Payments are processed within 24-48 hours by the platform.</p>
                             </div>
                         </div>

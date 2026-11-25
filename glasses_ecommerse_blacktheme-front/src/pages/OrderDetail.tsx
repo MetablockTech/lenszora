@@ -23,6 +23,7 @@ import ReviewForm from '@/components/product/ReviewForm'
 import ReturnRequestModal from '@/components/product/ReturnRequestModal'
 import OrderReceiptModal from '@/components/modals/OrderReceiptModal'
 import { getImageUrl } from '@/lib/utils'
+import { orderItemsTotal, orderDiscount, orderPaidTotal } from '@/lib/orderTotals'
 
 interface Order {
   _id: string;
@@ -44,6 +45,10 @@ interface Order {
     };
   }>;
   total: number;
+  subtotal?: number;
+  discount?: number;
+  couponCode?: string;
+  shippingCharge?: number;
   paymentStatus: 'pending' | 'completed' | 'failed';
   orderStatus: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | 'partially_shipped' | 'partially_delivered';
   vendorOrders?: Array<{
@@ -569,14 +574,22 @@ const OrderDetail = () => {
                       <span>₹{order.items.reduce((sum, i) => sum + ((i.lens?.price || 0) * i.quantity), 0).toLocaleString()}</span>
                     </div>
                   )}
+                  {orderDiscount(order) > 0 && (
+                    <div className="flex justify-between text-emerald-400">
+                      <span>Coupon Discount{order.couponCode ? ` (${order.couponCode})` : ''}</span>
+                      <span>-₹{orderDiscount(order).toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-400">Shipping</span>
-                    <span className="text-green-400 font-medium">FREE</span>
+                    {(order.shippingCharge || 0) > 0
+                      ? <span>₹{(order.shippingCharge || 0).toLocaleString()}</span>
+                      : <span className="text-green-400 font-medium">FREE</span>}
                   </div>
                   <div className="border-t border-zinc-800 pt-3 flex justify-between font-bold text-lg">
                     <span className="text-white">Total</span>
                     <span className="text-yellow-500 underline underline-offset-8 decoration-yellow-500/30 font-black tracking-tight scale-110">
-                      ₹{(order.items.reduce((sum, i) => sum + ((i.price + (i.lens?.price || 0)) * i.quantity), 0)).toLocaleString()}
+                      ₹{orderPaidTotal(order).toLocaleString()}
                     </span>
                   </div>
 

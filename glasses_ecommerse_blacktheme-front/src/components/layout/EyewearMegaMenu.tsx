@@ -50,7 +50,18 @@ const DEFAULT_FALLBACK_BRANDS: Brand[] = [
   { _id: "vogue", name: "Vogue Eyewear", slug: "vogue" },
 ];
 
-const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onItemClick }: EyewearMegaMenuProps) => {
+// Column set up in Admin → Navigation (saved per main category id)
+type NavColumn = {
+  title?: string;
+  source?: "subcategories" | "genders" | "shapes" | "brands" | "custom";
+  customLinks?: { label: string; url: string }[];
+};
+
+const COLUMN_ICON = { subcategories: Layers, genders: Users, shapes: Shapes, brands: Tag, custom: Sparkles } as const;
+const GENDERS = ["Men", "Women", "Kids", "Unisex"];
+const SHAPES = ["Rectangle", "Square", "Round", "Cat-Eye", "Aviator", "Wayfarer"];
+
+const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], navConfig = {}, onItemClick }: EyewearMegaMenuProps) => {
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeBrands = (Array.isArray(brands) && brands.length > 0) ? brands : DEFAULT_FALLBACK_BRANDS;
 
@@ -78,6 +89,87 @@ const EyewearMegaMenu = ({ categorySlug = "", categories = [], brands = [], onIt
   ) || currentCategory;
 
   const dbSubCategories = Array.isArray(eyeglassesCategory?.subcategories) ? eyeglassesCategory.subcategories : [];
+
+  // 0. ADMIN-CONFIGURED MENU: when the admin saved columns for this category in Admin → Navigation,
+  // show exactly those (titles, order and data source) instead of the built-in layout.
+  const configuredColumns: NavColumn[] = (!isBrands && currentCategory && Array.isArray(navConfig?.[currentCategory._id]))
+    ? (navConfig[currentCategory._id] as NavColumn[]).filter((c) => c && c.source)
+    : [];
+
+  if (configuredColumns.length > 0 && currentCategory) {
+    const catSlug = currentCategory.slug || "";
+    const linksFor = (col: NavColumn): { label: string; to: string }[] => {
+      switch (col.source) {
+        case "subcategories":
+          return (currentCategory.subcategories || []).flatMap((sub) => [
+            { label: sub.name, to: `/shop?category=${sub.slug}` },
+            ...(sub.subcategories || []).map((ss) => ({ label: `— ${ss.name}`, to: `/shop?category=${ss.slug}` })),
+          ]);
+        case "genders":
+          return GENDERS.map((g) => ({ label: g, to: `/shop?category=${catSlug}&gender=${g.toLowerCase()}` }));
+        case "shapes":
+          return SHAPES.map((sh) => ({ label: sh, to: `/shop?category=${catSlug}&frameShape=${sh.toLowerCase()}` }));
+        case "brands":
+          return safeBrands.slice(0, 8).map((b) => ({ label: b.name, to: `/shop?category=${catSlug}&brand=${b._id}` }));
+        case "custom":
+          return (col.customLinks || []).filter((l) => l?.label && l?.url).map((l) => ({ label: l.label, to: l.url }));
+        default:
+          return [];
+      }
+    };
+    const cols = Math.min(configuredColumns.length, 5);
+    const gridCols = ["md:grid-cols-1", "md:grid-cols-2", "md:grid-cols-3", "md:grid-cols-4", "md:grid-cols-5"][cols - 1];
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className="absolute left-0 right-0 top-full bg-slate-950 shadow-2xl border-t border-white/10 z-50 py-8 px-6 text-white backdrop-blur-2xl"
+      >
+        <div className="container mx-auto">
+          <div className={`grid grid-cols-1 ${gridCols} gap-8`}>
+            {configuredColumns.slice(0, 5).map((col, idx) => {
+              const Icon = COLUMN_ICON[col.source as keyof typeof COLUMN_ICON] || Layers;
+              const links = linksFor(col);
+              return (
+                <div key={`${col.title}-${idx}`} className="space-y-3">
+                  <div className="flex items-center gap-2 border-b border-amber-500/20 pb-2 mb-3">
+                    <Icon className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-xs font-black uppercase tracking-widest text-amber-400">{col.title || "Shop"}</h3>
+                  </div>
+                  <ul className="space-y-2 text-xs font-semibold">
+                    {links.length === 0 ? (
+                      <li className="text-slate-500">Coming soon</li>
+                    ) : links.map((l) => (
+                      <li key={`${l.label}-${l.to}`}>
+                        {/^https?:\/\//.test(l.to) ? (
+                          <a href={l.to} target="_blank" rel="noreferrer" onClick={onItemClick} className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5">{l.label}</a>
+                        ) : (
+                          <Link to={l.to} onClick={onItemClick} className="text-slate-300 hover:text-amber-400 transition-colors block py-0.5">{l.label}</Link>
+                        )}
+                      </li>
+                    ))}
+                    {col.source === "brands" && (
+                      <li>
+                        <Link to="/brands" onClick={onItemClick} className="text-amber-400 hover:underline text-[11px] font-bold block pt-1">View All Brands →</Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-6 border-t border-white/10 pt-4">
+            <Link to={`/shop?category=${catSlug}`} onClick={onItemClick} className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300">
+              Shop all {currentCategory.name} <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   // 1. BRANDS MEGA MENU
   if (isBrands) {

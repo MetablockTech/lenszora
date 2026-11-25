@@ -6,6 +6,7 @@ import { ReturnRequest } from '../models/ReturnRequest'
 import { Order } from '../models/Order'
 import { Product } from '../models/Product'
 import { requireAuth, requireAdmin } from '../middleware/auth'
+import { vendorAuth, AuthRequest as VendorAuthRequest } from '../middleware/vendorAuth'
 
 const router = express.Router()
 
@@ -93,7 +94,7 @@ router.get('/', requireAuth, async (req: any, res) => {
         const requests = await ReturnRequest.find({ userId: (req as any).user.id })
             .sort({ createdAt: -1 })
             .populate('productId', 'title thumbnail')
-            .populate('orderId', 'orderNumber')
+            .populate('orderId', '_id createdAt total orderStatus')
 
         res.json(requests)
     } catch (err: any) {
@@ -115,8 +116,34 @@ router.get('/admin/all', requireAuth, requireAdmin, async (req, res) => {
         const requests = await ReturnRequest.find(filter)
             .sort({ createdAt: -1 })
             .populate('productId', 'title thumbnail price')
-            .populate('orderId', 'orderNumber user')
-            .populate('userId', 'email name') // Assuming User model has name
+            .populate('orderId', '_id createdAt total orderStatus paymentStatus')
+            .populate('userId', 'email name phone')
+
+        res.json(requests)
+    } catch (err: any) {
+        res.status(500).json({ error: err.message })
+    }
+})
+
+// --- Vendor Routes ---
+
+// Vendor: return / refund / exchange requests raised for this vendor's products
+router.get('/vendor/me', vendorAuth, async (req: VendorAuthRequest, res) => {
+    try {
+        const vendorId = req.user?.vendorId
+        if (!vendorId) return res.status(403).json({ error: 'Vendor access required' })
+
+        const productIds = await Product.find({ vendorId }).distinct('_id')
+        const filter: any = { productId: { $in: productIds } }
+        const { status, type } = req.query
+        if (status && status !== 'all') filter.status = status
+        if (type && type !== 'all') filter.requestType = type
+
+        const requests = await ReturnRequest.find(filter)
+            .sort({ createdAt: -1 })
+            .populate('productId', 'title thumbnail price sku')
+            .populate('orderId', '_id createdAt total orderStatus paymentStatus shippingAddress')
+            .populate('userId', 'name')
 
         res.json(requests)
     } catch (err: any) {
@@ -147,8 +174,10 @@ router.patch('/:id/status', requireAuth, requireAdmin, async (req, res) => {
         if (status === 'completed' || status === 'approved') {
             try {
                 const targetOrderStatus = request.requestType === 'refund' ? 'refunded' : 'returned'
+                // The order's field is orderStatus (writing "status" changed nothing)
                 await Order.findByIdAndUpdate(request.orderId, {
-                    $set: { status: targetOrderStatus }
+                    $set: { orderStatus: targetOrderStatus },
+                    $push: { statusHistory: { status: targetOrderStatus, timestamp: new Date(), note: `${request.requestType} request ${status}` } }
                 })
             } catch (syncErr) {
                 console.error('Failed to sync order status for return request:', syncErr)

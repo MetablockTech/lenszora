@@ -116,6 +116,30 @@ const Checkout = () => {
     setCouponCode('')
   }
 
+  // Cart changed (item removed, qty changed): check the applied coupon again. If the cart no longer
+  // meets the coupon's minimum, remove it and say why; otherwise refresh the discount (percent coupons change).
+  const appliedCode = appliedCoupon?.code
+  useEffect(() => {
+    if (!appliedCode) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { coupons } = await import('@/lib/api')
+        const result = await coupons.apply(appliedCode, cartTotal)
+        if (cancelled) return
+        setAppliedCoupon(result)
+        setCouponDiscount(result.discountAmount)
+      } catch (err: any) {
+        if (cancelled) return
+        setAppliedCoupon(null)
+        setCouponDiscount(0)
+        setCouponCode('')
+        toast({ title: `Coupon ${appliedCode} removed`, description: err?.message || 'Your cart no longer meets this coupon\'s conditions.', variant: 'destructive' })
+      }
+    })()
+    return () => { cancelled = true }
+  }, [cartTotal, appliedCode])
+
   const finalTotal = Math.max(0, cartTotal + shippingCost - couponDiscount)
 
   const [formData, setFormData] = useState({
@@ -599,7 +623,20 @@ const Checkout = () => {
         rzp.open()
       }
     } catch (err: any) {
-      alert('Error creating order: ' + err.message)
+      // Server answers with JSON ({ error, couponInvalid }); show its message, not the raw text
+      let message = err?.message || 'Something went wrong'
+      let couponInvalid = false
+      try {
+        const body = JSON.parse(message)
+        message = body.error || message
+        couponInvalid = !!body.couponInvalid
+      } catch { /* plain text */ }
+      if (couponInvalid) {
+        handleRemoveCoupon()
+        toast({ title: 'Coupon removed', description: message, variant: 'destructive' })
+      } else {
+        alert('Error creating order: ' + message)
+      }
       setLoading(false)
       isProcessingRef.current = false;
     }

@@ -49,6 +49,7 @@ const AccessoriesAdminPage: React.FC = () => {
     setLoading(true)
     try {
       const p = await products.list({
+        allStatuses: true,
         category: selectedCategory || 'accessories'
       })
 
