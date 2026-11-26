@@ -26,3 +26,23 @@ export function getWearDuration(product?: ProductLike | null) {
   const text = `${product.title || ""} ${cat}`.toLowerCase().replace(/[-_]/g, " ");
   return WEAR_DURATIONS.find((d) => d.match.test(text)) || null;
 }
+
+// Contact lens shop types, matching the home page tiles. A product stores one in
+// eyewearDetails.lensKind (picked in Admin → Products / Accessories); the shop filters with ?lensType=.
+export type LensKindKey = "clear" | "color" | "solution" | "accessories";
+
+export const LENS_KINDS: { key: LensKindKey; label: string; short: string }[] = [
+  { key: "clear", label: "Clear Lenses", short: "Clear" },
+  { key: "color", label: "Color Lenses", short: "Color" },
+  { key: "solution", label: "Solutions", short: "Solution" },
+  { key: "accessories", label: "Accessories & Trial Pack", short: "Accessories" },
+];
+
+export const isLensKind = (value?: string | null): value is LensKindKey =>
+  !!value && LENS_KINDS.some((k) => k.key === value);
+
+// Home page tile → shop link for that type (used when a tile still has an old/default link)
+export function lensKindHref(kind: LensKindKey) {
+  if (kind === "solution" || kind === "accessories") return `/shop?lensType=${kind}`;
+  return `/shop?category=contact-lenses&lensType=${kind}`;
+}

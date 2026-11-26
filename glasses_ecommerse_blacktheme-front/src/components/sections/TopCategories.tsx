@@ -5,6 +5,7 @@ import { categories as categoriesAPI, settings, API_URL } from "@/lib/api";
 import { getImageUrl } from "@/lib/utils";
 import ShapePickerDialog from "@/components/modals/ShapePickerDialog";
 import type { FrameType } from "@/lib/frameShapes";
+import { lensKindHref, type LensKindKey } from "@/lib/contactLens";
 
 interface NavItem {
   id: string;
@@ -137,6 +138,28 @@ const NAVIGATION_GROUPS: NavGroup[] = [
   }
 ];
 
+// Contact lens tiles that still have an old / default link (e.g. "?type=color", "?search=solution") open
+// the shop on the matching lens type instead, so they show exactly the products the admin tagged.
+// A link the admin changed to something else in Admin → Homepage Categories is left alone.
+const OLD_CONTACT_LINKS = new Set([
+  "/shop?category=contact-lenses",
+  "/shop?category=contact-lenses&type=color",
+  "/shop?category=accessories&search=solution",
+  "/shop?category=accessories",
+]);
+
+function tileHref(item: NavItem): string {
+  const href = (item.href || "").trim();
+  if (!OLD_CONTACT_LINKS.has(href)) return href;
+  const label = item.label.toLowerCase();
+  let kind: LensKindKey | null = null;
+  if (/colou?r/.test(label)) kind = "color";
+  else if (/solution/.test(label)) kind = "solution";
+  else if (/accessor|trial/.test(label)) kind = "accessories";
+  else if (/clear/.test(label)) kind = "clear";
+  return kind ? lensKindHref(kind) : href;
+}
+
 // Eyeglasses / sunglasses cards open a frame-shape picker before the shop; other cards link straight through
 function frameTypeForHref(href: string): FrameType | null {
   const category = (new URLSearchParams(href.split("?")[1] || "").get("category") || "").toLowerCase();
@@ -234,7 +257,7 @@ const TopCategories = () => {
                   return (
                     <Link
                       key={item.id}
-                      to={item.href}
+                      to={tileHref(item)}
                       onClick={(e) => {
                         const frameType = frameTypeForHref(item.href);
                         // Ctrl/Cmd-click still opens the shop in a new tab

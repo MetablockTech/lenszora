@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/components/ui/use-toast'
 import { Loader2, Plus, Save, Trash2, X, ImageIcon, Sparkles, Layers, Check, Zap, Shield, Eye, Waves, Sun, Droplets, Award, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { categories, brands, products, vendors, getUser, eyewearAttributes as eyewearAttributesAPI, lens } from '@/lib/api'
-import { WEAR_DURATIONS } from '@/lib/contactLens'
+import { WEAR_DURATIONS, LENS_KINDS } from '@/lib/contactLens'
 import { getToken, getImageUrl, cn, colorSwatchBackground, formatColorName } from '@/lib/utils'
 import { generateUniqueSKU, generateVariantSKU } from '@/lib/generateSKU'
 const productSchema = z.object({
@@ -72,6 +72,7 @@ const productSchema = z.object({
         uvProtection: z.string().optional(),
         polarized: z.boolean().default(false),
         wearDuration: z.string().optional().default(''),
+        lensKind: z.string().optional().default(''),
         features: z.array(z.string()).default([])
     }).optional(),
     returnPolicy: z.object({
@@ -211,6 +212,7 @@ const ProductForm = () => {
                 uvProtection: '',
                 polarized: false,
                 wearDuration: '',
+                lensKind: '',
                 features: []
             },
             returnPolicy: {
@@ -253,6 +255,11 @@ const ProductForm = () => {
         control: form.control,
         name: 'category'
     })
+    const watchedWearDuration = useWatch({ control: form.control, name: 'eyewearDetails.wearDuration' })
+    const watchedLensKind = useWatch({ control: form.control, name: 'eyewearDetails.lensKind' })
+    // The contact lens type picker is shown for products under Contact Lenses (or Accessories)
+    const selectedMainName = String(mainCats.find((c: any) => c._id === selectedMain)?.name || '').toLowerCase()
+    const showWearDuration = selectedMainName.includes('contact') || selectedMainName.includes('accessor')
 
     useEffect(() => {
         loadData()
@@ -375,6 +382,7 @@ const ProductForm = () => {
                         uvProtection: product.eyewearDetails?.uvProtection || '',
                         polarized: product.eyewearDetails?.polarized || false,
                         wearDuration: product.eyewearDetails?.wearDuration || '',
+                        lensKind: product.eyewearDetails?.lensKind || '',
                         features: product.eyewearDetails?.features || []
                     },
                     lensSettings: {
@@ -817,6 +825,65 @@ const ProductForm = () => {
                                         </SelectContent>
                                     </Select>
                                 </FormItem>
+
+                                {/* Contact lens type: decides which shop tab (Monthly / Dailies / Bi-Weekly / Yearly) shows this product */}
+                                {(showWearDuration || watchedLensKind) && (
+                                    <FormField
+                                        control={form.control}
+                                        name="eyewearDetails.lensKind"
+                                        render={({ field }) => (
+                                            <FormItem className="md:col-span-3 space-y-2 border-t border-slate-200 pt-3">
+                                                <FormLabel className="text-slate-500 font-bold uppercase text-[9px] tracking-widest">Lens Type (home page section)</FormLabel>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {[{ key: '', label: 'Not set', short: 'Not set' }, ...LENS_KINDS].map((k) => {
+                                                        const active = (field.value || '') === k.key
+                                                        return (
+                                                            <button
+                                                                key={k.key || 'none'}
+                                                                type="button"
+                                                                onClick={() => field.onChange(k.key)}
+                                                                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${active ? 'border-amber-500 bg-amber-50 text-amber-800 ring-1 ring-amber-500' : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'}`}
+                                                            >
+                                                                {k.label}
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                                <p className="text-[11px] text-slate-400">Decides which home page tile shows this product: Clear, Color Lenses, Solutions, or Accessories &amp; Trial Pack.</p>
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                {(showWearDuration || watchedWearDuration) && (
+                                    <FormField
+                                        control={form.control}
+                                        name="eyewearDetails.wearDuration"
+                                        render={({ field }) => (
+                                            <FormItem className="md:col-span-3 space-y-2 border-t border-slate-200 pt-3">
+                                                <FormLabel className="text-slate-500 font-bold uppercase text-[9px] tracking-widest">Contact Lens Type (shop tab)</FormLabel>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {[{ key: '', label: 'Not set', code: '—', hint: 'Shows only under "All"' }, ...WEAR_DURATIONS].map((d) => {
+                                                        const active = (field.value || '') === d.key
+                                                        return (
+                                                            <button
+                                                                key={d.key || 'none'}
+                                                                type="button"
+                                                                onClick={() => field.onChange(d.key)}
+                                                                title={d.hint}
+                                                                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${active ? 'border-amber-500 bg-amber-50 text-amber-800 ring-1 ring-amber-500' : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'}`}
+                                                            >
+                                                                <span className={`rounded border px-1 text-[10px] font-black ${active ? 'border-amber-500' : 'border-slate-300'}`}>{d.code}</span>
+                                                                {d.label}
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                                <p className="text-[11px] text-slate-400">The product appears under this tab in the shop (and always under "All"), and the type is shown on the product page.</p>
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1138,26 +1205,6 @@ const ProductForm = () => {
                                                     <SelectItem value="Heavy">Heavy</SelectItem>
                                                 </SelectContent>
                                             </Select>
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="eyewearDetails.wearDuration"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-slate-600">Contact Lens Duration</FormLabel>
-                                            <FormControl>
-                                                <select
-                                                    value={field.value || ''}
-                                                    onChange={(e) => field.onChange(e.target.value)}
-                                                    className="h-10 w-full rounded-md border border-slate-300 bg-slate-100 px-3 text-sm text-slate-700"
-                                                >
-                                                    <option value="">Not a contact lens / not set</option>
-                                                    {WEAR_DURATIONS.map((d) => <option key={d.key} value={d.key}>{d.label} ({d.hint})</option>)}
-                                                </select>
-                                            </FormControl>
-                                            <p className="text-[11px] text-slate-400">Contact lenses only: shown on the product and used for the Monthly / Dailies tabs in the shop.</p>
                                         </FormItem>
                                     )}
                                 />

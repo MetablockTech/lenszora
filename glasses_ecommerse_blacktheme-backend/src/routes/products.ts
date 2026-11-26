@@ -49,7 +49,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res) => {
       status, isBestSeller, isFeatured, sort, limit,
       category, brand, minPrice, maxPrice,
       gender, frameType, frameShape, frameMaterial, weightGroup, faceShape,
-      vendorId, isBulk, search, sale, wearDuration, scope, excludeAccessories
+      vendorId, isBulk, search, sale, wearDuration, scope, excludeAccessories, lensType
     } = req.query
 
     const filter: any = {}
@@ -252,6 +252,37 @@ router.get('/', optionalAuth, async (req: AuthRequest, res) => {
           { 'eyewearDetails.wearDuration': { $in: [null, ''] }, title: { $regex: DURATION_TITLE[key] } }
         ]
       })
+    }
+
+    // Contact lens shop type (home page tiles: Clear / Color / Solutions / Accessories & trial pack).
+    // Products where the admin picked the type match on it; older products without one are placed by
+    // their category and title until the admin sets it.
+    const LENS_KINDS = ['clear', 'color', 'solution', 'accessories']
+    if (lensType && LENS_KINDS.includes(String(lensType))) {
+      const kind = String(lensType)
+      const { Category } = require('../models/Category')
+      const treeOf = async (re: RegExp) => {
+        const roots = await Category.find({ $or: [{ slug: re }, { name: re }] }).select('_id').lean()
+        return (await Promise.all(roots.map((c: any) => categoryTreeIds(c._id)))).flat()
+      }
+      const unset = { 'eyewearDetails.lensKind': { $in: [null, ''] } }
+      const colorWords = /colou?r|tint/i
+      const solutionWords = /solution|multipurpose|disinfect|lens care|eye drop/i
+      let fallback: any
+      if (kind === 'color') {
+        fallback = { $or: [{ title: colorWords }, { searchTags: colorWords }] }
+      } else if (kind === 'solution') {
+        const careCats = await treeOf(/solution/i)
+        fallback = { $or: [{ title: solutionWords }, { searchTags: solutionWords }, { category: { $in: careCats } }] }
+      } else if (kind === 'accessories') {
+        const accCats = await treeOf(/^accessor/i)
+        fallback = { category: { $in: accCats }, title: { $not: solutionWords } }
+      } else {
+        const contactCats = await treeOf(/^contact/i)
+        const careCats = await treeOf(/solution/i)
+        fallback = { category: { $in: contactCats, $nin: careCats }, title: { $not: /colou?r|tint|solution/i } }
+      }
+      andConditions.push({ $or: [{ 'eyewearDetails.lensKind': kind }, { ...unset, ...fallback }] })
     }
 
     if (andConditions.length > 0) {
@@ -501,6 +532,16 @@ router.put('/:id', requireAuth, requireVendorOrAdmin, async (req: AuthRequest, r
       return res.status(400).json({ error: `SKU "${updateData.sku}" is already used by another product. Please use a unique SKU.` })
     }
     if (updateData.stock !== undefined) updateData.stock = Math.max(0, Number(updateData.stock) || 0)
+    // Accessory form sends only the contact lens fields; a product with no eyewear details yet needs the object
+    if (!(product as any).eyewearDetails) {
+      for (const key of ['wearDuration', 'lensKind']) {
+        const dotted = `eyewearDetails.${key}`
+        if (dotted in updateData) {
+          updateData.eyewearDetails = { ...(updateData.eyewearDetails || {}), [key]: updateData[dotted] }
+          delete updateData[dotted]
+        }
+      }
+    }
     if (updateData.category === '' || updateData.category === 'none') updateData.category = null
     if (updateData.brand === '' || updateData.brand === 'none') updateData.brand = null
     if (updateData.vendorId === '') {

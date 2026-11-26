@@ -70,6 +70,7 @@ export interface IProduct extends Document {
     uvProtection?: string
     polarized?: boolean
     wearDuration?: string // Contact lenses: daily | biweekly | monthly | yearly
+    lensKind?: string // Contact lens shop type: clear | color | solution | accessories (home page tiles)
     features?: string[]
   }
   lensSettings?: {
@@ -148,6 +149,8 @@ const ProductSchema = new Schema<IProduct>({
     polarized: { type: Boolean, default: false },
     // Contact lenses: how often they are replaced (daily | biweekly | monthly | yearly)
     wearDuration: { type: String, enum: ['', 'daily', 'biweekly', 'monthly', 'yearly'], default: '' },
+    // Contact lens shop type, picked in admin: Clear / Color / Solution / Accessories & trial pack
+    lensKind: { type: String, enum: ['', 'clear', 'color', 'solution', 'accessories'], default: '' },
     features: { type: [String], default: [] }
   },
   lensSettings: {

@@ -70,8 +70,10 @@ export const products = {
     /** Admin/vendor screens: include pending, rejected and inactive products (needs an admin or owning-vendor token) */
     allStatuses?: boolean;
     excludeAccessories?: boolean;
+    lensType?: string;
   }) {
     const query = new URLSearchParams()
+    if (params?.lensType) query.append('lensType', params.lensType)
     if (params?.allStatuses) query.append('scope', 'all')
     if (params?.excludeAccessories) query.append('excludeAccessories', 'true')
     if (params?.status) query.append('status', params.status)

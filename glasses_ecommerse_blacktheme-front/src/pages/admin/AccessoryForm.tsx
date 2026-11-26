@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { categories, products, getToken, API_URL } from '@/lib/api'
 import { getImageUrl } from '@/lib/utils'
 import { generateUniqueSKU } from '@/lib/generateSKU'
+import { WEAR_DURATIONS, LENS_KINDS } from '@/lib/contactLens'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -47,6 +48,10 @@ const AccessoryFormPage: React.FC = () => {
   const [thumbnail, setThumbnail] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [status, setStatus] = useState<'active' | 'inactive'>('active')
+  // Contact lens type: which shop tab (Monthly / Dailies / Bi-Weekly / Yearly) shows this item
+  const [wearDuration, setWearDuration] = useState('')
+  // Home page section this item belongs to (Clear / Color / Solutions / Accessories & Trial Pack)
+  const [lensKind, setLensKind] = useState('')
   const [urlInput, setUrlInput] = useState('')
 
   useEffect(() => {
@@ -98,6 +103,8 @@ const AccessoryFormPage: React.FC = () => {
         setPrice(data.price || '')
         setDiscountAmount(data.discountAmount || 0)
         setStock(data.stock ?? 100)
+        setWearDuration(data.eyewearDetails?.wearDuration || '')
+        setLensKind(data.eyewearDetails?.lensKind || '')
         
         const prodCatId = typeof data.category === 'object' ? data.category?._id : data.category || ''
         setCategory(prodCatId)
@@ -273,6 +280,13 @@ const AccessoryFormPage: React.FC = () => {
           disableLensSelection: true
         }
       }
+      // Only this one field: an edit must not wipe other saved eyewear details
+      if (isEdit) {
+        payload['eyewearDetails.wearDuration'] = wearDuration
+        payload['eyewearDetails.lensKind'] = lensKind
+      } else {
+        payload.eyewearDetails = { wearDuration, lensKind }
+      }
 
       if (isEdit && id) {
         await products.update(id, payload, token)
@@ -444,6 +458,50 @@ const AccessoryFormPage: React.FC = () => {
                 </select>
               </div>
             )}
+          </div>
+
+          {/* Home page section (Clear / Color / Solutions / Accessories & Trial Pack) */}
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Lens Type (home page section)</label>
+            <div className="flex flex-wrap gap-2">
+              {[{ key: '', label: 'Not set', short: 'Not set' }, ...LENS_KINDS].map((k) => {
+                const active = lensKind === k.key
+                return (
+                  <button
+                    key={k.key || 'none'}
+                    type="button"
+                    onClick={() => setLensKind(k.key)}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${active ? 'border-amber-500 bg-amber-50 text-amber-800 ring-1 ring-amber-500' : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'}`}
+                  >
+                    {k.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-500">Decides which home page tile shows this item, e.g. a lens solution under "Solutions", a trial pack under "Accessories &amp; Trial Pack".</p>
+          </div>
+
+          {/* Contact lens type (shop tab) */}
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Contact Lens Type (shop tab)</label>
+            <div className="flex flex-wrap gap-2">
+              {[{ key: '', label: 'Not set', code: '—', hint: 'Shows only under "All"' }, ...WEAR_DURATIONS].map((d) => {
+                const active = wearDuration === d.key
+                return (
+                  <button
+                    key={d.key || 'none'}
+                    type="button"
+                    onClick={() => setWearDuration(d.key)}
+                    title={d.hint}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${active ? 'border-amber-500 bg-amber-50 text-amber-800 ring-1 ring-amber-500' : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'}`}
+                  >
+                    <span className={`rounded border px-1 text-[10px] font-black ${active ? 'border-amber-500' : 'border-slate-300'}`}>{d.code}</span>
+                    {d.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-500">For contact lenses: the item appears under this tab in the shop (and always under "All"). Leave "Not set" for care kits, cases, etc.</p>
           </div>
 
           <div>

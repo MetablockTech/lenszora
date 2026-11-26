@@ -12,7 +12,7 @@ import { ShoppingBag, Heart, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn, getImageUrl, getProductImage, calculateProductDiscount } from "@/lib/utils";
-import { WEAR_DURATIONS, getWearDuration } from "@/lib/contactLens";
+import { WEAR_DURATIONS, getWearDuration, LENS_KINDS, isLensKind } from "@/lib/contactLens";
 
 interface Product {
   _id: string;
@@ -82,6 +82,9 @@ const Shop = () => {
   const [onlySale, setOnlySale] = useState(urlSale);
   // Contact lenses: Monthly / Dailies / Bi-Weekly / Yearly tabs
   const [selectedDuration, setSelectedDuration] = useState(urlDuration);
+  // Contact lens shop type (Clear / Color / Solutions / Accessories): ?lensType=, or the older ?type=color tile link
+  const urlLensKind = searchParams.get('lensType') || (isLensKind(urlType) ? urlType : '');
+  const [selectedLensKind, setSelectedLensKind] = useState(isLensKind(urlLensKind) ? urlLensKind : '');
   const [loading, setLoading] = useState(true);
   const [productList, setProductList] = useState<Product[]>([]);
   const [categoryList, setCategoryList] = useState<Category[]>([]);
@@ -90,7 +93,7 @@ const Shop = () => {
 
   const [selectedMainCategory, setSelectedMainCategory] = useState(urlCategory);
   const [selectedSubCategory, setSelectedSubCategory] = useState(urlSubcategory);
-  const [selectedSubSubCategory, setSelectedSubSubCategory] = useState(urlType);
+  const [selectedSubSubCategory, setSelectedSubSubCategory] = useState(isLensKind(urlType) ? '' : urlType);
   // Shopping contact lenses (any selected category or the URL category is / sits under Contact Lenses)
   const isContactLensShop = [selectedMainCategory, selectedSubCategory, selectedSubSubCategory, urlCategory].some((val) => {
     if (!val) return false;
@@ -155,6 +158,7 @@ const Shop = () => {
         search: searchToFilter,
         sale: onlySale ? 'true' : undefined,
         wearDuration: isContactLensShop && selectedDuration ? selectedDuration : undefined,
+        lensType: selectedLensKind || undefined,
         sort: sortBy === 'price-asc' ? 'price:asc' : sortBy === 'price-desc' ? 'price:desc' : 'createdAt:desc'
       });
 
@@ -224,6 +228,7 @@ const Shop = () => {
     selectedVendor,
     onlySale,
     selectedDuration,
+    selectedLensKind,
     searchParams
   ]);
 
@@ -288,12 +293,16 @@ const Shop = () => {
         setSelectedSubCategory("");
       }
 
-      if (typeParam) {
+      if (typeParam && !isLensKind(typeParam)) {
         const cat = categoryList.find(c => c.slug === typeParam || c._id === typeParam);
         if (cat) setSelectedSubSubCategory(cat._id);
       } else {
         setSelectedSubSubCategory("");
       }
+
+      // Contact lens shop type from the link (?lensType= or the older ?type=color)
+      const lensKindParam = searchParams.get('lensType') || (isLensKind(typeParam) ? typeParam : '');
+      setSelectedLensKind(isLensKind(lensKindParam) ? lensKindParam : '');
 
       if (genderParam) {
         // Capitalize first letter to match filter options (e.g., "men" -> "Men")
@@ -441,6 +450,7 @@ const Shop = () => {
 
     // Contact lens duration tab
     if (isContactLensShop && selectedDuration) params.set('wearDuration', selectedDuration);
+    if (selectedLensKind) params.set('lensType', selectedLensKind);
 
     // Update URL without page reload
     const newUrl = params.toString() ? `/shop?${params.toString()}` : '/shop';
@@ -452,7 +462,7 @@ const Shop = () => {
     if (categoryList.length > 0 && brandList.length > 0) {
       updateURLParams();
     }
-  }, [selectedMainCategory, selectedSubCategory, selectedSubSubCategory, selectedBrand, selectedGender, selectedFrameType, selectedFrameShape, selectedFrameMaterial, selectedWeightGroup, selectedFaceShape, sortBy, searchQuery, selectedVendor, onlySale, selectedDuration]);
+  }, [selectedMainCategory, selectedSubCategory, selectedSubSubCategory, selectedBrand, selectedGender, selectedFrameType, selectedFrameShape, selectedFrameMaterial, selectedWeightGroup, selectedFaceShape, sortBy, searchQuery, selectedVendor, onlySale, selectedDuration, selectedLensKind]);
 
   const rawMainCategories = categoryList.filter((c) => !c.parentId);
   const hasAccessoryInCat = rawMainCategories.some(c => c.slug?.toLowerCase().includes("accessor") || c.name?.toLowerCase().includes("accessor"));
@@ -1206,8 +1216,26 @@ const Shop = () => {
 
             {/* Products Grid */}
             <div className="lg:col-span-9">
+              {/* Contact lens shop type: Clear / Color / Solutions / Accessories & Trial Pack */}
+              {(isContactLensShop || selectedLensKind) && (
+                <div className="mb-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                  {[{ key: '', short: 'All Types' }, ...LENS_KINDS].map((k) => {
+                    const active = selectedLensKind === k.key;
+                    return (
+                      <button
+                        key={k.key || 'all'}
+                        type="button"
+                        onClick={() => setSelectedLensKind(k.key)}
+                        className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors ${active ? 'border-[#DAAB34] bg-[#DAAB34] text-black' : 'border-white/15 text-slate-300 hover:border-white/40 hover:text-white'}`}
+                      >
+                        {k.short}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {/* Contact lenses: filter by how often they are replaced */}
-              {isContactLensShop && (
+              {isContactLensShop && selectedLensKind !== 'solution' && selectedLensKind !== 'accessories' && (
                 <div className="mb-5 grid grid-cols-5 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
                   {[{ key: '', label: 'All', code: 'ALL' }, ...WEAR_DURATIONS].map((d) => {
                     const active = selectedDuration === d.key;
