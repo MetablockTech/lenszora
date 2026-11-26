@@ -255,6 +255,16 @@ const VendorPurchases: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              <div className="flex justify-end border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-black"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           )}
         </DialogContent>

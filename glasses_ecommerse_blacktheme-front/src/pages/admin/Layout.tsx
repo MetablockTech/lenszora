@@ -22,7 +22,7 @@ import {
   Boxes, Navigation, ExternalLink, SlidersHorizontal, Glasses, type LucideIcon,
 } from 'lucide-react'
 import { useSettings } from '@/context/SettingsContext'
-import { clearToken, getToken, getUser, products } from '@/lib/api'
+import { clearToken, getToken, getUser, products, contactMessages } from '@/lib/api'
 import { getImageUrl } from '@/lib/utils'
 
 type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean }
@@ -62,8 +62,8 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/users', label: 'Users', icon: Users },
       { to: '/admin/customer-leads', label: 'Cart & Wishlists', icon: Heart },
       { to: '/admin/appointments', label: 'Appointments', icon: Calendar },
-      { to: '/admin/product-inquiries', label: 'Inquiries', icon: MessageSquare },
-      { to: '/admin/contact-messages', label: 'Contact Messages', icon: Mail },
+      { to: '/admin/contact-messages', label: 'User Inquiries (Contact Us)', icon: Mail },
+      { to: '/admin/product-inquiries', label: 'Wholesale Inquiries', icon: MessageSquare },
     ],
   },
   {
@@ -138,6 +138,8 @@ const AdminLayout: React.FC = () => {
   const user = getUser()
 
   const [stats, setStats] = React.useState({ pending: 0, active: 0, rejected: 0 })
+  // New Contact Us messages, shown as a count next to "User Inquiries" in the sidebar
+  const [unreadContacts, setUnreadContacts] = React.useState(0)
 
   const userRole = user?.role
   const userId = user?.id
@@ -152,6 +154,7 @@ const AdminLayout: React.FC = () => {
     const fetchStats = async () => {
       const currentToken = getToken()
       if (!currentToken || userRole !== 'admin') return
+      contactMessages.list(currentToken, 'new').then((d) => setUnreadContacts(d.unread || 0)).catch(() => {})
       try {
         setStats(await products.stats(currentToken))
       } catch (err) {
@@ -230,6 +233,9 @@ const AdminLayout: React.FC = () => {
                               <span>
                                 <item.icon className="w-[18px] h-[18px] shrink-0" />
                                 <span className="truncate">{item.label}</span>
+                                {item.to === '/admin/contact-messages' && unreadContacts > 0 && (
+                                  <span className="ml-auto shrink-0 rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-5 text-white">{unreadContacts}</span>
+                                )}
                               </span>
                             </SidebarMenuButton>
                           )}

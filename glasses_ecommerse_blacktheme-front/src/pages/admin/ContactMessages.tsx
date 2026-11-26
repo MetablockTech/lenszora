@@ -93,7 +93,7 @@ export default function ContactMessagesPage() {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Contact Messages</h1>
+          <h1 className="text-3xl font-bold text-slate-900">User Inquiries (Contact Us)</h1>
           <p className="text-slate-500 mt-1">Queries sent from the website's Contact Us page{unread ? ` · ${unread} new` : ''}.</p>
         </div>
         <select value={filter} onChange={(e) => setFilter(e.target.value)} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm">

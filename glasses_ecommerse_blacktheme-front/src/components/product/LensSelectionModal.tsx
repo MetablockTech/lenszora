@@ -50,6 +50,8 @@ const LensSelectionModal = ({ isOpen, onClose, onSelect, vendorId, productTitle,
     // Prescription saved in the customer's profile, turned into the power form's format
     const [savedRx, setSavedRx] = useState<any>(null);
     const [savedRxDate, setSavedRxDate] = useState<string | null>(null);
+    // Bumped to remount the power form so it picks up newly filled values
+    const [rxFormKey, setRxFormKey] = useState(0);
     const [prescriptionImage, setPrescriptionImage] = useState<string | null>(null);
     const [prescriptionFileName, setPrescriptionFileName] = useState<string | null>(null);
     const [uploadingPrescription, setUploadingPrescription] = useState(false);
@@ -540,7 +542,8 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
                 if (!rx || (!rx.right && !rx.left)) { setSavedRx(null); return; }
                 const od = eye(rx.right);
                 const os = eye(rx.left);
-                if (!od.sph && !os.sph) { setSavedRx(null); return; }
+                const anyValue = [od.sph, os.sph, od.cyl, os.cyl, od.axis, os.axis, od.addl, os.addl].some(Boolean) || !!rx.pd;
+                if (!anyValue) { setSavedRx(null); return; }
                 setSavedRx({
                     od, os,
                     pd: rx.pd ? String(rx.pd) : '62',
@@ -560,9 +563,12 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
     const applySavedPrescription = () => {
         if (!savedRx) return;
         setPrescription({ ...savedRx });
+        setRxFormKey((k) => k + 1);
         setPowerOption('manual');
-        setShowPrescriptionForm(true);
-        pushModalHistory(3, true);
+        if (!showPrescriptionForm) {
+            setShowPrescriptionForm(true);
+            pushModalHistory(3, true);
+        }
     };
 
     const handleBack = () => {
@@ -1192,7 +1198,23 @@ const withFrameOnly = <T extends { key?: string; _id?: string; name?: string }>(
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-[1.3rem] font-bold text-slate-900">Enter power manually</h2>
                             </div>
-                            <PrescriptionForm onPrescriptionChange={setPrescription} initialData={prescription} />
+                            {/* Also offered here, e.g. when "Edit Power" from the cart opens this form directly */}
+                            {savedRx && (
+                                <button
+                                    type="button"
+                                    onClick={applySavedPrescription}
+                                    className="mb-4 flex w-full items-center justify-between gap-3 rounded-xl border-[1.5px] border-teal-300 bg-teal-50/50 px-4 py-3 text-left hover:border-teal-500"
+                                >
+                                    <span>
+                                        <span className="block text-[.85rem] font-bold text-slate-900">Fill from my saved prescription</span>
+                                        <span className="block text-[.74rem] text-slate-600">
+                                            Right SPH {savedRx.od.sph || '—'} · Left SPH {savedRx.os.sph || '—'}{savedRxDate ? ` · ${savedRxDate}` : ''}
+                                        </span>
+                                    </span>
+                                    <ChevronRight className="h-4 w-4 shrink-0 text-teal-700" />
+                                </button>
+                            )}
+                            <PrescriptionForm key={rxFormKey} onPrescriptionChange={setPrescription} initialData={prescription} />
                         </div>
                     )}
                 </div>

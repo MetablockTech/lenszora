@@ -42,9 +42,14 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      {/* Own colours (not the theme text colour), so the X shows on both white and dark pop-ups */}
-      <DialogPrimitive.Close className="absolute right-3 top-3 z-20 rounded-full bg-white/90 p-1.5 text-slate-700 shadow ring-1 ring-black/10 transition-colors hover:bg-white hover:text-black focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:pointer-events-none">
-        <X className="h-4 w-4" />
+      {/* Dark circle + white X with a light ring: clearly visible on white and on dark pop-ups.
+          "fixed" inside the (transformed) dialog pins it to the dialog's corner, so it stays in view
+          while long content scrolls underneath. */}
+      <DialogPrimitive.Close
+        aria-label="Close"
+        className="fixed right-3 top-3 z-50 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg ring-2 ring-white/80 transition-colors hover:bg-black focus:outline-none focus:ring-amber-500 disabled:pointer-events-none"
+      >
+        <X className="h-4 w-4" strokeWidth={2.5} />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
@@ -53,7 +58,7 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
+  <div className={cn("flex flex-col space-y-1.5 pr-10 text-center sm:text-left", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
